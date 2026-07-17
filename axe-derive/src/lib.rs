@@ -1,6 +1,6 @@
-//! # raisfast-derive
+//! # axe-derive
 //!
-//! Proc-macro crate for the `raisfast` blog/CMS system.
+//! Proc-macro crate for the `axe` blog/CMS system.
 //!
 //! Provides two categories of macros:
 //!

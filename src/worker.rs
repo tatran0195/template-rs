@@ -98,13 +98,7 @@ pub enum Job {
         email: String,
         verify_token: String,
     },
-    ExpirePaymentOrders,
-    ExpireOrders,
-    RetryPaymentCallback {
-        payment_order_id: SnowflakeId,
-    },
-    ReconcilePayments,
-    ProcessWalletOutbox,
+
     /// Custom job type, supports arbitrary `job_type` + JSON payload
     ///
     /// When no built-in Handler matches, WorkerRunner falls back to plugin dispatch.
@@ -129,11 +123,7 @@ impl Job {
             Job::SendPasswordResetEmail { .. } => "send_password_reset_email",
             Job::SendSmsCode { .. } => "send_sms_code",
             Job::SendEmailVerification { .. } => "send_email_verification",
-            Job::ExpirePaymentOrders => "expire_payment_orders",
-            Job::ExpireOrders => "expire_orders",
-            Job::RetryPaymentCallback { .. } => "retry_payment_callback",
-            Job::ReconcilePayments => "reconcile_payments",
-            Job::ProcessWalletOutbox => "process_wallet_outbox",
+
             Job::Custom { job_type, .. } => job_type,
         }
     }

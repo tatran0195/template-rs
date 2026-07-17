@@ -30,7 +30,7 @@ impl GitHubProvider {
                 crate::constants::HEADER_AUTHORIZATION,
                 format!("{}{access_token}", crate::constants::AUTH_BEARER_PREFIX),
             )
-            .header("User-Agent", "raisfast")
+            .header("User-Agent", "axe")
             .header("Accept", "application/json")
             .send()
             .await
@@ -104,7 +104,7 @@ impl OAuthProvider for GitHubProvider {
                 crate::constants::HEADER_AUTHORIZATION,
                 format!("{}{access_token}", crate::constants::AUTH_BEARER_PREFIX),
             )
-            .header("User-Agent", "raisfast")
+            .header("User-Agent", "axe")
             .header("Accept", "application/json")
             .send()
             .await

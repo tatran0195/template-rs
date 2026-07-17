@@ -1,4 +1,4 @@
-//! RaisFast: Rust-powered high-performance BaaS and headless CMS.
+//! axe: Rust-powered high-performance BaaS and headless CMS.
 //!
 //! Default behavior: starts the HTTP server. Use subcommands to switch to other operations.
 //!
@@ -16,14 +16,14 @@
 
 rust_i18n::i18n!("locales", fallback = "en");
 
+use axe::config::app::AppConfig;
 use clap::Parser;
-use raisfast::config::app::AppConfig;
 
 mod cli;
 mod logging;
 
 pub(crate) mod db {
-    pub use raisfast::db::*;
+    pub use axe::db::*;
 }
 
 #[tokio::main]

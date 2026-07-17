@@ -48,7 +48,7 @@ fn error_html(status: u16, message: &str) -> Response<ResBody> {
     let html = format!(
         "<html><head><title>{status}</title></head>\
          <body><h1>{status}</h1><p>{message}</p>\
-         <hr><small>Powered by raisfast proxy</small></body></html>"
+         <hr><small>Powered by axe proxy</small></body></html>"
     );
     Response::builder()
         .status(status)

@@ -1,4 +1,4 @@
-use raisfast::export_type::collect_all;
+use axe::export_type::collect_all;
 
 fn main() {
     let decls = collect_all();

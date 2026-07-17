@@ -55,7 +55,7 @@ pub async fn create(
     let expires_at =
         crate::utils::tz::now_utc() + chrono::Duration::seconds(expires_in_secs as i64);
 
-    raisfast_derive::crud_insert!(pool, "sms_codes", [
+    axe_derive::crud_insert!(pool, "sms_codes", [
         "id" => id,
         "phone" => phone,
         "code" => code,
@@ -66,7 +66,7 @@ pub async fn create(
     ])?;
 
     let result: Option<SmsCode> =
-        raisfast_derive::crud_find!(pool, "sms_codes", SmsCode, where: ("id", id))?;
+        axe_derive::crud_find!(pool, "sms_codes", SmsCode, where: ("id", id))?;
     result.ok_or_else(|| {
         crate::errors::app_error::AppError::Internal(anyhow::anyhow!("failed to fetch sms code"))
     })
@@ -74,7 +74,7 @@ pub async fn create(
 
 /// Find a verification code by ID
 pub async fn find_by_id(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<Option<SmsCode>> {
-    Ok(raisfast_derive::crud_find!(pool, "sms_codes", SmsCode, where: ("id", id))?)
+    Ok(axe_derive::crud_find!(pool, "sms_codes", SmsCode, where: ("id", id))?)
 }
 
 /// Find the most recent unverified code for a phone number
@@ -83,7 +83,7 @@ pub async fn find_latest_unverified(
     phone: &str,
     purpose: &str,
 ) -> AppResult<Option<SmsCode>> {
-    Ok(raisfast_derive::crud_find!(
+    Ok(axe_derive::crud_find!(
         pool,
         "sms_codes",
         SmsCode,
@@ -100,7 +100,7 @@ pub async fn is_rate_limited(
     within_secs: u64,
 ) -> AppResult<bool> {
     let cutoff = crate::utils::tz::now_utc() - chrono::Duration::seconds(within_secs as i64);
-    let cnt = raisfast_derive::crud_count!(
+    let cnt = axe_derive::crud_count!(
         pool,
         "sms_codes",
         where: AND(("phone", phone), ("purpose", purpose), ("created_at", GT, cutoff))
@@ -131,7 +131,7 @@ pub async fn verify_code(
     }
 
     if sms.code != input_code {
-        raisfast_derive::crud_update!(pool, "sms_codes",
+        axe_derive::crud_update!(pool, "sms_codes",
             bind: [],
             raw: ["attempts" => "attempts + 1"],
             where: ("id", id)
@@ -140,7 +140,7 @@ pub async fn verify_code(
     }
 
     let now = crate::utils::tz::now_utc();
-    raisfast_derive::crud_update!(pool, "sms_codes",
+    axe_derive::crud_update!(pool, "sms_codes",
         bind: ["verified_at" => now],
         where: ("id", id)
     )?;

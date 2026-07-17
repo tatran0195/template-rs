@@ -9,29 +9,26 @@
 //! cargo test
 //! ```
 
+use axe::AppState;
+use axe::DbDriver;
+use axe::config::app::AppConfig;
+use axe::handlers::{
+    api_token as h_token, auth as h_auth, category as h_cat, comment as h_cmt, cron as h_cron,
+    health as h_health, media as h_media, options as h_options, page as h_page, plugin as h_plugin,
+    post as h_post, rbac as h_rbac, reusable_block as h_block, rss as h_rss, sse as h_sse,
+    stats as h_stats, tag as h_tag, tenant as h_tenant, user as h_user,
+};
+use axe::middleware::locale::locale_middleware;
+use axe::middleware::rate_limit::{
+    RateLimiterSet, comment_rate_limit, global_rate_limit, login_rate_limit, register_rate_limit,
+};
+use axe::plugins::PluginManager;
+use axe::search::NoopSearchEngine;
 use axum::body::Body;
 use axum::http::{Request, StatusCode, header};
 use axum::middleware::from_fn;
 use axum::routing::{delete, get, post as http_post, put};
 use http_body_util::BodyExt;
-use raisfast::AppState;
-use raisfast::DbDriver;
-use raisfast::config::app::AppConfig;
-use raisfast::handlers::{
-    api_token as h_token, auth as h_auth, cart as h_cart, category as h_cat, comment as h_cmt,
-    cron as h_cron, health as h_health, media as h_media, options as h_options, order as h_order,
-    page as h_page, payment as h_payment, plugin as h_plugin, post as h_post, product as h_product,
-    product_category as h_product_category, product_variant as h_product_variant, rbac as h_rbac,
-    reusable_block as h_block, rss as h_rss, sse as h_sse, stats as h_stats, tag as h_tag,
-    tenant as h_tenant, user as h_user, user_address as h_user_address, wallet as h_wallet,
-};
-use raisfast::middleware::locale::locale_middleware;
-use raisfast::middleware::rate_limit::{
-    RateLimiterSet, comment_rate_limit, global_rate_limit, login_rate_limit,
-    payment_callback_rate_limit, register_rate_limit,
-};
-use raisfast::plugins::PluginManager;
-use raisfast::search::NoopSearchEngine;
 use serde_json::{Value, json};
 use std::sync::Arc;
 use tower::ServiceExt;
@@ -55,13 +52,11 @@ pub(crate) fn test_config() -> AppConfig {
     cfg
 }
 
-pub(crate) async fn test_pool() -> raisfast::db::Pool {
+pub(crate) async fn test_pool() -> axe::db::Pool {
     #[cfg(feature = "db-sqlite")]
     {
-        let pool = raisfast::db::Pool::connect("sqlite::memory:")
-            .await
-            .unwrap();
-        sqlx::query(raisfast::db::schema::SCHEMA_SQL)
+        let pool = axe::db::Pool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query(axe::db::schema::SCHEMA_SQL)
             .execute(&pool)
             .await
             .unwrap();
@@ -69,7 +64,7 @@ pub(crate) async fn test_pool() -> raisfast::db::Pool {
     }
 }
 
-pub(crate) async fn test_pool_with_tenants() -> raisfast::db::Pool {
+pub(crate) async fn test_pool_with_tenants() -> axe::db::Pool {
     #[cfg(feature = "db-sqlite")]
     {
         test_pool().await
@@ -84,132 +79,82 @@ pub(crate) async fn test_app_with_tenants() -> (axum::Router, AppState) {
     build_test_app(test_pool_with_tenants().await).await
 }
 
-async fn build_test_app(pool: raisfast::db::Pool) -> (axum::Router, AppState) {
+async fn build_test_app(pool: axe::db::Pool) -> (axum::Router, AppState) {
     let config = Arc::new(test_config());
     let state = AppState {
         pool: pool.clone(),
         config: config.clone(),
         jwt_decoding_key: jsonwebtoken::DecodingKey::from_secret(config.jwt_secret.as_bytes()),
         plugins: PluginManager::new(config.clone()).await,
-        eventbus: raisfast::eventbus::EventBus::new(256),
+        eventbus: axe::eventbus::EventBus::new(256),
         post_service: {
-            Arc::new(raisfast::services::post::PostServiceImpl::new(
+            Arc::new(axe::services::post::PostServiceImpl::new(
                 Arc::new(pool.clone()),
-                Arc::new(raisfast::aspects::engine::AspectEngine::new()),
+                Arc::new(axe::aspects::engine::AspectEngine::new()),
                 Arc::new(NoopSearchEngine),
             ))
         },
-        page_service: Arc::new(raisfast::services::page::PageServiceImpl::new(
-            Arc::new(raisfast::aspects::engine::AspectEngine::new()),
+        page_service: Arc::new(axe::services::page::PageServiceImpl::new(
+            Arc::new(axe::aspects::engine::AspectEngine::new()),
             Arc::new(pool.clone()),
         )),
-        category_service: Arc::new(raisfast::services::category::CategoryServiceImpl::new(
-            Arc::new(raisfast::aspects::engine::AspectEngine::new()),
+        category_service: Arc::new(axe::services::category::CategoryServiceImpl::new(
+            Arc::new(axe::aspects::engine::AspectEngine::new()),
             Arc::new(pool.clone()),
         )),
-        tag_service: Arc::new(raisfast::services::tag::TagServiceImpl::new(
-            Arc::new(raisfast::aspects::engine::AspectEngine::new()),
+        tag_service: Arc::new(axe::services::tag::TagServiceImpl::new(
+            Arc::new(axe::aspects::engine::AspectEngine::new()),
             Arc::new(pool.clone()),
         )),
-        comment_service: Arc::new(raisfast::services::comment::CommentServiceImpl::new(
+        comment_service: Arc::new(axe::services::comment::CommentServiceImpl::new(
             Arc::new(pool.clone()),
-            Arc::new(raisfast::aspects::engine::AspectEngine::new()),
+            Arc::new(axe::aspects::engine::AspectEngine::new()),
         )),
-        wallet_service: Arc::new(raisfast::services::wallet::WalletServiceImpl::new(
-            Arc::new(raisfast::aspects::engine::AspectEngine::new()),
-            Arc::new(pool.clone()),
-        )),
-        product_category_service: Arc::new(
-            raisfast::services::product_category::ProductCategoryServiceImpl::new(
-                Arc::new(raisfast::aspects::engine::AspectEngine::new()),
-                Arc::new(pool.clone()),
-            ),
-        ),
-        product_service: Arc::new(raisfast::services::product::ProductServiceImpl::new(
-            Arc::new(raisfast::aspects::engine::AspectEngine::new()),
-            Arc::new(pool.clone()),
-            Arc::new(
-                raisfast::services::options::OptionsService::new(Arc::new(pool.clone()), false)
-                    .await,
-            ),
-        )),
-        order_service: Arc::new(raisfast::services::order::OrderServiceImpl::new(
-            Arc::new(raisfast::aspects::engine::AspectEngine::new()),
-            Arc::new(pool.clone()),
-            Arc::new(
-                raisfast::services::options::OptionsService::new(Arc::new(pool.clone()), false)
-                    .await,
-            ),
-        )),
-        cart_service: Arc::new(raisfast::services::cart::CartServiceImpl::new(Arc::new(
-            pool.clone(),
-        ))),
-        product_variant_service: Arc::new(
-            raisfast::services::product_variant::ProductVariantServiceImpl::new(Arc::new(
-                pool.clone(),
-            )),
-        ),
-        product_comment_service: Arc::new(
-            raisfast::services::product_comment::ProductCommentServiceImpl::new(Arc::new(
-                pool.clone(),
-            )),
-        ),
-        coupon_service: Arc::new(raisfast::services::coupon::CouponServiceImpl::new(
+
+        user_address_service: Arc::new(axe::services::user_address::UserAddressServiceImpl::new(
             Arc::new(pool.clone()),
         )),
-        shipping_template_service: Arc::new(
-            raisfast::services::shipping_template::ShippingTemplateServiceImpl::new(Arc::new(
-                pool.clone(),
-            )),
-        ),
-        user_address_service: Arc::new(
-            raisfast::services::user_address::UserAddressServiceImpl::new(Arc::new(pool.clone())),
-        ),
-        payment_service: Arc::new(raisfast::services::payment::PaymentServiceImpl::new(
-            config.clone(),
-            Arc::new(raisfast::aspects::engine::AspectEngine::new()),
-            Arc::new(pool.clone()),
-        )),
-        user_service: Arc::new(raisfast::services::user::UserServiceImpl::new(Arc::new(
+
+        user_service: Arc::new(axe::services::user::UserServiceImpl::new(Arc::new(
             pool.clone(),
         ))),
         search: Arc::new(NoopSearchEngine),
-        content_type_registry: Arc::new(raisfast::content_type::ContentTypeRegistry::new()),
+        content_type_registry: Arc::new(axe::content_type::ContentTypeRegistry::new()),
         aspect_engine: {
-            let engine = raisfast::aspects::engine::AspectEngine::new();
-            let mut reg = raisfast::protocols::ProtocolRegistry::new();
-            reg.register(raisfast::protocols::ownable::OwnableProtocol);
-            reg.register(raisfast::protocols::timestampable::TimestampableProtocol);
+            let engine = axe::aspects::engine::AspectEngine::new();
+            let mut reg = axe::protocols::ProtocolRegistry::new();
+            reg.register(axe::protocols::ownable::OwnableProtocol);
+            reg.register(axe::protocols::timestampable::TimestampableProtocol);
             let reg = Arc::new(reg);
             reg.register_aspects_into(&engine);
             Arc::new(engine)
         },
         protocol_registry: Arc::new({
-            let mut reg = raisfast::protocols::ProtocolRegistry::new();
-            reg.register(raisfast::protocols::ownable::OwnableProtocol);
-            reg.register(raisfast::protocols::timestampable::TimestampableProtocol);
+            let mut reg = axe::protocols::ProtocolRegistry::new();
+            reg.register(axe::protocols::ownable::OwnableProtocol);
+            reg.register(axe::protocols::timestampable::TimestampableProtocol);
             reg
         }),
         options: Arc::new(
-            raisfast::services::options::OptionsService::new(Arc::new(pool.clone()), false).await,
+            axe::services::options::OptionsService::new(Arc::new(pool.clone()), false).await,
         ),
-        rbac: Arc::new(raisfast::services::rbac::RbacService::new(Arc::new(
+        rbac: Arc::new(axe::services::rbac::RbacService::new(Arc::new(
             pool.clone(),
         ))),
-        tenant: Arc::new(raisfast::services::tenant::TenantService::new(Arc::new(
+        tenant: Arc::new(axe::services::tenant::TenantService::new(Arc::new(
             pool.clone(),
         ))),
-        audit: Arc::new(raisfast::services::audit::AuditService::new(pool.clone())),
-        webhook: Arc::new(raisfast::webhook::WebhookService::new(pool.clone())),
-        workflow: Arc::new(raisfast::workflow::WorkflowService::new(pool.clone())),
-        storage: raisfast::storage::create_storage(&config).expect("failed to create storage"),
-        cache: Arc::new(raisfast::cache::MemoryCache::new()),
+        audit: Arc::new(axe::services::audit::AuditService::new(pool.clone())),
+        webhook: Arc::new(axe::webhook::WebhookService::new(pool.clone())),
+        workflow: Arc::new(axe::workflow::WorkflowService::new(pool.clone())),
+        storage: axe::storage::create_storage(&config).expect("failed to create storage"),
+        cache: Arc::new(axe::cache::MemoryCache::new()),
         cms_cache: Arc::new(dashmap::DashMap::new()),
-        oauth_registry: Arc::new(raisfast::oauth::OAuthProviderRegistry::default()),
-        email_sender: raisfast::notifier::build_email_sender(&config),
-        sms_sender: raisfast::notifier::build_sms_sender(&config),
+        oauth_registry: Arc::new(axe::oauth::OAuthProviderRegistry::default()),
+        email_sender: axe::notifier::build_email_sender(&config),
+        sms_sender: axe::notifier::build_sms_sender(&config),
         route_registry: Arc::new(Vec::new()),
-        services: raisfast::app::ServiceRegistry::new(),
+        services: axe::app::ServiceRegistry::new(),
     };
     let max_upload = state.config.max_upload_size;
 
@@ -308,49 +253,49 @@ async fn build_test_app(pool: raisfast::db::Pool) -> (axum::Router, AppState) {
                 .put(h_tenant::update_tenant)
                 .delete(h_tenant::delete_tenant),
         )
-        .route("/admin/audit", get(raisfast::handlers::audit::list))
-        .route("/admin/audit/{id}", get(raisfast::handlers::audit::get))
+        .route("/admin/audit", get(axe::handlers::audit::list))
+        .route("/admin/audit/{id}", get(axe::handlers::audit::get))
         .route(
             "/admin/webhooks",
-            get(raisfast::webhook::handler::list).post(raisfast::webhook::handler::create),
+            get(axe::webhook::handler::list).post(axe::webhook::handler::create),
         )
         .route(
             "/admin/webhooks/{id}",
-            get(raisfast::webhook::handler::get)
-                .put(raisfast::webhook::handler::update)
-                .delete(raisfast::webhook::handler::delete),
+            get(axe::webhook::handler::get)
+                .put(axe::webhook::handler::update)
+                .delete(axe::webhook::handler::delete),
         )
         .route(
             "/admin/workflows",
-            get(raisfast::workflow::handler::list).post(raisfast::workflow::handler::create),
+            get(axe::workflow::handler::list).post(axe::workflow::handler::create),
         )
         .route(
             "/admin/workflows/{id}",
-            get(raisfast::workflow::handler::get).delete(raisfast::workflow::handler::delete),
+            get(axe::workflow::handler::get).delete(axe::workflow::handler::delete),
         )
         .route(
             "/admin/workflows/{id}/start",
-            http_post(raisfast::workflow::handler::start),
+            http_post(axe::workflow::handler::start),
         )
         .route(
             "/admin/workflows/instances",
-            get(raisfast::workflow::handler::list_instances),
+            get(axe::workflow::handler::list_instances),
         )
         .route(
             "/admin/workflows/instances/{id}",
-            get(raisfast::workflow::handler::get_instance),
+            get(axe::workflow::handler::get_instance),
         )
         .route(
             "/admin/workflows/instances/{id}/execute",
-            http_post(raisfast::workflow::handler::execute_step),
+            http_post(axe::workflow::handler::execute_step),
         )
         .route(
             "/admin/workflows/instances/{id}/cancel",
-            http_post(raisfast::workflow::handler::cancel_instance),
+            http_post(axe::workflow::handler::cancel_instance),
         )
         .route(
             "/admin/workflows/instances/{id}/logs",
-            get(raisfast::workflow::handler::get_step_logs),
+            get(axe::workflow::handler::get_step_logs),
         )
         .route("/pages", get(h_page::list).post(h_page::create))
         .route(
@@ -376,180 +321,6 @@ async fn build_test_app(pool: raisfast::db::Pool) -> (axum::Router, AppState) {
             get(h_block::get_reusable)
                 .put(h_block::update_reusable)
                 .delete(h_block::delete_reusable),
-        )
-        .route("/products", get(h_product::list_active))
-        .route("/products/{slug}", get(h_product::get_product))
-        .route(
-            "/admin/products",
-            get(h_product::admin_list).post(h_product::admin_create),
-        )
-        .route("/admin/products/batch", http_post(h_product::admin_batch))
-        .route(
-            "/admin/products/{id}",
-            get(h_product::admin_get)
-                .put(h_product::admin_update)
-                .delete(h_product::admin_delete),
-        )
-        .route(
-            "/product-categories",
-            get(h_product_category::list).post(h_product_category::create),
-        )
-        .route(
-            "/product-categories/{id}",
-            get(h_product_category::get)
-                .put(h_product_category::update)
-                .delete(h_product_category::delete),
-        )
-        .route(
-            "/admin/product-categories",
-            get(h_product_category::admin_list).post(h_product_category::admin_create),
-        )
-        .route(
-            "/admin/product-categories/{id}",
-            put(h_product_category::admin_update).delete(h_product_category::admin_delete),
-        )
-        .route(
-            "/admin/product-categories/batch",
-            http_post(h_product_category::admin_batch),
-        )
-        .route(
-            "/orders",
-            get(h_order::list_orders).post(h_order::create_order),
-        )
-        .route(
-            "/orders/{id}",
-            get(h_order::get_order).put(h_order::cancel_order_handler),
-        )
-        .route("/orders/{id}/confirm", http_post(h_order::confirm_receipt))
-        .route("/admin/orders", get(h_order::admin_list))
-        .route("/admin/orders/{id}", get(h_order::admin_get))
-        .route("/admin/orders/{id}/pay", http_post(h_order::admin_pay))
-        .route("/admin/orders/{id}/ship", http_post(h_order::admin_ship))
-        .route(
-            "/admin/orders/{id}/cancel",
-            http_post(h_order::admin_cancel),
-        )
-        .route(
-            "/admin/orders/{id}/refund",
-            http_post(h_order::admin_refund),
-        )
-        .route(
-            "/admin/orders/{id}/remark",
-            put(h_order::admin_update_remark),
-        )
-        .route("/admin/orders/stats", get(h_order::admin_stats))
-        .route("/wallets", get(h_wallet::list_wallets))
-        .route("/wallets/{currency}", get(h_wallet::get_wallet))
-        .route(
-            "/wallets/transactions",
-            get(h_wallet::list_all_transactions),
-        )
-        .route(
-            "/wallets/{currency}/transactions",
-            get(h_wallet::list_transactions),
-        )
-        .route("/admin/wallets", get(h_wallet::list_all_wallets))
-        .route(
-            "/admin/wallets/transactions",
-            get(h_wallet::list_all_transactions_admin),
-        )
-        .route("/admin/wallets/credit", http_post(h_wallet::admin_credit))
-        .route("/admin/wallets/debit", http_post(h_wallet::admin_debit))
-        .route(
-            "/admin/wallets/{user_id}/transactions",
-            get(h_wallet::list_user_all_transactions),
-        )
-        .route(
-            "/admin/wallets/{user_id}/{currency}/transactions",
-            get(h_wallet::list_user_transactions),
-        )
-        .route(
-            "/admin/wallets/{tx_id}/reversal",
-            http_post(h_wallet::admin_reversal),
-        )
-        .route(
-            "/payment/channels/available",
-            get(h_payment::list_available_channels_handler),
-        )
-        .route(
-            "/payment/orders",
-            get(h_payment::list_user_orders).post(h_payment::create_payment_order_handler),
-        )
-        .route(
-            "/payment/orders/{id}",
-            get(h_payment::get_payment_order_handler),
-        )
-        .route(
-            "/payment/orders/{id}/cancel",
-            http_post(h_payment::cancel_payment_order_handler),
-        )
-        .route(
-            "/payment/orders/{id}/transactions",
-            get(h_payment::list_order_transactions),
-        )
-        .route(
-            "/payment/orders/{id}/refunds",
-            get(h_payment::list_order_refunds),
-        )
-        .route(
-            "/payment/callback/{channel_id}",
-            http_post(h_payment::handle_callback).layer(from_fn(payment_callback_rate_limit)),
-        )
-        .route(
-            "/admin/payment/channels",
-            get(h_payment::admin_list_channels).post(h_payment::admin_create_channel),
-        )
-        .route(
-            "/admin/payment/channels/{id}",
-            get(h_payment::admin_get_channel)
-                .put(h_payment::admin_update_channel)
-                .delete(h_payment::admin_delete_channel),
-        )
-        .route("/admin/payment/orders", get(h_payment::admin_list_orders))
-        .route(
-            "/admin/payment/orders/{id}",
-            get(h_payment::admin_get_order),
-        )
-        .route(
-            "/admin/payment/orders/{id}/refund",
-            http_post(h_payment::admin_refund_order),
-        )
-        .route(
-            "/admin/payment/transactions",
-            get(h_payment::admin_list_transactions),
-        )
-        .route("/admin/payment/refunds", get(h_payment::admin_list_refunds))
-        // ── Cart ──
-        .route("/cart", http_post(h_cart::add_to_cart))
-        .route("/cart", get(h_cart::list_cart))
-        .route("/cart/{id}", put(h_cart::update_cart_item))
-        .route("/cart/{id}", delete(h_cart::remove_from_cart))
-        .route("/cart", delete(h_cart::clear_cart))
-        .route("/cart/checkout", http_post(h_cart::checkout))
-        // ── Product Variants ──
-        .route(
-            "/products/{product_id}/variants",
-            get(h_product_variant::list_by_product),
-        )
-        .route(
-            "/admin/product-variants",
-            http_post(h_product_variant::admin_create),
-        )
-        .route(
-            "/admin/product-variants/{id}",
-            put(h_product_variant::admin_update),
-        )
-        .route(
-            "/admin/product-variants/{id}",
-            delete(h_product_variant::admin_delete),
-        )
-        // ── User Addresses ──
-        .route("/user/addresses", get(h_user_address::list_addresses))
-        .route("/user/addresses", http_post(h_user_address::create_address))
-        .route("/user/addresses/{id}", put(h_user_address::update_address))
-        .route(
-            "/user/addresses/{id}",
-            delete(h_user_address::delete_address),
         )
         .layer(from_fn(global_rate_limit))
         .layer(axum::Extension(RateLimiterSet::new_default()));
@@ -636,13 +407,9 @@ pub(crate) fn delete_auth(path: &str, token: &str) -> Request<Body> {
         .unwrap()
 }
 
-pub(crate) fn make_token(
-    _user_id: &str,
-    iid: i64,
-    role: raisfast::models::user::UserRole,
-) -> String {
-    raisfast::services::auth::generate_access_token_for_test(
-        raisfast::types::snowflake_id::SnowflakeId(iid),
+pub(crate) fn make_token(_user_id: &str, iid: i64, role: axe::models::user::UserRole) -> String {
+    axe::services::auth::generate_access_token_for_test(
+        axe::types::snowflake_id::SnowflakeId(iid),
         role,
     )
 }
@@ -679,21 +446,21 @@ pub(crate) async fn register_and_login(
     )
 }
 
-pub(crate) async fn create_admin(pool: &raisfast::db::Pool) -> (i64, String) {
-    let hash = raisfast::services::auth::hash_password("AdminPass123!").unwrap();
+pub(crate) async fn create_admin(pool: &axe::db::Pool) -> (i64, String) {
+    let hash = axe::services::auth::hash_password("AdminPass123!").unwrap();
     let sql = "INSERT INTO users (username, role, status, registered_via) VALUES ('testadmin', 'admin', 'active', 'email') RETURNING id";
     let int_id: i64 = sqlx::query_scalar(sql).fetch_one(pool).await.unwrap();
     let cred_data = serde_json::json!({"password_hash": hash}).to_string();
-    let cred_id = raisfast::utils::id::new_id();
-    let cred_now = raisfast::utils::tz::now_utc();
+    let cred_id = axe::utils::id::new_id();
+    let cred_now = axe::utils::tz::now_utc();
     let cred_sql = format!(
         "INSERT INTO user_credentials (id, user_id, auth_type, identifier, credential_data, verified, created_at, updated_at) VALUES ({}, {}, 'email', {}, {}, 1, {}, {})",
-        raisfast::db::Driver::ph(1),
-        raisfast::db::Driver::ph(2),
-        raisfast::db::Driver::ph(3),
-        raisfast::db::Driver::ph(4),
-        raisfast::db::Driver::ph(5),
-        raisfast::db::Driver::ph(6)
+        axe::db::Driver::ph(1),
+        axe::db::Driver::ph(2),
+        axe::db::Driver::ph(3),
+        axe::db::Driver::ph(4),
+        axe::db::Driver::ph(5),
+        axe::db::Driver::ph(6)
     );
     sqlx::query(&cred_sql)
         .bind(cred_id)
@@ -708,21 +475,21 @@ pub(crate) async fn create_admin(pool: &raisfast::db::Pool) -> (i64, String) {
     (int_id, int_id.to_string())
 }
 
-pub(crate) async fn create_author(pool: &raisfast::db::Pool) -> (i64, String) {
-    let hash = raisfast::services::auth::hash_password("AuthorPass123!").unwrap();
+pub(crate) async fn create_author(pool: &axe::db::Pool) -> (i64, String) {
+    let hash = axe::services::auth::hash_password("AuthorPass123!").unwrap();
     let sql = "INSERT INTO users (username, role, status, registered_via) VALUES ('testauthor', 'author', 'active', 'email') RETURNING id";
     let int_id: i64 = sqlx::query_scalar(sql).fetch_one(pool).await.unwrap();
     let cred_data = serde_json::json!({"password_hash": hash}).to_string();
-    let cred_id = raisfast::utils::id::new_id();
-    let cred_now = raisfast::utils::tz::now_utc();
+    let cred_id = axe::utils::id::new_id();
+    let cred_now = axe::utils::tz::now_utc();
     let cred_sql = format!(
         "INSERT INTO user_credentials (id, user_id, auth_type, identifier, credential_data, verified, created_at, updated_at) VALUES ({}, {}, 'email', {}, {}, 1, {}, {})",
-        raisfast::db::Driver::ph(1),
-        raisfast::db::Driver::ph(2),
-        raisfast::db::Driver::ph(3),
-        raisfast::db::Driver::ph(4),
-        raisfast::db::Driver::ph(5),
-        raisfast::db::Driver::ph(6)
+        axe::db::Driver::ph(1),
+        axe::db::Driver::ph(2),
+        axe::db::Driver::ph(3),
+        axe::db::Driver::ph(4),
+        axe::db::Driver::ph(5),
+        axe::db::Driver::ph(6)
     );
     sqlx::query(&cred_sql)
         .bind(cred_id)
@@ -756,8 +523,7 @@ mod api_token;
 mod audit;
 #[path = "api/auth.rs"]
 mod auth;
-#[path = "api/cart.rs"]
-mod cart;
+
 #[path = "api/category.rs"]
 mod category;
 #[path = "api/comment.rs"]
@@ -770,22 +536,15 @@ mod health;
 mod media;
 #[path = "api/options.rs"]
 mod options;
-#[path = "api/order.rs"]
-mod order;
+
 #[path = "api/page.rs"]
 mod page;
-#[path = "api/payment.rs"]
-mod payment;
+
 #[path = "api/plugin.rs"]
 mod plugin;
 #[path = "api/post.rs"]
 mod post;
-#[path = "api/product.rs"]
-mod product;
-#[path = "api/product_category.rs"]
-mod product_category;
-#[path = "api/product_variant.rs"]
-mod product_variant;
+
 #[path = "api/rbac.rs"]
 mod rbac;
 #[path = "api/reusable_block.rs"]
@@ -806,8 +565,7 @@ mod tenant_e2e;
 mod user;
 #[path = "api/user_address.rs"]
 mod user_address;
-#[path = "api/wallet.rs"]
-mod wallet;
+
 #[path = "api/webhook.rs"]
 mod webhook;
 #[path = "api/workflow.rs"]

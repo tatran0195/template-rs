@@ -1,5 +1,5 @@
 # ============================================================
-# RaisFast — fly.io production Dockerfile
+# axe — fly.io production Dockerfile
 # Usage:
 #   1. Cross-compile locally:
 #      cargo build --release --no-default-features \
@@ -25,7 +25,7 @@ RUN groupadd --gid 1000 app \
 
 WORKDIR /app
 
-COPY --chmod=755 target/x86_64-unknown-linux-musl/release/raisfast /app/raisfast
+COPY --chmod=755 target/x86_64-unknown-linux-musl/release/axe /app/axe
 COPY adminui/ /app/adminui/
 
 RUN mkdir -p /app/storage/db /app/storage/uploads /app/extensions/content_types /app/extensions/plugins \
@@ -37,4 +37,4 @@ EXPOSE 9898
 
 VOLUME ["/app/storage"]
 
-CMD ["/app/raisfast"]
+CMD ["/app/axe"]

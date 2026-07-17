@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use raisfast_derive::aspect_service;
+use axe_derive::aspect_service;
 
 use crate::aspects::engine::AspectEngine;
 use crate::aspects::slug_aspect;

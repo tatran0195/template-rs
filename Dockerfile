@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY Cargo.toml Cargo.lock ./
-COPY raisfast-derive/ raisfast-derive/
+COPY axe-derive/ axe-derive/
 RUN mkdir src && echo "fn main() {}" > src/main.rs
 RUN cargo build --release --features "db-sqlite plugin-all search-tantivy storage-s3" || true
 RUN rm -rf src
@@ -31,7 +31,7 @@ RUN groupadd --gid 1000 app \
 
 WORKDIR /app
 
-COPY --from=builder /app/target/release/raisfast /app/raisfast
+COPY --from=builder /app/target/release/axe /app/axe
 
 RUN mkdir -p /app/data /app/logs /app/uploads /app/plugins-data \
     && chown -R app:app /app/data /app/logs /app/uploads /app/plugins-data
@@ -46,4 +46,4 @@ EXPOSE 9898
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:9898/healthz || exit 1
 
-CMD ["./raisfast"]
+CMD ["./axe"]

@@ -1,52 +1,51 @@
-//! `raisfast route` CLI subcommand.
+//! `axe route` CLI subcommand.
 //!
 //! Inspect registered routes without starting the HTTP server.
 
-use raisfast::config::app::AppConfig;
-use raisfast::server::RouteRegistry;
+use axe::config::app::AppConfig;
+use axe::server::RouteRegistry;
 
 fn collect_routes(config: &AppConfig) -> Vec<RouteInfo> {
     let mut registry = RouteRegistry::default();
-    let _ = raisfast::handlers::auth::routes(&mut registry, config);
-    let _ = raisfast::handlers::oauth::routes(&mut registry, config);
-    let _ = raisfast::handlers::api_token::routes(&mut registry, config);
-    let _ = raisfast::handlers::user::routes(&mut registry, config);
-    let _ = raisfast::handlers::wallet::routes(&mut registry, config);
-    let _ = raisfast::handlers::currencies::routes(&mut registry, config);
+    let _ = axe::handlers::auth::routes(&mut registry, config);
+    let _ = axe::handlers::oauth::routes(&mut registry, config);
+    let _ = axe::handlers::api_token::routes(&mut registry, config);
+    let _ = axe::handlers::user::routes(&mut registry, config);
+
 
     if config.builtins.blog {
-        let _ = raisfast::handlers::category::routes(&mut registry, config);
-        let _ = raisfast::handlers::tag::routes(&mut registry, config);
-        let _ = raisfast::handlers::post::routes(&mut registry, config);
-        let _ = raisfast::handlers::post::admin_routes(&mut registry, config);
-        let _ = raisfast::handlers::comment::routes(&mut registry, config);
+        let _ = axe::handlers::category::routes(&mut registry, config);
+        let _ = axe::handlers::tag::routes(&mut registry, config);
+        let _ = axe::handlers::post::routes(&mut registry, config);
+        let _ = axe::handlers::post::admin_routes(&mut registry, config);
+        let _ = axe::handlers::comment::routes(&mut registry, config);
     }
 
     if config.builtins.pages {
-        let _ = raisfast::handlers::page::routes(&mut registry, config);
-        let _ = raisfast::handlers::reusable_block::routes(&mut registry, config);
+        let _ = axe::handlers::page::routes(&mut registry, config);
+        let _ = axe::handlers::reusable_block::routes(&mut registry, config);
     }
 
     if config.builtins.media {
-        let _ = raisfast::handlers::media::routes(0, &mut registry, config);
+        let _ = axe::handlers::media::routes(0, &mut registry, config);
     }
 
-    let _ = raisfast::handlers::sse::routes(&mut registry, config);
-    let _ = raisfast::handlers::ws::routes(&mut registry, config);
-    let _ = raisfast::graphql::handler::routes(&mut registry, config);
+    let _ = axe::handlers::sse::routes(&mut registry, config);
+    let _ = axe::handlers::ws::routes(&mut registry, config);
+    let _ = axe::graphql::handler::routes(&mut registry, config);
 
-    let _ = raisfast::handlers::plugin::routes(&mut registry, config);
-    let _ = raisfast::handlers::cron::routes(&mut registry, config);
-    let _ = raisfast::handlers::rbac::routes(&mut registry, config);
-    let _ = raisfast::handlers::stats::routes(&mut registry, config);
-    let _ = raisfast::handlers::options::routes(&mut registry, config);
-    let _ = raisfast::handlers::tenant::routes(&mut registry, config);
-    let _ = raisfast::handlers::audit::routes(&mut registry, config);
-    let _ = raisfast::webhook::handler::routes(&mut registry, config);
-    let _ = raisfast::content_type::handler::routes(&mut registry, config);
+    let _ = axe::handlers::plugin::routes(&mut registry, config);
+    let _ = axe::handlers::cron::routes(&mut registry, config);
+    let _ = axe::handlers::rbac::routes(&mut registry, config);
+    let _ = axe::handlers::stats::routes(&mut registry, config);
+    let _ = axe::handlers::options::routes(&mut registry, config);
+    let _ = axe::handlers::tenant::routes(&mut registry, config);
+    let _ = axe::handlers::audit::routes(&mut registry, config);
+    let _ = axe::webhook::handler::routes(&mut registry, config);
+    let _ = axe::content_type::handler::routes(&mut registry, config);
 
     if config.builtins.workflow {
-        let _ = raisfast::workflow::handler::routes(&mut registry, config);
+        let _ = axe::workflow::handler::routes(&mut registry, config);
     }
 
     let mut routes = registry.into_vec();
@@ -276,4 +275,4 @@ fn show_stats(routes: &[RouteInfo]) {
     println!("  Modules:              {}", sources.len());
 }
 
-use raisfast::server::RouteInfo;
+use axe::server::RouteInfo;

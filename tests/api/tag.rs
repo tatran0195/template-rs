@@ -3,7 +3,7 @@ use super::*;
 async fn setup() -> (axum::Router, AppState, String) {
     let (mut app, state) = test_app().await;
     let (int_id, id) = create_author(&state.pool).await;
-    let tok = make_token(&id, int_id, raisfast::models::user::UserRole::Author);
+    let tok = make_token(&id, int_id, axe::models::user::UserRole::Author);
     let _: (StatusCode, Value) = send(&mut app, get_req("/api/v1/tags")).await;
     (app, state, tok)
 }

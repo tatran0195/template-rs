@@ -40,7 +40,7 @@ pub struct Permission {
 
 /// List all roles
 pub async fn list_roles(pool: &crate::db::Pool) -> AppResult<Vec<Role>> {
-    raisfast_derive::check_schema!(
+    axe_derive::check_schema!(
         "roles",
         "id",
         "name",
@@ -49,20 +49,20 @@ pub async fn list_roles(pool: &crate::db::Pool) -> AppResult<Vec<Role>> {
         "created_at",
         "updated_at"
     );
-    let roles = raisfast_derive::crud_list!(pool, "roles", Role, order_by: "name")?;
+    let roles = axe_derive::crud_list!(pool, "roles", Role, order_by: "name")?;
     Ok(roles)
 }
 
 /// Find role by id
 pub async fn find_role_by_id(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<Option<Role>> {
-    let role = raisfast_derive::crud_find!(pool, "roles", Role, where: ("id", id))?;
+    let role = axe_derive::crud_find!(pool, "roles", Role, where: ("id", id))?;
     Ok(role)
 }
 
 /// Find role ID by role name (returns integer PK)
 pub async fn find_role_id_by_name(pool: &crate::db::Pool, name: &str) -> AppResult<Option<i64>> {
     let sql = format!("SELECT id FROM roles WHERE name = {}", Driver::ph(1));
-    Ok(raisfast_derive::crud_scalar!(
+    Ok(axe_derive::crud_scalar!(
         pool,
         i64,
         &sql,
@@ -81,7 +81,7 @@ pub async fn create_role(
         crate::utils::id::new_snowflake_id(),
         crate::utils::tz::now_utc(),
     );
-    raisfast_derive::crud_insert!(
+    axe_derive::crud_insert!(
         pool,
         "roles",
         [
@@ -108,7 +108,7 @@ pub async fn update_role(
     description: Option<&str>,
 ) -> AppResult<Role> {
     let now = crate::utils::tz::now_utc();
-    raisfast_derive::crud_update!(
+    axe_derive::crud_update!(
         pool, "roles",
         bind: ["updated_at" => now],
         optional: ["name" => name, "description" => description],
@@ -122,7 +122,7 @@ pub async fn update_role(
 
 /// Delete role
 pub async fn delete_role(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<()> {
-    raisfast_derive::crud_delete!(pool, "roles", where: ("id", id))?;
+    axe_derive::crud_delete!(pool, "roles", where: ("id", id))?;
     Ok(())
 }
 
@@ -131,7 +131,7 @@ pub async fn find_permissions_by_role_id(
     pool: &crate::db::Pool,
     role_id: SnowflakeId,
 ) -> AppResult<Vec<Permission>> {
-    raisfast_derive::check_schema!(
+    axe_derive::check_schema!(
         "permissions",
         "id",
         "role_id",
@@ -141,7 +141,7 @@ pub async fn find_permissions_by_role_id(
         "conditions",
         "created_at"
     );
-    let perms = raisfast_derive::crud_find_all!(pool, "permissions", Permission, where: ("role_id", role_id), order_by: "action")?;
+    let perms = axe_derive::crud_find_all!(pool, "permissions", Permission, where: ("role_id", role_id), order_by: "action")?;
     Ok(perms)
 }
 
@@ -150,7 +150,7 @@ pub async fn delete_permissions_by_role_id(
     pool: &crate::db::Pool,
     role_id: SnowflakeId,
 ) -> AppResult<()> {
-    raisfast_derive::crud_delete!(pool, "permissions", where: ("role_id", role_id))?;
+    axe_derive::crud_delete!(pool, "permissions", where: ("role_id", role_id))?;
     Ok(())
 }
 
@@ -160,7 +160,7 @@ pub async fn insert_permission(pool: &crate::db::Pool, cmd: &CreatePermissionCmd
         crate::utils::id::new_snowflake_id(),
         crate::utils::tz::now_utc(),
     );
-    raisfast_derive::crud_insert!(pool, "permissions", [
+    axe_derive::crud_insert!(pool, "permissions", [
         "id" => id,
         "role_id" => cmd.role_id,
         "action" => &cmd.action,

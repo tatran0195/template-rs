@@ -31,8 +31,8 @@ CONSTANTS="$ROOT_DIR/src/constants.rs"
 # 从 js_host.rs 提取 host.set("functionName", ...) 的函数名
 js_host_fns=$(grep -oE 'host\.set\("([a-zA-Z]+)"' "$JS_HOST" | sed 's/host\.set("//;s/"//' | sort -u)
 
-# 从 TS SDK 提取 RaisFastHost.functionName 调用
-ts_sdk_fns=$(grep -oE 'RaisFastHost\.([a-zA-Z]+)\(' "$TS_SDK" | sed 's/RaisFastHost\.//;s/(//' | sort -u)
+# 从 TS SDK 提取 axeHost.functionName 调用
+ts_sdk_fns=$(grep -oE 'axeHost\.([a-zA-Z]+)\(' "$TS_SDK" | sed 's/axeHost\.//;s/(//' | sort -u)
 
 # 从 constants.rs 提取全局名
 global_name=$(grep 'PLUGIN_HOST_GLOBAL' "$CONSTANTS" | grep -oE '"([^"]+)"' | sed 's/"//g')

@@ -7,7 +7,7 @@ base_url = "http://localhost:9898"
 
 [database]
 driver = "sqlite"
-name = "raisfast.db"
+name = "axe.db"
 
 [jwt]
 secret = "change-me-in-production"

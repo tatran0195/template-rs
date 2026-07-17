@@ -9,8 +9,8 @@
 //! and `max_lifetime`, ensuring no infinite waits under high concurrency while avoiding connection leaks.
 //!
 //! On first startup, automatically executes `SCHEMA_SQL` to create tables + seed data (idempotent).
-//! Incremental migrations must be run manually via `raisfast db migrate`.
-//! Rollback is available via `raisfast db rollback`.
+//! Incremental migrations must be run manually via `axe db migrate`.
+//! Rollback is available via `axe db rollback`.
 
 use crate::db::DbDriver;
 use std::sync::OnceLock;

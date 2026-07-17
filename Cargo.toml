@@ -1,15 +1,15 @@
 [workspace]
-members = [".", "raisfast-derive"]
+members = [".", "axe-derive"]
 resolver = "3"
 
 [package]
-name = "raisfast"
+name = "axe"
 version = "0.2.29"
 edition = "2024"
-default-run = "raisfast"
-repository = "https://github.com/raisfast/raisfast"
+default-run = "axe"
+repository = "https://github.com/axe/axe"
 description = "The fastest CMS, easiest to deploy. Rust-powered high-performance BaaS and headless CMS with built-in blog, ecommerce, wallet, payment and 4 plugin engines."
-homepage = "https://github.com/raisfast/raisfast"
+homepage = "https://github.com/axe/axe"
 license = "Apache-2.0"
 
 [features]
@@ -193,7 +193,7 @@ utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
 # TypeScript type generation
 ts-rs = { version = "12", optional = true, features = ["chrono-impl"] }
 inventory = "0.3.24"
-raisfast-derive = { version = "0.1.0", path = "raisfast-derive" }
+axe-derive = { version = "0.1.0", path = "axe-derive" }
 ferroid = { version = "2.0.0", features = ["snowflake", "atomic", "basic", "std", "alloc"] }
 
 [dev-dependencies]

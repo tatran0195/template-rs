@@ -33,7 +33,7 @@ pub struct Tag {
 
 pub async fn find_all(pool: &crate::db::Pool, tenant_id: Option<&str>) -> AppResult<Vec<Tag>> {
     let result: Vec<Tag> =
-        raisfast_derive::crud_list!(pool, "tags", Tag, order_by: "name", tenant: tenant_id)?;
+        axe_derive::crud_list!(pool, "tags", Tag, order_by: "name", tenant: tenant_id)?;
     Ok(result)
 }
 
@@ -43,7 +43,7 @@ pub async fn find_paginated(
     page: i64,
     page_size: i64,
 ) -> AppResult<(Vec<Tag>, i64)> {
-    let result = raisfast_derive::crud_query_paged!(
+    let result = axe_derive::crud_query_paged!(
         pool, Tag,
         table: "tags",
         order_by: "name",
@@ -60,7 +60,7 @@ pub async fn find_by_id(
     tenant_id: Option<&str>,
 ) -> AppResult<Tag> {
     let result: Tag =
-        raisfast_derive::crud_find_one!(pool, "tags", Tag, where: ("id", id), tenant: tenant_id)?;
+        axe_derive::crud_find_one!(pool, "tags", Tag, where: ("id", id), tenant: tenant_id)?;
     Ok(result)
 }
 
@@ -76,7 +76,7 @@ pub async fn create(
         crate::utils::tz::now_utc(),
     );
 
-    raisfast_derive::crud_insert!(
+    axe_derive::crud_insert!(
         pool,
         "tags",
         [
@@ -102,7 +102,7 @@ pub async fn update(
     tenant_id: Option<&str>,
 ) -> AppResult<Tag> {
     let now = crate::utils::tz::now_utc();
-    let result = raisfast_derive::crud_update!(pool, "tags",
+    let result = axe_derive::crud_update!(pool, "tags",
         bind: ["name" => name, "slug" => slug, "updated_at" => &now],
         where: ("id", id),
         tenant: tenant_id
@@ -120,7 +120,7 @@ pub async fn delete(
     if count > 0 {
         return Err(AppError::Conflict("tag_in_use".into()));
     }
-    let result = raisfast_derive::crud_delete!(pool, "tags", where: ("id", id), tenant: tenant_id)?;
+    let result = axe_derive::crud_delete!(pool, "tags", where: ("id", id), tenant: tenant_id)?;
     AppError::expect_affected(&result, "tag")
 }
 
@@ -198,7 +198,7 @@ mod tests {
         let tag = create(&pool, "rust", "rust", None, None).await.unwrap();
 
         let id = crate::utils::id::new_snowflake_id();
-        raisfast_derive::crud_insert!(
+        axe_derive::crud_insert!(
             &pool,
             "taggings",
             ["id" => id, "tag_id" => tag.id.0, "taggable_type" => "post", "taggable_id" => 1i64],

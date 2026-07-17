@@ -65,7 +65,7 @@ pub async fn find_by_id(
     tenant_id: Option<&str>,
 ) -> AppResult<Option<Comment>> {
     Ok(
-        raisfast_derive::crud_find!(pool, "comments", Comment, where: ("id", id), tenant: tenant_id)?,
+        axe_derive::crud_find!(pool, "comments", Comment, where: ("id", id), tenant: tenant_id)?,
     )
 }
 
@@ -79,7 +79,7 @@ pub async fn create(
         crate::utils::tz::now_utc(),
     );
 
-    raisfast_derive::crud_insert!(
+    axe_derive::crud_insert!(
         pool,
         "comments",
         [
@@ -109,7 +109,7 @@ pub async fn find_approved_by_post(
     tenant_id: Option<&str>,
 ) -> AppResult<Vec<Comment>> {
     Ok(
-        raisfast_derive::crud_find_all!(pool, "comments", Comment, where: AND(("post_id", post_id), ("status", CommentStatus::Approved)), tenant: tenant_id, order_by: "created_at ASC")?,
+        axe_derive::crud_find_all!(pool, "comments", Comment, where: AND(("post_id", post_id), ("status", CommentStatus::Approved)), tenant: tenant_id, order_by: "created_at ASC")?,
     )
 }
 
@@ -120,7 +120,7 @@ pub async fn find_approved_by_post_paginated(
     page_size: i64,
     tenant_id: Option<&str>,
 ) -> AppResult<(Vec<Comment>, i64)> {
-    let result = raisfast_derive::crud_query_paged!(
+    let result = axe_derive::crud_query_paged!(
         pool, Comment,
         table: "comments",
         where: AND(("post_id", post_id), ("status", CommentStatus::Approved)),
@@ -137,7 +137,7 @@ pub async fn find_all_by_post(
     post_id: SnowflakeId,
     tenant_id: Option<&str>,
 ) -> AppResult<Vec<Comment>> {
-    raisfast_derive::crud_find_all!(pool, "comments", Comment, where: ("post_id", post_id), tenant: tenant_id, order_by: "created_at ASC").map_err(Into::into)
+    axe_derive::crud_find_all!(pool, "comments", Comment, where: ("post_id", post_id), tenant: tenant_id, order_by: "created_at ASC").map_err(Into::into)
 }
 
 #[cfg_attr(feature = "export-types", derive(TS))]
@@ -193,7 +193,7 @@ pub async fn find_all_paginated(
     page_size: i64,
     tenant_id: Option<&str>,
 ) -> AppResult<(Vec<AdminCommentRow>, i64)> {
-    let (rows, total) = raisfast_derive::crud_join_paged!(
+    let (rows, total) = axe_derive::crud_join_paged!(
         pool, AdminCommentRowDb,
         select: ["c.id", "c.post_id", "p.title AS post_title", "c.created_by", "c.nickname", "c.email", "c.content", "c.parent_id", "c.status", "c.created_at"],
         from: "comments c",
@@ -214,7 +214,7 @@ pub async fn update_status(
     tenant_id: Option<&str>,
 ) -> AppResult<()> {
     let now = crate::utils::tz::now_utc();
-    let result = raisfast_derive::crud_update!(pool, "comments",
+    let result = axe_derive::crud_update!(pool, "comments",
         bind: ["status" => status, "updated_at" => &now],
         where: ("id", id),
         tenant: tenant_id
@@ -229,7 +229,7 @@ pub async fn delete(
     tenant_id: Option<&str>,
 ) -> AppResult<()> {
     let result =
-        raisfast_derive::crud_delete!(pool, "comments", where: ("id", id), tenant: tenant_id)?;
+        axe_derive::crud_delete!(pool, "comments", where: ("id", id), tenant: tenant_id)?;
     AppError::expect_affected(&result, "comment")
 }
 

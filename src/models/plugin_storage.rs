@@ -37,7 +37,7 @@ pub async fn get(pool: &Pool, plugin_id: &str, key: &str) -> AppResult<Option<St
             if let Some(exp) = &r.expires_at {
                 let now = crate::utils::tz::now_utc();
                 if exp < &now {
-                    let _ = raisfast_derive::crud_delete!(
+                    let _ = axe_derive::crud_delete!(
                         pool, "plugin_storage", where: AND(("plugin_id", plugin_id), ("storage_key", key))
                     );
                     return Ok(None);
@@ -64,7 +64,7 @@ pub async fn set(
     });
     let now = crate::utils::tz::now_utc();
 
-    raisfast_derive::crud_upsert!(
+    axe_derive::crud_upsert!(
         pool, "plugin_storage",
         key: ["plugin_id", "storage_key"],
         bind: ["plugin_id" => plugin_id, "storage_key" => key, "value" => value, "expires_at" => expires_at, "updated_at" => now],
@@ -76,7 +76,7 @@ pub async fn set(
 
 /// Delete a specific key for a plugin
 pub async fn delete(pool: &Pool, plugin_id: &str, key: &str) -> AppResult<()> {
-    raisfast_derive::crud_delete!(
+    axe_derive::crud_delete!(
         pool,
         "plugin_storage",
         where: AND(("plugin_id", plugin_id), ("storage_key", key))
@@ -86,7 +86,7 @@ pub async fn delete(pool: &Pool, plugin_id: &str, key: &str) -> AppResult<()> {
 
 /// Delete all data for a plugin
 pub async fn delete_all(pool: &Pool, plugin_id: &str) -> AppResult<()> {
-    raisfast_derive::crud_delete!(pool, "plugin_storage", where: ("plugin_id", plugin_id))?;
+    axe_derive::crud_delete!(pool, "plugin_storage", where: ("plugin_id", plugin_id))?;
     Ok(())
 }
 

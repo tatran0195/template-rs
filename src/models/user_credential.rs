@@ -55,7 +55,7 @@ pub async fn find_by_auth_type_and_identifier(
     auth_type: AuthType,
     identifier: &str,
 ) -> AppResult<Option<UserCredential>> {
-    let result: Option<UserCredential> = raisfast_derive::crud_find!(pool, "user_credentials", UserCredential, where: AND(("auth_type", auth_type), ("identifier", identifier)))?;
+    let result: Option<UserCredential> = axe_derive::crud_find!(pool, "user_credentials", UserCredential, where: AND(("auth_type", auth_type), ("identifier", identifier)))?;
     Ok(result)
 }
 
@@ -63,12 +63,12 @@ pub async fn find_by_user_id(
     pool: &crate::db::Pool,
     user_id: SnowflakeId,
 ) -> AppResult<Vec<UserCredential>> {
-    let result: Vec<UserCredential> = raisfast_derive::crud_find_all!(pool, "user_credentials", UserCredential, where: ("user_id", user_id))?;
+    let result: Vec<UserCredential> = axe_derive::crud_find_all!(pool, "user_credentials", UserCredential, where: ("user_id", user_id))?;
     Ok(result)
 }
 
 pub async fn count_by_user(pool: &crate::db::Pool, user_id: SnowflakeId) -> AppResult<i64> {
-    Ok(raisfast_derive::crud_count!(pool, "user_credentials", where: ("user_id", user_id))?)
+    Ok(axe_derive::crud_count!(pool, "user_credentials", where: ("user_id", user_id))?)
 }
 
 pub async fn create(
@@ -83,7 +83,7 @@ pub async fn create(
         crate::utils::id::new_snowflake_id(),
         crate::utils::tz::now_utc(),
     );
-    raisfast_derive::crud_insert!(pool, "user_credentials", [
+    axe_derive::crud_insert!(pool, "user_credentials", [
         "id" => id,
         "user_id" => user_id,
         "auth_type" => auth_type,
@@ -93,7 +93,7 @@ pub async fn create(
         "created_at" => now,
         "updated_at" => now
     ])?;
-    let cred = raisfast_derive::crud_find_one!(pool, "user_credentials", UserCredential, where: ("id", id))?;
+    let cred = axe_derive::crud_find_one!(pool, "user_credentials", UserCredential, where: ("id", id))?;
     Ok(cred)
 }
 
@@ -103,7 +103,7 @@ pub async fn update_credential_data(
     credential_data: &str,
 ) -> AppResult<()> {
     let now = crate::utils::tz::now_str();
-    raisfast_derive::crud_update!(pool, "user_credentials",
+    axe_derive::crud_update!(pool, "user_credentials",
         bind: ["credential_data" => credential_data, "updated_at" => &now],
         where: ("id", id)
     )?;
@@ -116,7 +116,7 @@ pub async fn update_verified(
     verified: bool,
 ) -> AppResult<()> {
     let now = crate::utils::tz::now_str();
-    raisfast_derive::crud_update!(pool, "user_credentials",
+    axe_derive::crud_update!(pool, "user_credentials",
         bind: ["verified" => if verified { 1 } else { 0 }, "updated_at" => &now],
         where: ("id", id)
     )?;
@@ -125,7 +125,7 @@ pub async fn update_verified(
 
 pub async fn delete_by_id(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<bool> {
     let result: crate::db::pool::DbQueryResult =
-        raisfast_derive::crud_delete!(pool, "user_credentials", where: ("id", id))?;
+        axe_derive::crud_delete!(pool, "user_credentials", where: ("id", id))?;
     Ok(result.rows_affected() > 0)
 }
 
@@ -134,7 +134,7 @@ pub async fn find_by_id(
     id: SnowflakeId,
 ) -> AppResult<Option<UserCredential>> {
     let result: Option<UserCredential> =
-        raisfast_derive::crud_find!(pool, "user_credentials", UserCredential, where: ("id", id))?;
+        axe_derive::crud_find!(pool, "user_credentials", UserCredential, where: ("id", id))?;
     Ok(result)
 }
 
@@ -150,7 +150,7 @@ pub async fn tx_create(
         crate::utils::id::new_snowflake_id(),
         crate::utils::tz::now_utc(),
     );
-    raisfast_derive::crud_insert!(&mut *tx, "user_credentials", [
+    axe_derive::crud_insert!(&mut *tx, "user_credentials", [
         "id" => id,
         "user_id" => user_id,
         "auth_type" => auth_type,
@@ -167,7 +167,7 @@ pub async fn tx_find_email_cred_by_user(
     tx: &mut crate::db::pool::DbConnection,
     user_id: SnowflakeId,
 ) -> AppResult<Option<(SnowflakeId, AuthType)>> {
-    Ok(raisfast_derive::crud_find!(
+    Ok(axe_derive::crud_find!(
         &mut *tx,
         "user_credentials",
         (SnowflakeId, AuthType),
@@ -181,7 +181,7 @@ pub async fn tx_update_credential_data(
     credential_data: &str,
 ) -> AppResult<()> {
     let now = crate::utils::tz::now_str();
-    raisfast_derive::crud_update!(&mut *tx, "user_credentials",
+    axe_derive::crud_update!(&mut *tx, "user_credentials",
         bind: ["credential_data" => credential_data, "updated_at" => now],
         where: ("id", id)
     )?;
@@ -193,7 +193,7 @@ pub async fn tx_verify_email_by_user(
     user_id: SnowflakeId,
 ) -> AppResult<()> {
     let now = crate::utils::tz::now_str();
-    raisfast_derive::crud_update!(&mut *tx, "user_credentials",
+    axe_derive::crud_update!(&mut *tx, "user_credentials",
         bind: ["verified" => 1i64, "updated_at" => now],
         where: AND(("user_id", user_id), ("auth_type", AuthType::Email))
     )?;

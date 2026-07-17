@@ -14,7 +14,7 @@ async fn feed_empty() {
 async fn feed_with_posts() {
     let (mut app, state) = test_app().await;
     let (int_id, id) = create_author(&state.pool).await;
-    let tok = make_token(&id, int_id, raisfast::models::user::UserRole::Author);
+    let tok = make_token(&id, int_id, axe::models::user::UserRole::Author);
     let _: (StatusCode, Value) = send(
         &mut app,
         post_json_auth(

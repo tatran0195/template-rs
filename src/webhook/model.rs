@@ -48,7 +48,7 @@ pub struct WebhookPayload {
 
 pub async fn insert(pool: &crate::db::Pool, sub: &WebhookSubscription) -> AppResult<()> {
     let now = crate::utils::tz::now_utc();
-    raisfast_derive::crud_insert!(
+    axe_derive::crud_insert!(
         pool,
         "webhook_subscriptions",
         [
@@ -72,7 +72,7 @@ pub async fn find_paginated(
     page: i64,
     page_size: i64,
 ) -> AppResult<(Vec<WebhookSubscription>, i64)> {
-    let result = raisfast_derive::crud_query_paged!(
+    let result = axe_derive::crud_query_paged!(
         pool, WebhookSubscription,
         table: "webhook_subscriptions",
         order_by: "created_at DESC",
@@ -84,13 +84,13 @@ pub async fn find_paginated(
 }
 
 pub async fn find_by_id(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<WebhookSubscription> {
-    let result: WebhookSubscription = raisfast_derive::crud_find_one!(pool, "webhook_subscriptions", WebhookSubscription, where: ("id", id))?;
+    let result: WebhookSubscription = axe_derive::crud_find_one!(pool, "webhook_subscriptions", WebhookSubscription, where: ("id", id))?;
     Ok(result)
 }
 
 pub async fn update(pool: &crate::db::Pool, sub: &WebhookSubscription) -> AppResult<()> {
     let now = crate::utils::tz::now_utc();
-    let result = raisfast_derive::crud_update!(
+    let result = axe_derive::crud_update!(
         pool, "webhook_subscriptions",
         bind: ["url" => &sub.url, "secret" => &sub.secret, "events" => &sub.events, "enabled" => sub.enabled, "description" => &sub.description, "updated_at" => now],
         where: ("id", sub.id)
@@ -100,7 +100,7 @@ pub async fn update(pool: &crate::db::Pool, sub: &WebhookSubscription) -> AppRes
 }
 
 pub async fn delete_by_id(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<()> {
-    let result = raisfast_derive::crud_delete!(pool, "webhook_subscriptions", where: ("id", id))?;
+    let result = axe_derive::crud_delete!(pool, "webhook_subscriptions", where: ("id", id))?;
     AppError::expect_affected(&result, "webhook_subscription")?;
     Ok(())
 }
@@ -110,6 +110,6 @@ pub async fn find_enabled_by_tenant(
     tenant_id: Option<&str>,
 ) -> AppResult<Vec<WebhookSubscription>> {
     Ok(
-        raisfast_derive::crud_find_all!(pool, "webhook_subscriptions", WebhookSubscription, where: ("enabled", true), tenant: tenant_id)?,
+        axe_derive::crud_find_all!(pool, "webhook_subscriptions", WebhookSubscription, where: ("enabled", true), tenant: tenant_id)?,
     )
 }

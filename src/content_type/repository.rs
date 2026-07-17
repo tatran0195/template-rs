@@ -533,7 +533,7 @@ impl ContentRepository {
             }
             let parsed_ids: Vec<i64> = ids.iter().filter_map(|s| s.parse().ok()).collect();
             let int_ids =
-                raisfast_derive::crud_resolve_ids!(&self.pool, target_table, &parsed_ids)?;
+                axe_derive::crud_resolve_ids!(&self.pool, target_table, &parsed_ids)?;
             for target_int_id in int_ids {
                 let jsql = crate::db::Driver::insert_ignore_sql(
                     through_table,
@@ -566,7 +566,7 @@ impl ContentRepository {
             }
             let parsed_ids: Vec<i64> = ids.iter().filter_map(|s| s.parse().ok()).collect();
             let int_ids =
-                raisfast_derive::crud_resolve_ids!(&self.pool, target_table, &parsed_ids)?;
+                axe_derive::crud_resolve_ids!(&self.pool, target_table, &parsed_ids)?;
             let usql = format!(
                 "UPDATE {target_table} SET {fk_col} = {} WHERE {COL_ID} = {}",
                 crate::db::Driver::ph(1),
@@ -824,7 +824,7 @@ impl ContentRepository {
             }
             let parsed_ids: Vec<i64> = ids.iter().filter_map(|s| s.parse().ok()).collect();
             let int_ids =
-                raisfast_derive::crud_resolve_ids!(&self.pool, target_table, &parsed_ids)?;
+                axe_derive::crud_resolve_ids!(&self.pool, target_table, &parsed_ids)?;
             for target_int_id in int_ids {
                 let jsql = crate::db::Driver::insert_ignore_sql(
                     through_table,
@@ -869,7 +869,7 @@ impl ContentRepository {
             }
             let parsed_ids: Vec<i64> = ids.iter().filter_map(|s| s.parse().ok()).collect();
             let int_ids =
-                raisfast_derive::crud_resolve_ids!(&self.pool, target_table, &parsed_ids)?;
+                axe_derive::crud_resolve_ids!(&self.pool, target_table, &parsed_ids)?;
             let usql = format!(
                 "UPDATE {target_table} SET {fk_col} = {} WHERE {COL_ID} = {}",
                 crate::db::Driver::ph(1),
@@ -1512,7 +1512,7 @@ pub(crate) async fn find_existing_id(
     target_table: &str,
     id: SnowflakeId,
 ) -> Result<Option<i64>, AppError> {
-    Ok(raisfast_derive::crud_resolve_id!(pool, target_table, *id)?)
+    Ok(axe_derive::crud_resolve_id!(pool, target_table, *id)?)
 }
 
 /// Generate SQL and column index for querying table column names

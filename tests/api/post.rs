@@ -16,7 +16,7 @@ async fn setup() -> Ctx {
     let tok = make_token(
         &author_id,
         author_int_id,
-        raisfast::models::user::UserRole::Author,
+        axe::models::user::UserRole::Author,
     );
 
     let (_, cb): (StatusCode, Value) = send(
@@ -438,11 +438,7 @@ async fn admin_can_update_others_post() {
     let mut c = setup().await;
     let slug = create_published_post(&mut c.app, &c.tok).await;
     let admin_id = create_admin(&c.state.pool).await;
-    let admin_tok = make_token(
-        &admin_id.1,
-        admin_id.0,
-        raisfast::models::user::UserRole::Admin,
-    );
+    let admin_tok = make_token(&admin_id.1, admin_id.0, axe::models::user::UserRole::Admin);
     let (status, body): (StatusCode, Value) = send(
         &mut c.app,
         put_json_auth(
@@ -491,11 +487,7 @@ async fn admin_can_delete_others() {
     let mut c = setup().await;
     let slug = create_published_post(&mut c.app, &c.tok).await;
     let admin_id = create_admin(&c.state.pool).await;
-    let admin_tok = make_token(
-        &admin_id.1,
-        admin_id.0,
-        raisfast::models::user::UserRole::Admin,
-    );
+    let admin_tok = make_token(&admin_id.1, admin_id.0, axe::models::user::UserRole::Admin);
     let (status, _): (StatusCode, Value) = send(
         &mut c.app,
         delete_auth(&format!("/api/v1/posts/{slug}"), &admin_tok),

@@ -80,7 +80,7 @@ pub async fn find_by_slug(
     tenant_id: Option<&str>,
 ) -> AppResult<Option<Post>> {
     let post =
-        raisfast_derive::crud_find!(pool, "posts", Post, where: ("slug", slug), tenant: tenant_id)?;
+        axe_derive::crud_find!(pool, "posts", Post, where: ("slug", slug), tenant: tenant_id)?;
     Ok(post)
 }
 
@@ -90,7 +90,7 @@ pub async fn find_by_id(
     tenant_id: Option<&str>,
 ) -> AppResult<Option<Post>> {
     let post =
-        raisfast_derive::crud_find!(pool, "posts", Post, where: ("id", id), tenant: tenant_id)?;
+        axe_derive::crud_find!(pool, "posts", Post, where: ("id", id), tenant: tenant_id)?;
     Ok(post)
 }
 
@@ -120,7 +120,7 @@ pub async fn create_tx(
     } else {
         None
     };
-    raisfast_derive::crud_insert!(
+    axe_derive::crud_insert!(
         &mut **tx,
         "posts",
         [
@@ -160,7 +160,7 @@ async fn find_by_id_tx(
     id: SnowflakeId,
     tenant_id: Option<&str>,
 ) -> AppResult<Option<Post>> {
-    raisfast_derive::crud_find!(&mut **tx, "posts", Post, where: ("id", id), tenant: tenant_id)
+    axe_derive::crud_find!(&mut **tx, "posts", Post, where: ("id", id), tenant: tenant_id)
         .map_err(Into::into)
 }
 
@@ -183,7 +183,7 @@ pub async fn update_tx(
 ) -> AppResult<Post> {
     let post_id = cmd.id;
     let existing =
-        raisfast_derive::crud_find_one!(&mut **tx, "posts", Post, where: ("id", post_id), tenant: tenant_id)
+        axe_derive::crud_find_one!(&mut **tx, "posts", Post, where: ("id", post_id), tenant: tenant_id)
             .map_err(|_| AppError::not_found("post"))?;
 
     let now = crate::utils::tz::now_utc();
@@ -248,7 +248,7 @@ pub async fn update_tx(
         .map(std::string::ToString::to_string)
         .or(existing.canonical_url);
 
-    raisfast_derive::crud_update!(
+    axe_derive::crud_update!(
         &mut **tx, "posts",
         bind: [
             "title" => title, "slug" => slug, "content" => content,
@@ -303,7 +303,7 @@ pub async fn delete(
     tenant_id: Option<&str>,
 ) -> AppResult<()> {
     let result =
-        raisfast_derive::crud_delete!(pool, "posts", where: ("id", id), tenant: tenant_id)?;
+        axe_derive::crud_delete!(pool, "posts", where: ("id", id), tenant: tenant_id)?;
     AppError::expect_affected(&result, "post")
 }
 
@@ -312,7 +312,7 @@ pub async fn increment_view_count_joined(
     slug: &str,
     tenant_id: Option<&str>,
 ) -> AppResult<PostJoinedRow> {
-    raisfast_derive::crud_update!(
+    axe_derive::crud_update!(
         pool, "posts",
         raw: ["view_count" => "view_count + 1"],
         where: AND(("slug", slug), ("status", PostStatus::Published)),
@@ -345,7 +345,7 @@ pub async fn get_tags_by_ids(
     if tag_ids.is_empty() {
         return Ok(Vec::new());
     }
-    let rows: Vec<TagRow> = raisfast_derive::crud_find_all!(
+    let rows: Vec<TagRow> = axe_derive::crud_find_all!(
         pool, "tags", TagRow,
         where: ("id", IN, tag_ids),
         tenant: tenant_id
@@ -365,7 +365,7 @@ pub async fn get_author_name(
     created_by: i64,
     tenant_id: Option<&str>,
 ) -> AppResult<Option<String>> {
-    let row: Option<(String,)> = raisfast_derive::crud_select!(
+    let row: Option<(String,)> = axe_derive::crud_select!(
         pool, "users", ["username"], where: ("id", created_by), tenant: tenant_id
     )?;
     Ok(row.map(|(s,)| s))
@@ -376,7 +376,7 @@ pub async fn get_category_name(
     category_id: SnowflakeId,
     tenant_id: Option<&str>,
 ) -> AppResult<Option<String>> {
-    let row: Option<(String,)> = raisfast_derive::crud_select!(
+    let row: Option<(String,)> = axe_derive::crud_select!(
         pool, "categories", ["name"], where: ("id", category_id), tenant: tenant_id
     )?;
     Ok(row.map(|(s,)| s))
@@ -391,7 +391,7 @@ pub async fn find_published(
     q: Option<&str>,
     tenant_id: Option<&str>,
 ) -> AppResult<(Vec<Post>, i64)> {
-    raisfast_derive::check_schema!(
+    axe_derive::check_schema!(
         "posts",
         "id",
         "status",
@@ -608,7 +608,7 @@ pub async fn find_all_joined(
     }
 
     if let Some(s) = status {
-        let result = raisfast_derive::crud_join_paged!(
+        let result = axe_derive::crud_join_paged!(
             pool, PostJoinedRow,
             select: [
                 "p.id", "p.tenant_id", "p.title", "p.slug",
@@ -634,7 +634,7 @@ pub async fn find_all_joined(
         );
         Ok(result)
     } else {
-        let result = raisfast_derive::crud_join_paged!(
+        let result = axe_derive::crud_join_paged!(
             pool, PostJoinedRow,
             select: [
                 "p.id", "p.tenant_id", "p.title", "p.slug",
@@ -725,7 +725,7 @@ pub async fn find_joined_by_id(
     id: SnowflakeId,
     tenant_id: Option<&str>,
 ) -> AppResult<PostJoinedRow> {
-    raisfast_derive::crud_join!(
+    axe_derive::crud_join!(
         pool, PostJoinedRow,
         select: ["p.id", "p.tenant_id", "p.title", "p.slug", "p.content", "p.excerpt", "p.cover_image", "p.image_ids", "p.status", "p.created_by", "p.updated_by", "p.category_id", "p.view_count", "p.is_pinned", "p.password", "p.comment_status", "p.format", "p.template", "p.meta_title", "p.meta_description", "p.og_title", "p.og_description", "p.og_image", "p.canonical_url", "p.reading_time", "p.created_at", "p.updated_at", "p.published_at", "u.username AS author_name", "c.name AS category_name"],
         from: "posts p",
@@ -745,7 +745,7 @@ pub async fn find_published_joined_by_slug(
     slug: &str,
     tenant_id: Option<&str>,
 ) -> AppResult<PostJoinedRow> {
-    raisfast_derive::crud_join!(
+    axe_derive::crud_join!(
         pool, PostJoinedRow,
         select: ["p.id", "p.tenant_id", "p.title", "p.slug", "p.content", "p.excerpt", "p.cover_image", "p.image_ids", "p.status", "p.created_by", "p.updated_by", "p.category_id", "p.view_count", "p.is_pinned", "p.password", "p.comment_status", "p.format", "p.template", "p.meta_title", "p.meta_description", "p.og_title", "p.og_description", "p.og_image", "p.canonical_url", "p.reading_time", "p.created_at", "p.updated_at", "p.published_at", "u.username AS author_name", "c.name AS category_name"],
         from: "posts p",
@@ -777,7 +777,7 @@ pub async fn find_joined_by_ids(
         return Ok(Vec::new());
     }
 
-    raisfast_derive::crud_join!(
+    axe_derive::crud_join!(
         pool,
         PostJoinedRow,
         select: [
@@ -813,7 +813,7 @@ pub async fn count_published_by_ids(
         return Ok(0);
     }
 
-    raisfast_derive::crud_count!(
+    axe_derive::crud_count!(
         pool,
         "posts",
         where: AND(("status", PostStatus::Published), ("id", IN, ids)),
@@ -831,7 +831,7 @@ pub async fn find_published_joined(
     q: Option<&str>,
     tenant_id: Option<&str>,
 ) -> AppResult<(Vec<PostJoinedRow>, i64)> {
-    raisfast_derive::check_schema!(
+    axe_derive::check_schema!(
         "posts",
         "id",
         "title",
@@ -860,8 +860,8 @@ pub async fn find_published_joined(
         "updated_at",
         "published_at"
     );
-    raisfast_derive::check_schema!("users", "id", "username");
-    raisfast_derive::check_schema!("categories", "id", "name");
+    axe_derive::check_schema!("users", "id", "username");
+    axe_derive::check_schema!("categories", "id", "name");
     let offset = (page - 1) * page_size;
 
     let (posts, total) = if let Some(tag_id) = tag_id {

@@ -1,10 +1,10 @@
 [package]
-name = "raisfast-derive"
+name = "axe-derive"
 version = "0.1.0"
 edition = "2024"
-description = "Procedural macros for raisfast — CRUD, Where DSL, and schema generation"
+description = "Procedural macros for axe — CRUD, Where DSL, and schema generation"
 license = "Apache-2.0"
-repository = "https://github.com/raisfast/raisfast"
+repository = "https://github.com/axe/axe"
 
 [lib]
 proc-macro = true

@@ -1,9 +1,9 @@
 [plugin]
-id = "com.raisfast.crm"
+id = "com.axe.crm"
 name = "CRM API"
 version = "0.1.0"
 description = "CRM 销售漏斗、Pipeline 管理、联系人时间线"
-author = "raisfast"
+author = "axe"
 license = "MIT"
 runtime = "js"
 language = "js"

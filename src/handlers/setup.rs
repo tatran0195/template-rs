@@ -163,7 +163,7 @@ pub async fn setup_database(
 
     tokio::spawn(async {
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-        let exe = std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("raisfast"));
+        let exe = std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("axe"));
         let args: Vec<String> = std::env::args().skip(1).collect();
         tracing::info!("spawning new server process and exiting...");
         let _ = std::process::Command::new(&exe).args(&args).spawn();
@@ -419,8 +419,8 @@ mod tests {
     #[test]
     fn mask_db_url_sqlite() {
         assert_eq!(
-            mask_db_url("sqlite:./storage/db/raisfast.db?mode=rwc"),
-            "sqlite:./storage/db/raisfast.db?mode=rwc"
+            mask_db_url("sqlite:./storage/db/axe.db?mode=rwc"),
+            "sqlite:./storage/db/axe.db?mode=rwc"
         );
     }
 
@@ -435,8 +435,8 @@ mod tests {
     #[test]
     fn mask_db_url_mysql() {
         assert_eq!(
-            mask_db_url("mysql://root:password@localhost/raisfast"),
-            "mysql://root:***@localhost/raisfast"
+            mask_db_url("mysql://root:password@localhost/axe"),
+            "mysql://root:***@localhost/axe"
         );
     }
 
@@ -488,7 +488,7 @@ mod tests {
         };
         assert_eq!(
             req.build_url("sqlite").unwrap(),
-            "sqlite:./storage/db/raisfast.db?mode=rwc"
+            "sqlite:./storage/db/axe.db?mode=rwc"
         );
     }
 
@@ -531,12 +531,12 @@ mod tests {
             port: Some(3306),
             username: Some("root".into()),
             password: Some("pass123".into()),
-            database: Some("raisfast".into()),
+            database: Some("axe".into()),
             url: None,
         };
         assert_eq!(
             req.build_url("mysql").unwrap(),
-            "mysql://root:pass123@localhost:3306/raisfast"
+            "mysql://root:pass123@localhost:3306/axe"
         );
     }
 

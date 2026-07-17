@@ -6,9 +6,9 @@
 
 ```bash
 cp .env.example .env
-raisfast db migrate
-raisfast db seed
-raisfast server start
+axe db migrate
+axe db seed
+axe server start
 ```
 
 ## API Endpoints

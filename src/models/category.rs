@@ -35,7 +35,7 @@ pub struct Category {
 }
 
 pub async fn find_all(pool: &crate::db::Pool, tenant_id: Option<&str>) -> AppResult<Vec<Category>> {
-    raisfast_derive::crud_list!(pool, "categories", Category, order_by: "sort_order, name", tenant: tenant_id).map_err(Into::into)
+    axe_derive::crud_list!(pool, "categories", Category, order_by: "sort_order, name", tenant: tenant_id).map_err(Into::into)
 }
 
 pub async fn find_paginated(
@@ -44,7 +44,7 @@ pub async fn find_paginated(
     page: i64,
     page_size: i64,
 ) -> AppResult<(Vec<Category>, i64)> {
-    let result = raisfast_derive::crud_query_paged!(
+    let result = axe_derive::crud_query_paged!(
         pool, Category,
         table: "categories",
         order_by: "sort_order, name",
@@ -60,7 +60,7 @@ pub async fn find_by_id(
     id: SnowflakeId,
     tenant_id: Option<&str>,
 ) -> AppResult<Category> {
-    raisfast_derive::crud_find_one!(pool, "categories", Category, where: ("id", id), tenant: tenant_id)
+    axe_derive::crud_find_one!(pool, "categories", Category, where: ("id", id), tenant: tenant_id)
         .map_err(Into::into)
 }
 
@@ -75,7 +75,7 @@ pub async fn create(
         crate::utils::tz::now_utc(),
     );
 
-    raisfast_derive::crud_insert!(
+    axe_derive::crud_insert!(
         pool,
         "categories",
         [
@@ -154,7 +154,7 @@ pub async fn update(
         .or(existing.og_image);
 
     let now = crate::utils::tz::now_utc();
-    raisfast_derive::crud_update!(pool, "categories",
+    axe_derive::crud_update!(pool, "categories",
         bind: ["name" => name, "slug" => slug, "description" => desc, "parent_id" => parent, "sort_order" => sort, "cover_image" => cover_image, "meta_title" => meta_title, "meta_description" => meta_description, "og_title" => og_title, "og_description" => og_description, "og_image" => og_image, "updated_by" => updated_by, "updated_at" => &now],
         where: ("id", cat_id),
         tenant: tenant_id
@@ -169,7 +169,7 @@ pub async fn delete(
     tenant_id: Option<&str>,
 ) -> AppResult<()> {
     let result =
-        raisfast_derive::crud_delete!(pool, "categories", where: ("id", id), tenant: tenant_id)?;
+        axe_derive::crud_delete!(pool, "categories", where: ("id", id), tenant: tenant_id)?;
     AppError::expect_affected(&result, "category")
 }
 

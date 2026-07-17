@@ -2,9 +2,9 @@
 
 ## Project
 
-raisfast — Rust-powered high-performance BaaS and headless CMS. Single binary, zero dependencies, zero GC. Built-in blog, ecommerce, wallet, payment & multi-tenant SaaS. JS / Rhai / Lua / WASM plugin engines for infinite extensibility.
+axe — Rust-powered high-performance BaaS and headless CMS. Single binary, zero dependencies, zero GC. Built-in blog, ecommerce, wallet, payment & multi-tenant SaaS. JS / Rhai / Lua / WASM plugin engines for infinite extensibility.
 
-- **Crate name:** `raisfast`
+- **Crate name:** `axe`
 - **Rust edition:** 2024
 - **Architecture:** Handler → Service → Model three-layer
 - **Plugin engines:** JS (QuickJS) / Rhai / Lua (mlua) / WASM (wasmtime)
@@ -14,12 +14,12 @@ raisfast — Rust-powered high-performance BaaS and headless CMS. Single binary,
 
 ```bash
 # Compile (SQLite + JS + Rhai)
-SQLX_OFFLINE=false DATABASE_URL="sqlite:./storage/db/raisfast.db?mode=rwc" \
+SQLX_OFFLINE=false DATABASE_URL="sqlite:./storage/db/axe.db?mode=rwc" \
   cargo clippy --tests --no-default-features \
   --features "db-sqlite,plugin-js,plugin-rhai" -- -D warnings
 
 # Test
-SQLX_OFFLINE=false DATABASE_URL="sqlite:./storage/db/raisfast.db?mode=rwc" \
+SQLX_OFFLINE=false DATABASE_URL="sqlite:./storage/db/axe.db?mode=rwc" \
   cargo test --no-default-features \
   --features "db-sqlite,plugin-js,plugin-rhai"
 
@@ -60,7 +60,7 @@ Handler → Service → Model (SQL)
 
 ## CRUD Macro System
 
-All DB operations use the Where DSL macro system (`raisfast-derive`):
+All DB operations use the Where DSL macro system (`axe-derive`):
 
 - `crud_insert!`, `crud_update!`, `crud_delete!` — write operations
 - `crud_find!`, `crud_find_one!`, `crud_find_all!` — read operations

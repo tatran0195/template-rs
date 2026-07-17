@@ -55,7 +55,7 @@ fn render_markdown(html) {
     }
 
     let injection = `<meta property="og:type" content="${og_str}">` +
-        `<meta name="generator" content="raisfast-seo-rhai/1.0.0">`;
+        `<meta name="generator" content="axe-seo-rhai/1.0.0">`;
 
     let result = replace(html, "<head>", "<head>" + injection);
     log("info", "[seo-rhai] render_markdown: injected og meta");

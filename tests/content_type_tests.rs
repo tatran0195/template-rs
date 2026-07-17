@@ -7,11 +7,11 @@ use std::collections::HashMap;
 
 use serde_json::json;
 
-use raisfast::content_type::ContentTypeRegistry;
-use raisfast::content_type::repository::{ContentQuery, ContentRepository, SaveContext};
-use raisfast::content_type::schema::ContentTypeSchema;
-use raisfast::db::tenant;
-use raisfast::types::snowflake_id::SnowflakeId;
+use axe::content_type::ContentTypeRegistry;
+use axe::content_type::repository::{ContentQuery, ContentRepository, SaveContext};
+use axe::content_type::schema::ContentTypeSchema;
+use axe::db::tenant;
+use axe::types::snowflake_id::SnowflakeId;
 
 const PRODUCT_TOML: &str = r#"
 [content_type]
@@ -50,10 +50,8 @@ unique = true
 "#;
 
 async fn setup_pool() -> sqlx::SqlitePool {
-    let pool = raisfast::db::Pool::connect("sqlite::memory:")
-        .await
-        .unwrap();
-    sqlx::query(raisfast::db::schema::SCHEMA_SQL)
+    let pool = axe::db::Pool::connect("sqlite::memory:").await.unwrap();
+    sqlx::query(axe::db::schema::SCHEMA_SQL)
         .execute(&pool)
         .await
         .unwrap();
@@ -89,21 +87,21 @@ fn parse_article() -> ContentTypeSchema {
     .unwrap()
 }
 
-fn test_ct_registry() -> raisfast::content_type::ContentTypeRegistry {
-    raisfast::content_type::ContentTypeRegistry::new()
+fn test_ct_registry() -> axe::content_type::ContentTypeRegistry {
+    axe::content_type::ContentTypeRegistry::new()
 }
 
-fn test_protocol_registry() -> raisfast::protocols::ProtocolRegistry {
-    let mut reg = raisfast::protocols::ProtocolRegistry::new();
-    reg.register(raisfast::protocols::ownable::OwnableProtocol);
-    reg.register(raisfast::protocols::timestampable::TimestampableProtocol);
-    reg.register(raisfast::protocols::soft_deletable::SoftDeletableProtocol);
-    reg.register(raisfast::protocols::versionable::VersionableProtocol);
-    reg.register(raisfast::protocols::lockable::LockableProtocol);
-    reg.register(raisfast::protocols::sortable::SortableProtocol);
-    reg.register(raisfast::protocols::expirable::ExpirableProtocol);
-    reg.register(raisfast::protocols::nestable::NestableProtocol);
-    reg.register(raisfast::protocols::tenantable::TenantableProtocol);
+fn test_protocol_registry() -> axe::protocols::ProtocolRegistry {
+    let mut reg = axe::protocols::ProtocolRegistry::new();
+    reg.register(axe::protocols::ownable::OwnableProtocol);
+    reg.register(axe::protocols::timestampable::TimestampableProtocol);
+    reg.register(axe::protocols::soft_deletable::SoftDeletableProtocol);
+    reg.register(axe::protocols::versionable::VersionableProtocol);
+    reg.register(axe::protocols::lockable::LockableProtocol);
+    reg.register(axe::protocols::sortable::SortableProtocol);
+    reg.register(axe::protocols::expirable::ExpirableProtocol);
+    reg.register(axe::protocols::nestable::NestableProtocol);
+    reg.register(axe::protocols::tenantable::TenantableProtocol);
     reg
 }
 
@@ -351,7 +349,7 @@ async fn update_changes_fields() {
     let updated = repo
         .update(
             &ct,
-            raisfast::types::snowflake_id::SnowflakeId(id),
+            axe::types::snowflake_id::SnowflakeId(id),
             json!({"title": "Updated", "price": 99}),
             None,
             &SaveContext::default(),
@@ -384,7 +382,7 @@ async fn delete_removes_record() {
 
     repo.delete(
         &ct,
-        raisfast::types::snowflake_id::SnowflakeId(id),
+        axe::types::snowflake_id::SnowflakeId(id),
         None,
         &test_protocol_registry(),
         &test_ct_registry(),
@@ -441,7 +439,7 @@ required = true
 
     repo.delete(
         &ct,
-        raisfast::types::snowflake_id::SnowflakeId(id),
+        axe::types::snowflake_id::SnowflakeId(id),
         None,
         &test_protocol_registry(),
         &test_ct_registry(),
@@ -469,7 +467,7 @@ async fn registry_load_and_lookup() {
     registry
         .register(
             ct,
-            &raisfast::config::app::RuleEngineConfig::default(),
+            &axe::config::app::RuleEngineConfig::default(),
             &reserved,
             &protocol_names,
             &protocol_reg,
@@ -576,7 +574,7 @@ async fn delete_respects_tenant() {
 
     repo.delete(
         &ct,
-        raisfast::types::snowflake_id::SnowflakeId(id_a),
+        axe::types::snowflake_id::SnowflakeId(id_a),
         Some("tenant_b"),
         &test_protocol_registry(),
         &test_ct_registry(),
@@ -594,7 +592,7 @@ async fn delete_respects_tenant() {
 
     repo.delete(
         &ct,
-        raisfast::types::snowflake_id::SnowflakeId(id_a),
+        axe::types::snowflake_id::SnowflakeId(id_a),
         Some("tenant_a"),
         &test_protocol_registry(),
         &test_ct_registry(),
@@ -796,7 +794,7 @@ async fn update_with_no_fields_returns_error() {
     let result = repo
         .update(
             &ct,
-            raisfast::types::snowflake_id::SnowflakeId(id),
+            axe::types::snowflake_id::SnowflakeId(id),
             json!({"nonexistent_field": "v"}),
             None,
             &SaveContext::default(),
@@ -927,7 +925,7 @@ async fn versioning_creates_revision_on_update() {
     let _updated = repo
         .update(
             &ct,
-            raisfast::types::snowflake_id::SnowflakeId(int_id),
+            axe::types::snowflake_id::SnowflakeId(int_id),
             json!({"title": "V2 Title", "content": "V2 Content"}),
             None,
             &SaveContext::default(),
@@ -935,7 +933,7 @@ async fn versioning_creates_revision_on_update() {
         .await
         .unwrap();
 
-    let revisions = raisfast::models::content_revision::list_revisions(
+    let revisions = axe::models::content_revision::list_revisions(
         &pool,
         "article",
         SnowflakeId(id.parse::<i64>().unwrap()),
@@ -945,7 +943,7 @@ async fn versioning_creates_revision_on_update() {
     assert_eq!(revisions.len(), 1);
     assert_eq!(revisions[0].revision_number, 1);
 
-    let rev = raisfast::models::content_revision::get_revision(
+    let rev = axe::models::content_revision::get_revision(
         &pool,
         "article",
         SnowflakeId(id.parse::<i64>().unwrap()),
@@ -1006,7 +1004,7 @@ async fn versioning_multiple_updates_create_multiple_revisions() {
     .await
     .unwrap();
 
-    let revisions = raisfast::models::content_revision::list_revisions(
+    let revisions = axe::models::content_revision::list_revisions(
         &pool,
         "article",
         SnowflakeId(id.parse::<i64>().unwrap()),
@@ -1049,7 +1047,7 @@ async fn versioning_delete_cleans_up_revisions() {
     .await
     .unwrap();
 
-    let before = raisfast::models::content_revision::list_revisions(
+    let before = axe::models::content_revision::list_revisions(
         &pool,
         "article",
         SnowflakeId(id.parse::<i64>().unwrap()),
@@ -1060,7 +1058,7 @@ async fn versioning_delete_cleans_up_revisions() {
 
     repo.delete(
         &ct,
-        raisfast::types::snowflake_id::SnowflakeId(int_id),
+        axe::types::snowflake_id::SnowflakeId(int_id),
         None,
         &test_protocol_registry(),
         &test_ct_registry(),
@@ -1068,7 +1066,7 @@ async fn versioning_delete_cleans_up_revisions() {
     .await
     .unwrap();
 
-    let after = raisfast::models::content_revision::list_revisions(
+    let after = axe::models::content_revision::list_revisions(
         &pool,
         "article",
         SnowflakeId(id.parse::<i64>().unwrap()),
@@ -1124,7 +1122,7 @@ required = true
     .await
     .unwrap();
 
-    let revisions = raisfast::models::content_revision::list_revisions(
+    let revisions = axe::models::content_revision::list_revisions(
         &pool,
         "note",
         SnowflakeId(id.parse::<i64>().unwrap()),
@@ -1139,7 +1137,7 @@ async fn versioning_diff_computes_correctly() {
     let old = json!({"title": "Old", "content": "Same", "status": "draft"});
     let new = json!({"title": "New", "content": "Same", "status": "published", "extra": 42});
 
-    let diff = raisfast::models::content_revision::compute_diff(&old, &new);
+    let diff = axe::models::content_revision::compute_diff(&old, &new);
 
     let changed = diff["changed"].as_object().unwrap();
     assert!(changed.contains_key("title"));

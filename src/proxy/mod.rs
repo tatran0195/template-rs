@@ -34,9 +34,9 @@ pub async fn start(config_path: &str) -> anyhow::Result<()> {
         addr = %addr,
         tenants = tenant_sections.len(),
         routes = router.len(),
-        "starting raisfast proxy"
+        "starting axe proxy"
     );
-    println!("raisfast proxy listening on http://{addr}");
+    println!("axe proxy listening on http://{addr}");
     println!(
         "registered {} routes for {} tenants",
         router.len(),

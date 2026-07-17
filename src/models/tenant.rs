@@ -33,7 +33,7 @@ pub struct Tenant {
 
 /// Query all tenants
 pub async fn find_all(pool: &crate::db::Pool) -> AppResult<Vec<Tenant>> {
-    raisfast_derive::check_schema!(
+    axe_derive::check_schema!(
         "tenants",
         "id",
         "name",
@@ -43,19 +43,19 @@ pub async fn find_all(pool: &crate::db::Pool) -> AppResult<Vec<Tenant>> {
         "created_at",
         "updated_at"
     );
-    let tenants = raisfast_derive::crud_list!(pool, "tenants", Tenant, order_by: "name")?;
+    let tenants = axe_derive::crud_list!(pool, "tenants", Tenant, order_by: "name")?;
     Ok(tenants)
 }
 
 /// Find a tenant by integer primary key
 pub async fn find_by_id(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<Option<Tenant>> {
-    let tenant = raisfast_derive::crud_find!(pool, "tenants", Tenant, where: ("id", id))?;
+    let tenant = axe_derive::crud_find!(pool, "tenants", Tenant, where: ("id", id))?;
     Ok(tenant)
 }
 
 /// Find a tenant by domain
 pub async fn find_by_domain(pool: &crate::db::Pool, domain: &str) -> AppResult<Option<Tenant>> {
-    let tenant = raisfast_derive::crud_find!(pool, "tenants", Tenant, where: ("domain", domain))?;
+    let tenant = axe_derive::crud_find!(pool, "tenants", Tenant, where: ("domain", domain))?;
     Ok(tenant)
 }
 
@@ -70,7 +70,7 @@ pub async fn create(
         crate::utils::id::new_snowflake_id(),
         crate::utils::tz::now_utc(),
     );
-    raisfast_derive::crud_insert!(
+    axe_derive::crud_insert!(
         pool,
         "tenants",
         [
@@ -100,7 +100,7 @@ pub async fn update(
     status: Option<TenantStatus>,
 ) -> AppResult<Tenant> {
     let now = crate::utils::tz::now_utc();
-    raisfast_derive::crud_update!(
+    axe_derive::crud_update!(
         pool, "tenants",
         bind: ["updated_at" => now],
         optional: ["name" => name, "domain" => domain, "config" => config, "status" => status],
@@ -114,7 +114,7 @@ pub async fn update(
 
 /// Delete a tenant
 pub async fn delete(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<()> {
-    raisfast_derive::crud_delete!(pool, "tenants", where: ("id", id))?;
+    axe_derive::crud_delete!(pool, "tenants", where: ("id", id))?;
     Ok(())
 }
 

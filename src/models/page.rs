@@ -315,7 +315,7 @@ pub async fn find_by_slug(
     slug: &str,
     tenant_id: Option<&str>,
 ) -> AppResult<Option<Page>> {
-    Ok(raisfast_derive::crud_find!(pool, "pages", Page, where: ("slug", slug), tenant: tenant_id)?)
+    Ok(axe_derive::crud_find!(pool, "pages", Page, where: ("slug", slug), tenant: tenant_id)?)
 }
 
 pub async fn find_by_id(
@@ -323,7 +323,7 @@ pub async fn find_by_id(
     id: SnowflakeId,
     tenant_id: Option<&str>,
 ) -> AppResult<Option<Page>> {
-    Ok(raisfast_derive::crud_find!(pool, "pages", Page, where: ("id", id), tenant: tenant_id)?)
+    Ok(axe_derive::crud_find!(pool, "pages", Page, where: ("id", id), tenant: tenant_id)?)
 }
 
 pub async fn list_published(
@@ -332,7 +332,7 @@ pub async fn list_published(
     page_size: i64,
     tenant_id: Option<&str>,
 ) -> AppResult<(Vec<Page>, i64)> {
-    let result = raisfast_derive::crud_query_paged!(
+    let result = axe_derive::crud_query_paged!(
         pool, Page,
         table: "pages",
         where: ("status", PageStatus::Published),
@@ -351,7 +351,7 @@ pub async fn list_all(
     status: Option<PageStatus>,
     tenant_id: Option<&str>,
 ) -> AppResult<(Vec<Page>, i64)> {
-    let result = raisfast_derive::crud_query_paged!(
+    let result = axe_derive::crud_query_paged!(
         pool, Page,
         table: "pages",
         where: ["status" => status],
@@ -378,7 +378,7 @@ pub async fn create(
         None
     };
 
-    raisfast_derive::crud_insert!(
+    axe_derive::crud_insert!(
         pool,
         "pages",
         [
@@ -414,7 +414,7 @@ pub async fn update(
     cmd: &UpdatePageCmd,
     tenant_id: Option<&str>,
 ) -> AppResult<Page> {
-    raisfast_derive::check_schema!(
+    axe_derive::check_schema!(
         "pages",
         "updated_by",
         "title",
@@ -570,7 +570,7 @@ pub async fn delete(
     tenant_id: Option<&str>,
 ) -> AppResult<()> {
     let result =
-        raisfast_derive::crud_delete!(pool, "pages", where: ("id", id), tenant: tenant_id)?;
+        axe_derive::crud_delete!(pool, "pages", where: ("id", id), tenant: tenant_id)?;
     AppError::expect_affected(&result, "page")
 }
 
@@ -581,7 +581,7 @@ pub async fn update_status(
     updated_by: Option<i64>,
     tenant_id: Option<&str>,
 ) -> AppResult<Page> {
-    raisfast_derive::check_schema!(
+    axe_derive::check_schema!(
         "pages",
         "status",
         "updated_by",
@@ -648,7 +648,7 @@ pub async fn reorder(
     let now = crate::utils::tz::now_utc();
 
     for (id, sort_order) in items {
-        raisfast_derive::crud_update!(
+        axe_derive::crud_update!(
             pool, "pages",
             bind: ["sort_order" => sort_order, "updated_at" => now],
             where: ("id", id),
@@ -667,7 +667,7 @@ pub async fn list_sitemap(
         "SELECT slug, updated_at FROM pages WHERE status = {}{filter} ORDER BY sort_order ASC",
         Driver::ph(1)
     );
-    Ok(raisfast_derive::crud_query!(
+    Ok(axe_derive::crud_query!(
         pool,
         (String, Option<String>),
         &sql,

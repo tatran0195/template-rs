@@ -176,7 +176,7 @@ pub async fn create_schedule_with_plugin(
     let next = next_run(cron_expr, now)?;
 
     let id = crate::utils::id::new_snowflake_id();
-    raisfast_derive::crud_insert!(pool, "cron_schedules", [
+    axe_derive::crud_insert!(pool, "cron_schedules", [
         "id" => id,
         "label" => label,
         "job_type" => job_type,
@@ -233,7 +233,7 @@ pub async fn list_schedules(pool: &Pool) -> AppResult<Vec<CronSchedule>> {
 /// Enable/disable a schedule
 pub async fn toggle_schedule(pool: &Pool, id: SnowflakeId, enabled: bool) -> AppResult<()> {
     let now = crate::utils::tz::now_utc();
-    let result: crate::db::pool::DbQueryResult = raisfast_derive::crud_update!(pool, "cron_schedules",
+    let result: crate::db::pool::DbQueryResult = axe_derive::crud_update!(pool, "cron_schedules",
         bind: ["enabled" => enabled, "updated_at" => now],
         where: ("id", id)
     )?;
@@ -279,7 +279,7 @@ pub async fn update_schedule(
     let next = next_run(&schedule.cron_expr, crate::utils::tz::now_utc())?;
     let now = crate::utils::tz::now_utc();
 
-    raisfast_derive::crud_update!(pool, "cron_schedules",
+    axe_derive::crud_update!(pool, "cron_schedules",
         bind: [
             "label" => &schedule.label,
             "job_type" => &schedule.job_type,
@@ -298,7 +298,7 @@ pub async fn update_schedule(
 /// Delete a schedule
 pub async fn delete_schedule(pool: &Pool, id: SnowflakeId) -> AppResult<()> {
     let result: crate::db::DbQueryResult =
-        raisfast_derive::crud_delete!(pool, "cron_schedules", where: ("id", id))?;
+        axe_derive::crud_delete!(pool, "cron_schedules", where: ("id", id))?;
 
     if result.rows_affected() == 0 {
         return Err(AppError::not_found("cron_schedule"));
@@ -402,7 +402,7 @@ impl CronScheduler {
             match &dispatch_result {
                 Ok(()) => {
                     if let Some(ref lid) = log_id {
-                        raisfast_derive::crud_update!(&mut *tx, "cron_execution_log",
+                        axe_derive::crud_update!(&mut *tx, "cron_execution_log",
                             bind: ["status" => CronExecStatus::Completed, "duration_ms" => elapsed, "finished_at" => now],
                             where: ("id", lid)
                         )?;
@@ -411,7 +411,7 @@ impl CronScheduler {
                 Err(e) => {
                     if let Some(ref lid) = log_id {
                         let err_str = e.to_string();
-                        raisfast_derive::crud_update!(&mut *tx, "cron_execution_log",
+                        axe_derive::crud_update!(&mut *tx, "cron_execution_log",
                             bind: ["status" => CronExecStatus::Failed, "duration_ms" => elapsed, "error" => &err_str, "finished_at" => now],
                             where: ("id", lid)
                         )?;
@@ -421,7 +421,7 @@ impl CronScheduler {
             }
 
             if let Some(next) = &next {
-                raisfast_derive::crud_update!(&mut *tx, "cron_schedules",
+                axe_derive::crud_update!(&mut *tx, "cron_schedules",
                     bind: ["last_run_at" => now, "next_run_at" => next, "updated_at" => now],
                     where: ("id", schedule.id)
                 )?;
@@ -521,7 +521,7 @@ pub async fn create_execution_log(
     let id = crate::utils::id::new_id();
     let now = crate::utils::tz::now_utc();
 
-    raisfast_derive::crud_insert!(pool, "cron_execution_log", [
+    axe_derive::crud_insert!(pool, "cron_execution_log", [
         "id" => id,
         "schedule_id" => schedule_id,
         "job_type" => job_type,
@@ -540,7 +540,7 @@ pub async fn complete_execution_log(
     duration_ms: i64,
 ) -> AppResult<()> {
     let now = crate::utils::tz::now_utc();
-    raisfast_derive::crud_update!(pool, "cron_execution_log",
+    axe_derive::crud_update!(pool, "cron_execution_log",
         bind: ["status" => CronExecStatus::Completed, "duration_ms" => duration_ms, "finished_at" => now],
         where: ("id", log_id)
     )?;
@@ -555,7 +555,7 @@ pub async fn fail_execution_log(
     error: &str,
 ) -> AppResult<()> {
     let now = crate::utils::tz::now_utc();
-    raisfast_derive::crud_update!(pool, "cron_execution_log",
+    axe_derive::crud_update!(pool, "cron_execution_log",
         bind: ["status" => CronExecStatus::Failed, "duration_ms" => duration_ms, "error" => error, "finished_at" => now],
         where: ("id", log_id)
     )?;
@@ -647,7 +647,7 @@ pub async fn sync_plugin_crons(
 
         for row in &old {
             if !new_types.contains(&row.job_type.as_str()) {
-                raisfast_derive::crud_delete!(&mut *tx, "cron_schedules", where: ("id", row.id))?;
+                axe_derive::crud_delete!(&mut *tx, "cron_schedules", where: ("id", row.id))?;
                 tracing::info!(
                     "removed stale cron '{}' for plugin {plugin_id}",
                     row.job_type
@@ -669,7 +669,7 @@ pub async fn sync_plugin_crons(
             if let Some(existing_row) = existing {
                 let now = crate::utils::tz::now_utc();
                 let next = next_run(&entry.cron_expr, crate::utils::tz::now_utc())?;
-                raisfast_derive::crud_update!(&mut *tx, "cron_schedules",
+                axe_derive::crud_update!(&mut *tx, "cron_schedules",
                     bind: ["label" => &entry.label, "payload" => &entry.payload, "cron_expr" => &entry.cron_expr, "enabled" => entry.enabled, "next_run_at" => next, "updated_at" => now],
                     where: ("id", existing_row.0)
                 )?;
@@ -679,7 +679,7 @@ pub async fn sync_plugin_crons(
                 let id = crate::utils::id::new_id();
                 let now = crate::utils::tz::now_utc();
                 let next = next_run(&entry.cron_expr, crate::utils::tz::now_utc())?;
-                raisfast_derive::crud_insert!(&mut *tx, "cron_schedules", [
+                axe_derive::crud_insert!(&mut *tx, "cron_schedules", [
                     "id" => id,
                     "label" => &entry.label,
                     "job_type" => &entry.job_type,
@@ -705,7 +705,7 @@ pub async fn sync_plugin_crons(
 /// Called when a plugin is unloaded.
 pub async fn remove_plugin_crons(pool: &Pool, plugin_id: &str) -> AppResult<()> {
     let result: crate::db::DbQueryResult =
-        raisfast_derive::crud_delete!(pool, "cron_schedules", where: ("plugin_id", plugin_id))?;
+        axe_derive::crud_delete!(pool, "cron_schedules", where: ("plugin_id", plugin_id))?;
 
     let count = result.rows_affected();
     if count > 0 {

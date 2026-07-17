@@ -232,11 +232,11 @@ mod tests {
 
     #[test]
     fn parse_unix_backend() {
-        let addr = parse_backend("unix:/run/raisfast/user1.sock").unwrap();
+        let addr = parse_backend("unix:/run/axe/user1.sock").unwrap();
         let BackendAddr::UnixSocket(p) = addr else {
             panic!("expected unix")
         };
-        assert_eq!(p, PathBuf::from("/run/raisfast/user1.sock"));
+        assert_eq!(p, PathBuf::from("/run/axe/user1.sock"));
     }
 
     #[test]

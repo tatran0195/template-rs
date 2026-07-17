@@ -12,13 +12,13 @@ mod route_cmd;
 mod server_cmd;
 mod user_cmd;
 
-use raisfast::config::app::AppConfig;
+use axe::config::app::AppConfig;
 
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(
-    name = "raisfast",
+    name = "axe",
     version,
     about = "Rust-powered high-performance BaaS and headless CMS"
 )]
@@ -85,13 +85,13 @@ pub enum ProxyAction {
     /// Start the proxy server
     Start {
         /// Path to proxy config file
-        #[arg(short, long, default_value = "/etc/raisfast/proxy.toml")]
+        #[arg(short, long, default_value = "/etc/axe/proxy.toml")]
         config: String,
     },
     /// Validate proxy configuration
     Check {
         /// Path to proxy config file
-        #[arg(short, long, default_value = "/etc/raisfast/proxy.toml")]
+        #[arg(short, long, default_value = "/etc/axe/proxy.toml")]
         config: String,
     },
 }
@@ -370,7 +370,7 @@ pub fn print_banner(config: &AppConfig) {
 
     println!();
     println!(
-        "{d}    raisfast v{}  ·  http://{}:{}{r}",
+        "{d}    axe v{}  ·  http://{}:{}{r}",
         env!("CARGO_PKG_VERSION"),
         config.host,
         config.port
@@ -527,7 +527,7 @@ pub async fn run(cli: Cli, config: &AppConfig) -> anyhow::Result<()> {
                 config: proxy_config,
             },
         }) => {
-            raisfast::proxy::start(&proxy_config).await?;
+            axe::proxy::start(&proxy_config).await?;
         }
 
         #[cfg(all(feature = "proxy", unix))]
@@ -536,13 +536,13 @@ pub async fn run(cli: Cli, config: &AppConfig) -> anyhow::Result<()> {
                 config: proxy_config,
             },
         }) => {
-            match raisfast::proxy::config::ProxyConfig::load(std::path::Path::new(&proxy_config)) {
+            match axe::proxy::config::ProxyConfig::load(std::path::Path::new(&proxy_config)) {
                 Ok(c) => {
                     println!("proxy config OK");
                     println!("  listen_http: {}", c.proxy.listen_http);
                     println!("  listen_https: {}", c.proxy.listen_https);
                     println!("  tenants_dir: {}", c.proxy.tenants_dir.display());
-                    let tenants = raisfast::proxy::config::load_all_tenants(&c.proxy.tenants_dir);
+                    let tenants = axe::proxy::config::load_all_tenants(&c.proxy.tenants_dir);
                     println!("  tenants loaded: {}", tenants.len());
                     for (_, t) in &tenants {
                         println!(

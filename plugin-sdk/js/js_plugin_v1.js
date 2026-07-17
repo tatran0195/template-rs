@@ -3,10 +3,10 @@
 // Host 函数签名必须与 src/plugins/js_host.rs register_host_functions() 保持一致
 export const SDK_VERSION = "1.0.0";
 export function dbPh(idx) {
-    return RaisFastHost.dbPh(idx);
+    return axeHost.dbPh(idx);
 }
 export function dbQuery(sql, params) {
-    const result = RaisFastHost.dbQuery(sql, JSON.stringify(params ?? []));
+    const result = axeHost.dbQuery(sql, JSON.stringify(params ?? []));
     if (!result)
         throw new Error("query returned no result");
     if (result.startsWith("error:"))
@@ -14,27 +14,27 @@ export function dbQuery(sql, params) {
     return JSON.parse(result);
 }
 export function dbExec(sql, params) {
-    const result = RaisFastHost.dbExecute(sql, JSON.stringify(params ?? []));
+    const result = axeHost.dbExecute(sql, JSON.stringify(params ?? []));
     return JSON.parse(result);
 }
 export function dbInsert(table, data, options) {
     const dataStr = typeof data === "string" ? data : JSON.stringify(data);
     const optStr = options == null ? "{}" : (typeof options === "string" ? options : JSON.stringify(options));
-    const result = JSON.parse(RaisFastHost.dbInsert(table, dataStr, optStr));
+    const result = JSON.parse(axeHost.dbInsert(table, dataStr, optStr));
     if (result.error) throw new Error(result.error);
     return result;
 }
 export function dbFetchOne(table, where, options) {
     const whereStr = where == null ? "{}" : (typeof where === "string" ? where : JSON.stringify(where));
     const optStr = options == null ? "{}" : (typeof options === "string" ? options : JSON.stringify(options));
-    const result = JSON.parse(RaisFastHost.dbFetchOne(table, whereStr, optStr));
+    const result = JSON.parse(axeHost.dbFetchOne(table, whereStr, optStr));
     if (result.error) throw new Error(result.error);
     return result.data;
 }
 export function dbFetchAll(table, where, options) {
     const whereStr = where == null ? "{}" : (typeof where === "string" ? where : JSON.stringify(where));
     const optStr = options == null ? "{}" : (typeof options === "string" ? options : JSON.stringify(options));
-    const result = JSON.parse(RaisFastHost.dbFetchAll(table, whereStr, optStr));
+    const result = JSON.parse(axeHost.dbFetchAll(table, whereStr, optStr));
     if (result.error) throw new Error(result.error);
     return result;
 }
@@ -42,21 +42,21 @@ export function dbUpdate(table, data, where, options) {
     const dataStr = typeof data === "string" ? data : JSON.stringify(data);
     const whereStr = where == null ? "{}" : (typeof where === "string" ? where : JSON.stringify(where));
     const optStr = options == null ? "{}" : (typeof options === "string" ? options : JSON.stringify(options));
-    const result = JSON.parse(RaisFastHost.dbUpdate(table, dataStr, whereStr, optStr));
+    const result = JSON.parse(axeHost.dbUpdate(table, dataStr, whereStr, optStr));
     if (result.error) throw new Error(result.error);
     return result;
 }
 export function dbDelete(table, where, options) {
     const whereStr = where == null ? "{}" : (typeof where === "string" ? where : JSON.stringify(where));
     const optStr = options == null ? "{}" : (typeof options === "string" ? options : JSON.stringify(options));
-    const result = JSON.parse(RaisFastHost.dbDelete(table, whereStr, optStr));
+    const result = JSON.parse(axeHost.dbDelete(table, whereStr, optStr));
     if (result.error) throw new Error(result.error);
     return result;
 }
 export function dbCount(table, where, options) {
     const whereStr = where == null ? "{}" : (typeof where === "string" ? where : JSON.stringify(where));
     const optStr = options == null ? "{}" : (typeof options === "string" ? options : JSON.stringify(options));
-    const result = JSON.parse(RaisFastHost.dbCount(table, whereStr, optStr));
+    const result = JSON.parse(axeHost.dbCount(table, whereStr, optStr));
     if (result.error) throw new Error(result.error);
     return result.count;
 }
@@ -64,89 +64,89 @@ export function dbIncrement(table, columns, where, options) {
     const colStr = typeof columns === "string" ? columns : JSON.stringify(columns);
     const whereStr = where == null ? "{}" : (typeof where === "string" ? where : JSON.stringify(where));
     const optStr = options == null ? "{}" : (typeof options === "string" ? options : JSON.stringify(options));
-    const result = JSON.parse(RaisFastHost.dbIncrement(table, colStr, whereStr, optStr));
+    const result = JSON.parse(axeHost.dbIncrement(table, colStr, whereStr, optStr));
     if (result.error) throw new Error(result.error);
     return result;
 }
 export function dbSum(table, column, where, options) {
     const whereStr = where == null ? "{}" : (typeof where === "string" ? where : JSON.stringify(where));
     const optStr = options == null ? "{}" : (typeof options === "string" ? options : JSON.stringify(options));
-    const result = JSON.parse(RaisFastHost.dbSum(table, column, whereStr, optStr));
+    const result = JSON.parse(axeHost.dbSum(table, column, whereStr, optStr));
     if (result.error) throw new Error(result.error);
     return result.sum;
 }
 export function dbGroupBy(table, options) {
     const optStr = options == null ? "{}" : (typeof options === "string" ? options : JSON.stringify(options));
-    const result = JSON.parse(RaisFastHost.dbGroupBy(table, optStr));
+    const result = JSON.parse(axeHost.dbGroupBy(table, optStr));
     if (result.error) throw new Error(result.error);
     return result;
 }
 export function dbBegin() {
-    const result = JSON.parse(RaisFastHost.dbBegin());
+    const result = JSON.parse(axeHost.dbBegin());
     if (!result.ok)
         throw new Error("dbBegin failed");
     return result;
 }
 export function dbCommit() {
-    const result = JSON.parse(RaisFastHost.dbCommit());
+    const result = JSON.parse(axeHost.dbCommit());
     if (!result.ok)
         throw new Error("dbCommit failed");
     return result;
 }
 export function dbRollback() {
-    return JSON.parse(RaisFastHost.dbRollback());
+    return JSON.parse(axeHost.dbRollback());
 }
 export function httpGet(url) {
-    return RaisFastHost.httpGet(url) || null;
+    return axeHost.httpGet(url) || null;
 }
 export function httpGetJson(url) {
-    const result = RaisFastHost.httpGet(url);
+    const result = axeHost.httpGet(url);
     if (!result)
         return null;
     return JSON.parse(result);
 }
 export function httpPost(url, body) {
     const json = typeof body === "string" ? body : JSON.stringify(body);
-    return RaisFastHost.httpPost(url, json) || null;
+    return axeHost.httpPost(url, json) || null;
 }
 export function httpPostJson(url, body) {
     const json = typeof body === "string" ? body : JSON.stringify(body);
-    const result = RaisFastHost.httpPost(url, json);
+    const result = axeHost.httpPost(url, json);
     if (!result)
         return null;
     return JSON.parse(result);
 }
 export function configGet(key) {
-    return RaisFastHost.getConfig(key);
+    return axeHost.getConfig(key);
 }
 export function storeGet(key) {
-    return RaisFastHost.getData(key);
+    return axeHost.getData(key);
 }
 export function storeSet(key, value) {
-    return RaisFastHost.setData(key, value);
+    return axeHost.setData(key, value);
 }
 export function vfsRead(path) {
-    return RaisFastHost.vfsRead(path);
+    return axeHost.vfsRead(path);
 }
 export function vfsWrite(path, content) {
-    return RaisFastHost.vfsWrite(path, content);
+    return axeHost.vfsWrite(path, content);
 }
 export function vfsDelete(path) {
-    return RaisFastHost.vfsDelete(path);
+    return axeHost.vfsDelete(path);
 }
 export function vfsExists(path) {
-    return RaisFastHost.vfsExists(path) ?? false;
+    return axeHost.vfsExists(path) ?? false;
 }
 export function vfsList(path) {
-    const result = RaisFastHost.vfsList(path);
+    const result = axeHost.vfsList(path);
     return result ? result.split(",") : null;
 }
 export function vfsStat(path) {
-    const result = RaisFastHost.vfsStat(path);
+    const result = axeHost.vfsStat(path);
     return result ? JSON.parse(result) : null;
 }
 export function getPost(slug) {
-    const result = RaisFastHost.getPost(slug);
+    const result = axeHost.getPost(slug);
     return result ? JSON.parse(result) : null;
 }
 export function ok(data) {
@@ -187,12 +187,12 @@ export function extractJson(input, field) {
         return null;
     }
 }
-export function logInfo(msg) { RaisFastHost.log("info", msg); }
-export function logWarn(msg) { RaisFastHost.log("warn", msg); }
-export function logError(msg) { RaisFastHost.log("error", msg); }
+export function logInfo(msg) { axeHost.log("info", msg); }
+export function logWarn(msg) { axeHost.log("warn", msg); }
+export function logError(msg) { axeHost.log("error", msg); }
 export function newId() {
-    return RaisFastHost.newId();
+    return axeHost.newId();
 }
 export function eventEmit(type, data) {
-    RaisFastHost.emitEvent(type, typeof data === "string" ? data : JSON.stringify(data));
+    axeHost.emitEvent(type, typeof data === "string" ? data : JSON.stringify(data));
 }

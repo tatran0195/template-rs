@@ -34,7 +34,7 @@ impl JobQueue for DefaultJobQueue {
         let payload = serialize_job(&new_job.job);
         let max_attempts = new_job.max_attempts.unwrap_or(3);
 
-        raisfast_derive::crud_insert!(&self.pool, "jobs", [
+        axe_derive::crud_insert!(&self.pool, "jobs", [
             "id" => id,
             "job_type" => job_type,
             "payload" => &payload,
@@ -196,7 +196,7 @@ impl JobQueue for DefaultJobQueue {
         let id: i64 = id
             .parse()
             .map_err(|e| AppError::Internal(anyhow::anyhow!("invalid id: {e}")))?;
-        raisfast_derive::crud_update!(&self.pool, "jobs",
+        axe_derive::crud_update!(&self.pool, "jobs",
             bind: ["status" => JobStatus::Completed, "updated_at" => now],
             where: ("id", id)
         )?;
@@ -228,7 +228,7 @@ impl JobQueue for DefaultJobQueue {
             let max_attempts: i32 = r.get::<i32, _>("max_attempts");
 
             if attempts >= max_attempts {
-                raisfast_derive::crud_update!(&mut *tx, "jobs",
+                axe_derive::crud_update!(&mut *tx, "jobs",
                     bind: ["status" => JobStatus::Dead, "error" => error, "updated_at" => now],
                     where: ("id", id)
                 )?;
@@ -240,7 +240,7 @@ impl JobQueue for DefaultJobQueue {
             let run_after =
                 crate::utils::tz::now_utc() + chrono::Duration::from_std(delay).unwrap_or_default();
 
-            raisfast_derive::crud_update!(&mut *tx, "jobs",
+            axe_derive::crud_update!(&mut *tx, "jobs",
                 bind: ["status" => JobStatus::Pending, "error" => error, "run_after" => run_after, "updated_at" => now],
                 where: ("id", id)
             )?;
@@ -257,7 +257,7 @@ impl JobQueue for DefaultJobQueue {
         let id: i64 = id
             .parse()
             .map_err(|e| AppError::Internal(anyhow::anyhow!("invalid id: {e}")))?;
-        raisfast_derive::crud_update!(&self.pool, "jobs",
+        axe_derive::crud_update!(&self.pool, "jobs",
             bind: ["status" => JobStatus::Dead, "error" => error, "updated_at" => now],
             where: ("id", id)
         )?;
@@ -393,7 +393,7 @@ impl JobQueue for DefaultJobQueue {
         let id: i64 = id
             .parse()
             .map_err(|e| AppError::Internal(anyhow::anyhow!("invalid id: {e}")))?;
-        let result: crate::db::pool::DbQueryResult = raisfast_derive::crud_update!(&self.pool, "jobs",
+        let result: crate::db::pool::DbQueryResult = axe_derive::crud_update!(&self.pool, "jobs",
             bind: [
                 "status" => JobStatus::Pending,
                 "attempts" => 0i32,
@@ -417,7 +417,7 @@ impl JobQueue for DefaultJobQueue {
             .parse()
             .map_err(|e| AppError::Internal(anyhow::anyhow!("invalid id: {e}")))?;
         let result: crate::db::DbQueryResult =
-            raisfast_derive::crud_delete!(&self.pool, "jobs", where: ("id", id))?;
+            axe_derive::crud_delete!(&self.pool, "jobs", where: ("id", id))?;
 
         if result.rows_affected() == 0 {
             return Err(AppError::not_found("job"));

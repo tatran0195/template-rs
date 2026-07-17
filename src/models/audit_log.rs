@@ -27,7 +27,7 @@ pub struct AuditEntry {
 
 /// Insert an audit log entry
 pub async fn insert(pool: &crate::db::Pool, entry: &AuditEntry) -> AppResult<()> {
-    raisfast_derive::crud_insert!(
+    axe_derive::crud_insert!(
         pool,
         "audit_log",
         [
@@ -56,7 +56,7 @@ pub async fn find_paginated(
     page: i64,
     page_size: i64,
 ) -> AppResult<(Vec<AuditEntry>, i64)> {
-    let result = raisfast_derive::crud_query_paged!(
+    let result = axe_derive::crud_query_paged!(
         pool, AuditEntry,
         table: "audit_log",
         where: AND(("tenant_id", tenant_id), ("action", action), ("actor_id", actor_id)),
@@ -69,6 +69,6 @@ pub async fn find_paginated(
 
 /// Find an audit log entry by ID
 pub async fn find_by_id(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<AuditEntry> {
-    raisfast_derive::crud_find_one!(pool, "audit_log", AuditEntry, where: ("id", id))
+    axe_derive::crud_find_one!(pool, "audit_log", AuditEntry, where: ("id", id))
         .map_err(Into::into)
 }

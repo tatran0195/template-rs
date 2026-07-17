@@ -31,7 +31,7 @@ pub async fn find_reusable_by_id(
     tenant_id: Option<&str>,
 ) -> AppResult<Option<ReusableBlock>> {
     Ok(
-        raisfast_derive::crud_find!(pool, "reusable_blocks", ReusableBlock, where: ("id", id), tenant: tenant_id)?,
+        axe_derive::crud_find!(pool, "reusable_blocks", ReusableBlock, where: ("id", id), tenant: tenant_id)?,
     )
 }
 
@@ -39,7 +39,7 @@ pub async fn list_reusable(
     pool: &crate::db::Pool,
     tenant_id: Option<&str>,
 ) -> AppResult<Vec<ReusableBlock>> {
-    let result: Vec<ReusableBlock> = raisfast_derive::crud_list!(pool, "reusable_blocks", ReusableBlock, order_by: "name ASC", tenant: tenant_id)?;
+    let result: Vec<ReusableBlock> = axe_derive::crud_list!(pool, "reusable_blocks", ReusableBlock, order_by: "name ASC", tenant: tenant_id)?;
     Ok(result)
 }
 
@@ -52,7 +52,7 @@ pub async fn create_reusable(
         crate::utils::id::new_snowflake_id(),
         crate::utils::tz::now_utc(),
     );
-    raisfast_derive::crud_insert!(
+    axe_derive::crud_insert!(
         pool,
         "reusable_blocks",
         [
@@ -80,7 +80,7 @@ pub async fn update_reusable(
     tenant_id: Option<&str>,
 ) -> AppResult<ReusableBlock> {
     let now = crate::utils::tz::now_utc();
-    raisfast_derive::crud_update!(
+    axe_derive::crud_update!(
         pool, "reusable_blocks",
         bind: ["updated_at" => now],
         optional: ["updated_by" => cmd.updated_by, "name" => cmd.name, "block_type" => cmd.block_type, "content" => cmd.content, "description" => cmd.description],
@@ -98,7 +98,7 @@ pub async fn delete_reusable(
     id: SnowflakeId,
     tenant_id: Option<&str>,
 ) -> AppResult<()> {
-    let result = raisfast_derive::crud_delete!(pool, "reusable_blocks", where: ("id", id), tenant: tenant_id)?;
+    let result = axe_derive::crud_delete!(pool, "reusable_blocks", where: ("id", id), tenant: tenant_id)?;
     AppError::expect_affected(&result, "reusable_block")
 }
 

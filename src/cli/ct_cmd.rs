@@ -4,8 +4,8 @@
 
 use std::path::PathBuf;
 
-use raisfast::config::app::AppConfig;
-use raisfast::content_type::schema::{ContentTypeSchema, FieldType};
+use axe::config::app::AppConfig;
+use axe::content_type::schema::{ContentTypeSchema, FieldType};
 
 pub fn create_new(config: &AppConfig, name: &str) -> anyhow::Result<()> {
     let ct_dir = PathBuf::from(&config.content_type_dir);
@@ -272,7 +272,7 @@ fn schema_to_ts(ct: &ContentTypeSchema) -> String {
         && !ct
             .fields
             .iter()
-            .any(|f| f.name == raisfast::constants::COL_VERSION)
+            .any(|f| f.name == axe::constants::COL_VERSION)
     {
         lines.push("  version: number;".into());
     }
@@ -281,7 +281,7 @@ fn schema_to_ts(ct: &ContentTypeSchema) -> String {
         && !ct
             .fields
             .iter()
-            .any(|f| f.name == raisfast::constants::COL_LOCK_VERSION)
+            .any(|f| f.name == axe::constants::COL_LOCK_VERSION)
     {
         lines.push("  lock_version: number;".into());
     }
@@ -290,7 +290,7 @@ fn schema_to_ts(ct: &ContentTypeSchema) -> String {
     lines.join("\n")
 }
 
-fn field_type_to_ts(field: &raisfast::content_type::schema::FieldSchema) -> String {
+fn field_type_to_ts(field: &axe::content_type::schema::FieldSchema) -> String {
     match &field.field_type {
         FieldType::Text | FieldType::RichText | FieldType::Uid => "string".into(),
         FieldType::Email => "string".into(),

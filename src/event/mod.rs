@@ -17,18 +17,15 @@ use crate::models::category::Category;
 use crate::models::comment::Comment;
 use crate::models::email_verification::EmailVerificationToken;
 use crate::models::media::Media;
-use crate::models::order::Order;
 use crate::models::page::Page;
 use crate::models::password_reset::PasswordResetToken;
-use crate::models::payment_order::PaymentOrder;
+
 use crate::models::post::Post;
-use crate::models::product::Product;
-use crate::models::product_category::ProductCategory;
 use crate::models::tag::Tag;
 use crate::models::user::User;
-use crate::models::wallet_transaction::WalletTransaction;
 
-pub use raisfast_derive::EventMeta;
+
+pub use axe_derive::EventMeta;
 
 pub struct AuditInfo {
     pub action: String,
@@ -88,55 +85,8 @@ pub enum Event {
     #[event(table = "pages")]
     PageDeleted(Page),
 
-    // ── Product lifecycle ──
-    #[event(table = "products")]
-    ProductCreated(Product),
-    #[event(table = "products")]
-    ProductUpdated(Product),
-    #[event(table = "products")]
-    ProductDeleted(Product),
 
-    // ── Product Category lifecycle ──
-    #[event(table = "product_categories")]
-    ProductCategoryCreated(ProductCategory),
-    #[event(table = "product_categories")]
-    ProductCategoryUpdated(ProductCategory),
-    #[event(table = "product_categories")]
-    ProductCategoryDeleted(ProductCategory),
 
-    // ── Product Comment lifecycle ──
-    #[event(table = "product_comments")]
-    ProductCommentCreated(crate::models::product_comment::ProductComment),
-    #[event(table = "product_comments")]
-    ProductCommentUpdated(crate::models::product_comment::ProductComment),
-    #[event(table = "product_comments")]
-    ProductCommentDeleted(crate::models::product_comment::ProductComment),
-
-    // ── Order lifecycle ──
-    #[event(table = "orders")]
-    OrderCreated(Order),
-    #[event(table = "orders")]
-    OrderPaid(Order),
-    #[event(table = "orders")]
-    OrderShipped(Order),
-    #[event(table = "orders")]
-    OrderCompleted(Order),
-    #[event(table = "orders")]
-    OrderCancelled(Order),
-
-    // ── Payment lifecycle ──
-    #[event(table = "payment_orders")]
-    PaymentOrderCreated(PaymentOrder),
-    #[event(table = "payment_orders")]
-    PaymentPaid(PaymentOrder),
-    #[event(table = "payment_orders")]
-    PaymentRefunded(PaymentOrder),
-
-    // ── Wallet lifecycle ──
-    #[event(table = "wallet_transactions")]
-    WalletCredited(WalletTransaction),
-    #[event(table = "wallet_transactions")]
-    WalletDebited(WalletTransaction),
 
     // ── Generic CMS content lifecycle ──
     ContentCreating,

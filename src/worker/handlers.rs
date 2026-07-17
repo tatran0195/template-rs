@@ -7,16 +7,14 @@ pub mod cache;
 pub mod db_backup;
 pub mod email;
 pub mod email_verification;
-pub mod order_expire;
-pub mod payment_expire;
-pub mod payment_reconcile;
-pub mod payment_retry;
+
+
 pub mod publish;
 pub mod search_index;
 pub mod sitemap;
 pub mod sms;
 pub mod thumbnail;
-pub mod wallet_outbox;
+
 pub mod webhook;
 
 use std::sync::Arc;
@@ -96,41 +94,7 @@ pub fn register_all(
             config.clone(),
         )),
     );
-    registry.register(
-        "expire_payment_orders",
-        Box::new(payment_expire::ExpirePaymentOrdersHandler::new(
-            pool.clone(),
-            config.clone(),
-        )),
-    );
-    registry.register(
-        "expire_orders",
-        Box::new(order_expire::ExpireOrdersHandler::new(
-            pool.clone(),
-            config.clone(),
-        )),
-    );
-    registry.register(
-        "retry_payment_callback",
-        Box::new(payment_retry::RetryPaymentCallbackHandler::new(
-            pool.clone(),
-            config.clone(),
-        )),
-    );
-    registry.register(
-        "reconcile_payments",
-        Box::new(payment_reconcile::ReconcilePaymentsHandler::new(
-            pool.clone(),
-            config.clone(),
-        )),
-    );
-    registry.register(
-        "process_wallet_outbox",
-        Box::new(wallet_outbox::ProcessWalletOutboxHandler::new(
-            pool,
-            config.clone(),
-        )),
-    );
+
     registry.register(
         "db_backup",
         Box::new(db_backup::DbBackupHandler::new(config)),

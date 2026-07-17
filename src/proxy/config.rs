@@ -97,7 +97,7 @@ fn default_listen_https() -> String {
 }
 
 fn default_acme_dir() -> PathBuf {
-    PathBuf::from("/var/lib/raisfast/acme")
+    PathBuf::from("/var/lib/axe/acme")
 }
 
 fn default_acme_directory() -> String {
@@ -113,7 +113,7 @@ fn default_admin_secret() -> String {
 }
 
 fn default_tenants_dir() -> PathBuf {
-    PathBuf::from("/etc/raisfast/tenants")
+    PathBuf::from("/etc/axe/tenants")
 }
 
 fn default_health_check_interval() -> u64 {
@@ -121,7 +121,7 @@ fn default_health_check_interval() -> u64 {
 }
 
 fn default_log_dir() -> PathBuf {
-    PathBuf::from("/var/lib/raisfast/proxy/logs")
+    PathBuf::from("/var/lib/axe/proxy/logs")
 }
 
 fn default_connect_timeout() -> u64 {
@@ -210,7 +210,7 @@ acme_dir = "/data/acme"
 acme_email = "admin@example.com"
 admin_listen = "127.0.0.1:9999"
 admin_secret = "my-secret"
-tenants_dir = "/etc/raisfast/tenants"
+tenants_dir = "/etc/axe/tenants"
 health_check_interval_secs = 60
 "#;
         let config: ProxyConfig = toml::from_str(toml_str).unwrap();
@@ -228,13 +228,13 @@ health_check_interval_secs = 60
 [tenant]
 name = "user1"
 host = "user1.api.example.com"
-backend = "unix:/run/raisfast/user1.sock"
+backend = "unix:/run/axe/user1.sock"
 connect_timeout_ms = 3000
 "#;
         let config: TenantConfig = toml::from_str(toml_str).unwrap();
         assert_eq!(config.tenant.name, "user1");
         assert_eq!(config.tenant.host.as_deref(), Some("user1.api.example.com"));
-        assert_eq!(config.tenant.backend, "unix:/run/raisfast/user1.sock");
+        assert_eq!(config.tenant.backend, "unix:/run/axe/user1.sock");
         assert_eq!(config.tenant.connect_timeout_ms, 3000);
         assert!(config.tenant.enabled);
     }
@@ -260,7 +260,7 @@ backend = "127.0.0.1:9902"
         let config: ProxyConfig = toml::from_str(toml_str).unwrap();
         assert_eq!(
             config.proxy.acme_dir,
-            PathBuf::from("/var/lib/raisfast/acme")
+            PathBuf::from("/var/lib/axe/acme")
         );
         assert_eq!(
             config.proxy.acme_directory,

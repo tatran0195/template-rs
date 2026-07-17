@@ -43,7 +43,7 @@ pub async fn create(
         crate::utils::tz::now_utc(),
     );
 
-    raisfast_derive::crud_insert!(
+    axe_derive::crud_insert!(
         pool,
         "media",
         [
@@ -60,7 +60,7 @@ pub async fn create(
         tenant: tenant_id
     )?;
 
-    let media = raisfast_derive::crud_find_one!(pool, "media", Media, where: ("id", id), tenant: tenant_id)?;
+    let media = axe_derive::crud_find_one!(pool, "media", Media, where: ("id", id), tenant: tenant_id)?;
 
     Ok(media)
 }
@@ -72,7 +72,7 @@ pub async fn find_all(
     page_size: i64,
     tenant_id: Option<&str>,
 ) -> AppResult<(Vec<Media>, i64)> {
-    let result = raisfast_derive::crud_query_paged!(
+    let result = axe_derive::crud_query_paged!(
         pool, Media,
         table: "media",
         where: ("user_id", user_id),
@@ -90,7 +90,7 @@ pub async fn find_all_admin(
     page_size: i64,
     tenant_id: Option<&str>,
 ) -> AppResult<(Vec<Media>, i64)> {
-    let result = raisfast_derive::crud_query_paged!(
+    let result = axe_derive::crud_query_paged!(
         pool, Media,
         table: "media",
         order_by: "created_at DESC",
@@ -106,7 +106,7 @@ pub async fn find_by_id(
     id: SnowflakeId,
     tenant_id: Option<&str>,
 ) -> AppResult<Option<Media>> {
-    Ok(raisfast_derive::crud_find!(pool, "media", Media, where: ("id", id), tenant: tenant_id)?)
+    Ok(axe_derive::crud_find!(pool, "media", Media, where: ("id", id), tenant: tenant_id)?)
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -134,7 +134,7 @@ pub async fn stats(
         "SELECT COUNT(*), COALESCE(SUM(size), 0) FROM media WHERE user_id = {}{filter}",
         Driver::ph(1)
     );
-    let (total_files, total_size) = raisfast_derive::crud_query!(
+    let (total_files, total_size) = axe_derive::crud_query!(
         pool,
         (i64, i64),
         &total_sql,
@@ -147,7 +147,7 @@ pub async fn stats(
         "SELECT mimetype, COUNT(*), COALESCE(SUM(size), 0) FROM media WHERE user_id = {}{filter} GROUP BY mimetype ORDER BY COUNT(*) DESC",
         Driver::ph(1)
     );
-    let rows = raisfast_derive::crud_query!(
+    let rows = axe_derive::crud_query!(
         pool,
         (String, i64, i64),
         &by_type_sql,
@@ -178,7 +178,7 @@ pub async fn delete(
     tenant_id: Option<&str>,
 ) -> AppResult<()> {
     let result =
-        raisfast_derive::crud_delete!(pool, "media", where: ("id", id), tenant: tenant_id)?;
+        axe_derive::crud_delete!(pool, "media", where: ("id", id), tenant: tenant_id)?;
     AppError::expect_affected(&result, "media")
 }
 

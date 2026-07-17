@@ -5,19 +5,19 @@ services:
       - "9898:9898"
     env_file: .env
     environment:
-      DATABASE_URL: sqlite:/app/data/raisfast.db?mode=rwc
+      DATABASE_URL: sqlite:/app/data/axe.db?mode=rwc
       APP_ENV: production
       CORS_ORIGINS: http://localhost:3000
       STORAGE_DRIVER: s3
       S3_ENDPOINT: http://rustfs:9000
       S3_ACCESS_KEY: rustfsadmin
       S3_SECRET_KEY: rustfsadmin
-      S3_BUCKET: raisfast
+      S3_BUCKET: axe
       S3_REGION: us-east-1
     volumes:
-      - raisfast-data:/app/data
-      - raisfast-logs:/app/logs
-      - raisfast-plugins:/app/plugins-data
+      - axe-data:/app/data
+      - axe-logs:/app/logs
+      - axe-plugins:/app/plugins-data
     depends_on:
       rustfs:
         condition: service_healthy
@@ -61,8 +61,8 @@ services:
     restart: unless-stopped
 
 volumes:
-  raisfast-data:
-  raisfast-logs:
-  raisfast-plugins:
+  axe-data:
+  axe-logs:
+  axe-plugins:
   rustfs-data:
   rustfs-logs:

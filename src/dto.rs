@@ -1,67 +1,54 @@
 pub mod api_token;
 pub mod audit;
 pub mod batch;
-pub mod cart;
 pub mod category;
 pub mod comment;
-pub mod coupon;
 pub mod cron;
-pub mod currencies;
+
 pub mod health;
 pub mod media;
 pub mod oauth;
 pub mod options;
-pub mod order;
+
 pub mod page;
-pub mod payment;
+
 pub mod post;
-pub mod product;
-pub mod product_category;
-pub mod product_comment;
-pub mod product_variant;
 pub mod reusable_block;
 pub mod setup;
-pub mod shipping_template;
+
 pub mod sse;
 pub mod stats;
 pub mod tag;
 pub mod tenant;
 pub mod user;
-pub mod user_address;
-pub mod wallet;
+
+
 pub mod ws;
 
 pub use api_token::*;
 pub use audit::*;
 pub use batch::*;
-pub use cart::*;
 pub use category::*;
 pub use comment::*;
-pub use coupon::*;
 pub use cron::*;
-pub use currencies::*;
+
 pub use health::*;
 pub use media::*;
 pub use oauth::*;
 pub use options::*;
-pub use order::*;
+
 pub use page::*;
-pub use payment::*;
+
 pub use post::*;
-pub use product::*;
-pub use product_category::*;
-pub use product_comment::*;
-pub use product_variant::*;
 pub use reusable_block::*;
 pub use setup::*;
-pub use shipping_template::*;
 pub use sse::*;
 pub use stats::*;
 pub use tag::*;
 pub use tenant::*;
 pub use user::*;
-pub use user_address::*;
-pub use wallet::*;
+
+
 pub use ws::*;
 
 #[cfg(feature = "export-types")]
@@ -74,15 +61,10 @@ export_types!(
     comment::CreateCommentRequest,
     comment::UpdateCommentStatusRequest,
     comment::AdminCommentListQuery,
-    coupon::CreateCouponRequest,
-    coupon::UpdateCouponRequest,
-    coupon::CouponResponse,
     currencies::CurrencyResponse,
     currencies::CreateCurrencyRequest,
     currencies::UpdateCurrencyRequest,
-    user_address::CreateUserAddressRequest,
-    user_address::UpdateUserAddressRequest,
-    user_address::UserAddressResponse,
+
     media::MediaResponse,
     media::MediaStatsResponse,
     media::MediaTypeInfoResponse,
@@ -98,20 +80,7 @@ export_types!(
     post::CreatePostRequest,
     post::UpdatePostRequest,
     post::PostResponse,
-    product_category::CreateProductCategoryRequest,
-    product_category::UpdateProductCategoryRequest,
-    product_comment::CreateProductCommentRequest,
-    product_comment::UpdateProductCommentRequest,
-    product_comment::ProductCommentResponse,
-    product_comment::AdminReplyRequest,
-    product_comment::UpdateProductCommentStatusRequest,
-    product_comment::AdminProductCommentListQuery,
-    product_variant::CreateProductVariantRequest,
-    product_variant::UpdateProductVariantRequest,
-    product_variant::ProductVariantResponse,
-    shipping_template::CreateShippingTemplateRequest,
-    shipping_template::UpdateShippingTemplateRequest,
-    shipping_template::ShippingTemplateResponse,
+
     tag::CreateTagRequest,
     tag::UpdateTagRequest,
     user::CredentialResponse,
@@ -133,10 +102,7 @@ export_types!(
     user::BindEmailRequest,
     user::VerifyEmailRequest,
     user::ResendVerificationRequest,
-    wallet::WalletResponse,
-    wallet::WalletTransactionResponse,
-    wallet::AdminWalletOperationRequest,
-    wallet::ReversalRequest,
+
 );
 
 fn validate_password(pwd: &str) -> Result<(), validator::ValidationError> {
@@ -200,17 +166,7 @@ fn is_valid_id_str(s: &str) -> bool {
     !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric())
 }
 
-fn validate_currency_code(code: &str) -> Result<(), validator::ValidationError> {
-    let valid =
-        !code.is_empty() && code.len() <= 10 && code.chars().all(|c| c.is_ascii_uppercase());
-    if valid {
-        Ok(())
-    } else {
-        let mut err = validator::ValidationError::new("invalid_currency_code");
-        err.message = Some("currency must be 1-10 uppercase ASCII letters".into());
-        Err(err)
-    }
-}
+
 
 #[cfg(test)]
 mod tests {

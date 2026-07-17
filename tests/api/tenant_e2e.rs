@@ -1,7 +1,7 @@
 use super::*;
-use raisfast::DbDriver;
+use axe::DbDriver;
 
-async fn has_tenant_id_column(pool: &raisfast::db::Pool) -> bool {
+async fn has_tenant_id_column(pool: &axe::db::Pool) -> bool {
     #[cfg(feature = "db-sqlite")]
     {
         let result: Result<(i64,), sqlx::Error> = sqlx::query_as(
@@ -26,7 +26,7 @@ macro_rules! skip_without_tenant {
     };
 }
 
-async fn create_tenant_in_db(pool: &raisfast::db::Pool, name: &str) {
+async fn create_tenant_in_db(pool: &axe::db::Pool, name: &str) {
     let now = chrono::Utc::now().to_rfc3339();
     sqlx::query(
         "INSERT OR IGNORE INTO tenants (name, config, status, created_at, updated_at) VALUES (?, '{}', 'active', ?, ?)"
@@ -36,18 +36,18 @@ async fn create_tenant_in_db(pool: &raisfast::db::Pool, name: &str) {
 }
 
 async fn create_user_in_tenant(
-    pool: &raisfast::db::Pool,
+    pool: &axe::db::Pool,
     email: &str,
     username: &str,
     role: &str,
     tenant_id: &str,
 ) -> i64 {
-    let hash = raisfast::services::auth::hash_password("TestPass123!").unwrap();
+    let hash = axe::services::auth::hash_password("TestPass123!").unwrap();
     let sql = format!(
         "INSERT INTO users (tenant_id, username, role, status, registered_via) VALUES ({}, {}, {}, 'active', 'email') RETURNING id",
-        raisfast::db::Driver::ph(1),
-        raisfast::db::Driver::ph(2),
-        raisfast::db::Driver::ph(3)
+        axe::db::Driver::ph(1),
+        axe::db::Driver::ph(2),
+        axe::db::Driver::ph(3)
     );
     let int_id: i64 = sqlx::query_scalar(&sql)
         .bind(tenant_id)
@@ -57,16 +57,16 @@ async fn create_user_in_tenant(
         .await
         .unwrap();
     let cred_data = serde_json::json!({"password_hash": hash}).to_string();
-    let cred_id = raisfast::utils::id::new_id();
-    let cred_now = raisfast::utils::tz::now_utc();
+    let cred_id = axe::utils::id::new_id();
+    let cred_now = axe::utils::tz::now_utc();
     let cred_sql = format!(
         "INSERT INTO user_credentials (id, user_id, auth_type, identifier, credential_data, verified, created_at, updated_at) VALUES ({}, {}, 'email', {}, {}, 1, {}, {})",
-        raisfast::db::Driver::ph(1),
-        raisfast::db::Driver::ph(2),
-        raisfast::db::Driver::ph(3),
-        raisfast::db::Driver::ph(4),
-        raisfast::db::Driver::ph(5),
-        raisfast::db::Driver::ph(6)
+        axe::db::Driver::ph(1),
+        axe::db::Driver::ph(2),
+        axe::db::Driver::ph(3),
+        axe::db::Driver::ph(4),
+        axe::db::Driver::ph(5),
+        axe::db::Driver::ph(6)
     );
     sqlx::query(&cred_sql)
         .bind(cred_id)
@@ -82,7 +82,7 @@ async fn create_user_in_tenant(
 }
 
 async fn create_published_post_in_tenant(
-    pool: &raisfast::db::Pool,
+    pool: &axe::db::Pool,
     slug: &str,
     title: &str,
     author_int_id: i64,
@@ -91,12 +91,12 @@ async fn create_published_post_in_tenant(
     let now = chrono::Utc::now().to_rfc3339();
     let sql = format!(
         "INSERT INTO posts (tenant_id, title, slug, content, excerpt, status, created_by, updated_by, created_at, updated_at) VALUES ({}, {}, {}, 'content', 'excerpt', 'published', {}, NULL, {}, {})",
-        raisfast::db::Driver::ph(1),
-        raisfast::db::Driver::ph(2),
-        raisfast::db::Driver::ph(3),
-        raisfast::db::Driver::ph(4),
-        raisfast::db::Driver::ph(5),
-        raisfast::db::Driver::ph(6)
+        axe::db::Driver::ph(1),
+        axe::db::Driver::ph(2),
+        axe::db::Driver::ph(3),
+        axe::db::Driver::ph(4),
+        axe::db::Driver::ph(5),
+        axe::db::Driver::ph(6)
     );
     sqlx::query(&sql)
         .bind(tenant_id)

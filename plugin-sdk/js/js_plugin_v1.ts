@@ -4,7 +4,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-declare const RaisFastHost: {
+declare const axeHost: {
   log(level: string, msg: string): void;
   getConfig(key: string): string | null;
   httpGet(url: string): string;
@@ -42,99 +42,99 @@ export interface PluginError {
 export const SDK_VERSION: string = "1.0.0";
 
 export function dbPh(idx: number): string {
-  return RaisFastHost.dbPh(idx);
+  return axeHost.dbPh(idx);
 }
 
 export function dbQuery(sql: string, params: unknown[] = []): Record<string, unknown>[] {
-  const result = RaisFastHost.dbQuery(sql, JSON.stringify(params));
+  const result = axeHost.dbQuery(sql, JSON.stringify(params));
   if (!result) throw new Error("query returned no result");
   if (result.startsWith("error:")) throw new Error(result.slice(6));
   return JSON.parse(result);
 }
 
 export function dbExec(sql: string, params: unknown[] = []): DbExecResult {
-  const result = RaisFastHost.dbExecute(sql, JSON.stringify(params));
+  const result = axeHost.dbExecute(sql, JSON.stringify(params));
   return JSON.parse(result);
 }
 
 export function dbBegin(): { ok: boolean } {
-  const result = JSON.parse(RaisFastHost.dbBegin());
+  const result = JSON.parse(axeHost.dbBegin());
   if (!result.ok) throw new Error("dbBegin failed");
   return result;
 }
 
 export function dbCommit(): { ok: boolean } {
-  const result = JSON.parse(RaisFastHost.dbCommit());
+  const result = JSON.parse(axeHost.dbCommit());
   if (!result.ok) throw new Error("dbCommit failed");
   return result;
 }
 
 export function dbRollback(): { ok: boolean } {
-  return JSON.parse(RaisFastHost.dbRollback());
+  return JSON.parse(axeHost.dbRollback());
 }
 
 export function httpGet(url: string): string | null {
-  return RaisFastHost.httpGet(url) || null;
+  return axeHost.httpGet(url) || null;
 }
 
 export function httpGetJson(url: string): Record<string, unknown> | null {
-  const result = RaisFastHost.httpGet(url);
+  const result = axeHost.httpGet(url);
   if (!result) return null;
   return JSON.parse(result);
 }
 
 export function httpPost(url: string, body: Record<string, unknown> | string): string | null {
   const json = typeof body === "string" ? body : JSON.stringify(body);
-  return RaisFastHost.httpPost(url, json) || null;
+  return axeHost.httpPost(url, json) || null;
 }
 
 export function httpPostJson(url: string, body: Record<string, unknown> | string): Record<string, unknown> | null {
   const json = typeof body === "string" ? body : JSON.stringify(body);
-  const result = RaisFastHost.httpPost(url, json);
+  const result = axeHost.httpPost(url, json);
   if (!result) return null;
   return JSON.parse(result);
 }
 
 export function configGet(key: string): string | null {
-  return RaisFastHost.getConfig(key);
+  return axeHost.getConfig(key);
 }
 
 export function storeGet(key: string): string | null {
-  return RaisFastHost.getData(key);
+  return axeHost.getData(key);
 }
 
 export function storeSet(key: string, value: string): boolean {
-  return RaisFastHost.setData(key, value);
+  return axeHost.setData(key, value);
 }
 
 export function vfsRead(path: string): string | null {
-  return RaisFastHost.vfsRead(path);
+  return axeHost.vfsRead(path);
 }
 
 export function vfsWrite(path: string, content: string): boolean {
-  return RaisFastHost.vfsWrite(path, content);
+  return axeHost.vfsWrite(path, content);
 }
 
 export function vfsDelete(path: string): boolean {
-  return RaisFastHost.vfsDelete(path);
+  return axeHost.vfsDelete(path);
 }
 
 export function vfsExists(path: string): boolean {
-  return RaisFastHost.vfsExists(path) ?? false;
+  return axeHost.vfsExists(path) ?? false;
 }
 
 export function vfsList(path: string): string[] | null {
-  const result = RaisFastHost.vfsList(path);
+  const result = axeHost.vfsList(path);
   return result ? result.split(",") : null;
 }
 
 export function vfsStat(path: string): Record<string, unknown> | null {
-  const result = RaisFastHost.vfsStat(path);
+  const result = axeHost.vfsStat(path);
   return result ? JSON.parse(result) : null;
 }
 
 export function getPost(slug: string): Record<string, unknown> | null {
-  const result = RaisFastHost.getPost(slug);
+  const result = axeHost.getPost(slug);
   return result ? JSON.parse(result) : null;
 }
 
@@ -168,14 +168,14 @@ export function extractJson(input: any, field?: string): any {
   } catch { return null; }
 }
 
-export function logInfo(msg: string): void { RaisFastHost.log("info", msg); }
-export function logWarn(msg: string): void { RaisFastHost.log("warn", msg); }
-export function logError(msg: string): void { RaisFastHost.log("error", msg); }
+export function logInfo(msg: string): void { axeHost.log("info", msg); }
+export function logWarn(msg: string): void { axeHost.log("warn", msg); }
+export function logError(msg: string): void { axeHost.log("error", msg); }
 
 export function newId(): string {
-  return RaisFastHost.newId();
+  return axeHost.newId();
 }
 
 export function eventEmit(type: string, data: string | Record<string, unknown>): void {
-  RaisFastHost.emitEvent(type, typeof data === "string" ? data : JSON.stringify(data));
+  axeHost.emitEvent(type, typeof data === "string" ? data : JSON.stringify(data));
 }

@@ -2,147 +2,147 @@ local M = {}
 M.SDK_VERSION = "1.0.0"
 
 function M.dbPh(idx)
-    return RaisFastHost.dbPh(idx)
+    return axeHost.dbPh(idx)
 end
 
 function M.dbQuery(sql, params)
-    local paramsJson = params and RaisFastHost.jsonEncode(params) or "[]"
-    local result = RaisFastHost.dbQuery(sql, paramsJson)
+    local paramsJson = params and axeHost.jsonEncode(params) or "[]"
+    local result = axeHost.dbQuery(sql, paramsJson)
     if not result then error("query returned no result") end
     if result:sub(1, 6) == "error:" then error(result:sub(7)) end
-    return RaisFastHost.jsonDecode(result)
+    return axeHost.jsonDecode(result)
 end
 
 function M.dbExec(sql, params)
-    local paramsJson = params and RaisFastHost.jsonEncode(params) or "[]"
-    local result = RaisFastHost.dbExecute(sql, paramsJson)
-    return RaisFastHost.jsonDecode(result)
+    local paramsJson = params and axeHost.jsonEncode(params) or "[]"
+    local result = axeHost.dbExecute(sql, paramsJson)
+    return axeHost.jsonDecode(result)
 end
 
 function M.dbInsert(table, data, options)
-    local dataStr = type(data) == "string" and data or RaisFastHost.jsonEncode(data)
-    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or RaisFastHost.jsonEncode(options))
-    local result = RaisFastHost.jsonDecode(RaisFastHost.dbInsert(table, dataStr, optStr))
+    local dataStr = type(data) == "string" and data or axeHost.jsonEncode(data)
+    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or axeHost.jsonEncode(options))
+    local result = axeHost.jsonDecode(axeHost.dbInsert(table, dataStr, optStr))
     if result.error then error(result.error) end
     return result
 end
 
 function M.dbFetchOne(table, where, options)
-    local whereStr = (where == nil) and "{}" or (type(where) == "string" and where or RaisFastHost.jsonEncode(where))
-    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or RaisFastHost.jsonEncode(options))
-    local result = RaisFastHost.jsonDecode(RaisFastHost.dbFetchOne(table, whereStr, optStr))
+    local whereStr = (where == nil) and "{}" or (type(where) == "string" and where or axeHost.jsonEncode(where))
+    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or axeHost.jsonEncode(options))
+    local result = axeHost.jsonDecode(axeHost.dbFetchOne(table, whereStr, optStr))
     if result.error then error(result.error) end
     return result.data
 end
 
 function M.dbFetchAll(table, where, options)
-    local whereStr = (where == nil) and "{}" or (type(where) == "string" and where or RaisFastHost.jsonEncode(where))
-    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or RaisFastHost.jsonEncode(options))
-    local result = RaisFastHost.jsonDecode(RaisFastHost.dbFetchAll(table, whereStr, optStr))
+    local whereStr = (where == nil) and "{}" or (type(where) == "string" and where or axeHost.jsonEncode(where))
+    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or axeHost.jsonEncode(options))
+    local result = axeHost.jsonDecode(axeHost.dbFetchAll(table, whereStr, optStr))
     if result.error then error(result.error) end
     return result
 end
 
 function M.dbUpdate(table, data, where, options)
-    local dataStr = type(data) == "string" and data or RaisFastHost.jsonEncode(data)
-    local whereStr = (where == nil) and "{}" or (type(where) == "string" and where or RaisFastHost.jsonEncode(where))
-    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or RaisFastHost.jsonEncode(options))
-    local result = RaisFastHost.jsonDecode(RaisFastHost.dbUpdate(table, dataStr, whereStr, optStr))
+    local dataStr = type(data) == "string" and data or axeHost.jsonEncode(data)
+    local whereStr = (where == nil) and "{}" or (type(where) == "string" and where or axeHost.jsonEncode(where))
+    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or axeHost.jsonEncode(options))
+    local result = axeHost.jsonDecode(axeHost.dbUpdate(table, dataStr, whereStr, optStr))
     if result.error then error(result.error) end
     return result
 end
 
 function M.dbDelete(table, where, options)
-    local whereStr = (where == nil) and "{}" or (type(where) == "string" and where or RaisFastHost.jsonEncode(where))
-    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or RaisFastHost.jsonEncode(options))
-    local result = RaisFastHost.jsonDecode(RaisFastHost.dbDelete(table, whereStr, optStr))
+    local whereStr = (where == nil) and "{}" or (type(where) == "string" and where or axeHost.jsonEncode(where))
+    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or axeHost.jsonEncode(options))
+    local result = axeHost.jsonDecode(axeHost.dbDelete(table, whereStr, optStr))
     if result.error then error(result.error) end
     return result
 end
 
 function M.dbCount(table, where, options)
-    local whereStr = (where == nil) and "{}" or (type(where) == "string" and where or RaisFastHost.jsonEncode(where))
-    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or RaisFastHost.jsonEncode(options))
-    local result = RaisFastHost.jsonDecode(RaisFastHost.dbCount(table, whereStr, optStr))
+    local whereStr = (where == nil) and "{}" or (type(where) == "string" and where or axeHost.jsonEncode(where))
+    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or axeHost.jsonEncode(options))
+    local result = axeHost.jsonDecode(axeHost.dbCount(table, whereStr, optStr))
     if result.error then error(result.error) end
     return result.count
 end
 
 function M.dbIncrement(table, columns, where, options)
-    local colStr = type(columns) == "string" and columns or RaisFastHost.jsonEncode(columns)
-    local whereStr = (where == nil) and "{}" or (type(where) == "string" and where or RaisFastHost.jsonEncode(where))
-    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or RaisFastHost.jsonEncode(options))
-    local result = RaisFastHost.jsonDecode(RaisFastHost.dbIncrement(table, colStr, whereStr, optStr))
+    local colStr = type(columns) == "string" and columns or axeHost.jsonEncode(columns)
+    local whereStr = (where == nil) and "{}" or (type(where) == "string" and where or axeHost.jsonEncode(where))
+    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or axeHost.jsonEncode(options))
+    local result = axeHost.jsonDecode(axeHost.dbIncrement(table, colStr, whereStr, optStr))
     if result.error then error(result.error) end
     return result
 end
 
 function M.dbSum(table, column, where, options)
-    local whereStr = (where == nil) and "{}" or (type(where) == "string" and where or RaisFastHost.jsonEncode(where))
-    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or RaisFastHost.jsonEncode(options))
-    local result = RaisFastHost.jsonDecode(RaisFastHost.dbSum(table, column, whereStr, optStr))
+    local whereStr = (where == nil) and "{}" or (type(where) == "string" and where or axeHost.jsonEncode(where))
+    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or axeHost.jsonEncode(options))
+    local result = axeHost.jsonDecode(axeHost.dbSum(table, column, whereStr, optStr))
     if result.error then error(result.error) end
     return result.sum
 end
 
 function M.dbGroupBy(table, options)
-    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or RaisFastHost.jsonEncode(options))
-    local result = RaisFastHost.jsonDecode(RaisFastHost.dbGroupBy(table, optStr))
+    local optStr = (options == nil) and "{}" or (type(options) == "string" and options or axeHost.jsonEncode(options))
+    local result = axeHost.jsonDecode(axeHost.dbGroupBy(table, optStr))
     if result.error then error(result.error) end
     return result
 end
 
 function M.dbBegin()
-    local result = RaisFastHost.jsonDecode(RaisFastHost.dbBegin())
+    local result = axeHost.jsonDecode(axeHost.dbBegin())
     if not result.ok then error("dbBegin failed") end
     return result
 end
 
 function M.dbCommit()
-    local result = RaisFastHost.jsonDecode(RaisFastHost.dbCommit())
+    local result = axeHost.jsonDecode(axeHost.dbCommit())
     if not result.ok then error("dbCommit failed") end
     return result
 end
 
 function M.dbRollback()
-    return RaisFastHost.jsonDecode(RaisFastHost.dbRollback())
+    return axeHost.jsonDecode(axeHost.dbRollback())
 end
 
 function M.httpGet(url)
-    return RaisFastHost.httpGet(url)
+    return axeHost.httpGet(url)
 end
 
 function M.httpGetJson(url)
-    local result = RaisFastHost.httpGet(url)
+    local result = axeHost.httpGet(url)
     if not result then return nil end
-    local ok, decoded = pcall(RaisFastHost.jsonDecode, result)
+    local ok, decoded = pcall(axeHost.jsonDecode, result)
     return ok and decoded or nil
 end
 
 function M.httpPost(url, body)
-    local jsonBody = type(body) == "string" and body or RaisFastHost.jsonEncode(body)
-    return RaisFastHost.httpPost(url, jsonBody)
+    local jsonBody = type(body) == "string" and body or axeHost.jsonEncode(body)
+    return axeHost.httpPost(url, jsonBody)
 end
 
 function M.httpPostJson(url, body)
-    local jsonBody = type(body) == "string" and body or RaisFastHost.jsonEncode(body)
-    local result = RaisFastHost.httpPost(url, jsonBody)
+    local jsonBody = type(body) == "string" and body or axeHost.jsonEncode(body)
+    local result = axeHost.httpPost(url, jsonBody)
     if not result then return nil end
-    local ok, decoded = pcall(RaisFastHost.jsonDecode, result)
+    local ok, decoded = pcall(axeHost.jsonDecode, result)
     return ok and decoded or nil
 end
 
-function M.configGet(key) return RaisFastHost.getConfig(key) end
+function M.configGet(key) return axeHost.getConfig(key) end
 
-function M.storeGet(key) return RaisFastHost.getData(key) end
-function M.storeSet(key, value) return RaisFastHost.setData(key, value) end
+function M.storeGet(key) return axeHost.getData(key) end
+function M.storeSet(key, value) return axeHost.setData(key, value) end
 
-function M.vfsRead(path) return RaisFastHost.vfsRead(path) end
-function M.vfsWrite(path, content) return RaisFastHost.vfsWrite(path, content) end
-function M.vfsDelete(path) return RaisFastHost.vfsDelete(path) end
-function M.vfsExists(path) return RaisFastHost.vfsExists(path) end
+function M.vfsRead(path) return axeHost.vfsRead(path) end
+function M.vfsWrite(path, content) return axeHost.vfsWrite(path, content) end
+function M.vfsDelete(path) return axeHost.vfsDelete(path) end
+function M.vfsExists(path) return axeHost.vfsExists(path) end
 function M.vfsList(path)
-    local result = RaisFastHost.vfsList(path)
+    local result = axeHost.vfsList(path)
     if not result then return nil end
     local list = {}
     for part in result:gmatch("[^,]+") do
@@ -152,16 +152,16 @@ function M.vfsList(path)
 end
 
 function M.vfsStat(path)
-    local result = RaisFastHost.vfsStat(path)
+    local result = axeHost.vfsStat(path)
     if not result then return nil end
-    local ok, decoded = pcall(RaisFastHost.jsonDecode, result)
+    local ok, decoded = pcall(axeHost.jsonDecode, result)
     return ok and decoded or nil
 end
 
 function M.getPost(slug)
-    local result = RaisFastHost.getPost(slug)
+    local result = axeHost.getPost(slug)
     if not result then return nil end
-    local ok, decoded = pcall(RaisFastHost.jsonDecode, result)
+    local ok, decoded = pcall(axeHost.jsonDecode, result)
     return ok and decoded or nil
 end
 
@@ -177,7 +177,7 @@ function M.extractJson(input, field)
     local ok, result = pcall(function()
         local parsed = input
         if type(input) == "string" then
-            parsed = RaisFastHost.jsonDecode(input)
+            parsed = axeHost.jsonDecode(input)
         end
         if not field or field == "" then return parsed end
         local val = parsed
@@ -186,7 +186,7 @@ function M.extractJson(input, field)
             val = val[part]
         end
         if type(val) == "string" then
-            local decodeOk, decoded = pcall(RaisFastHost.jsonDecode, val)
+            local decodeOk, decoded = pcall(axeHost.jsonDecode, val)
             if decodeOk then return decoded end
             return val
         end
@@ -195,15 +195,15 @@ function M.extractJson(input, field)
     return ok and result or nil
 end
 
-function M.logInfo(msg) RaisFastHost.log("info", msg) end
-function M.logWarn(msg) RaisFastHost.log("warn", msg) end
-function M.logError(msg) RaisFastHost.log("error", msg) end
+function M.logInfo(msg) axeHost.log("info", msg) end
+function M.logWarn(msg) axeHost.log("warn", msg) end
+function M.logError(msg) axeHost.log("error", msg) end
 
-function M.newId() return RaisFastHost.newId() end
+function M.newId() return axeHost.newId() end
 
 function M.eventEmit(eventType, data)
-    local dataStr = type(data) == "string" and data or RaisFastHost.jsonEncode(data)
-    return RaisFastHost.emitEvent(eventType, dataStr)
+    local dataStr = type(data) == "string" and data or axeHost.jsonEncode(data)
+    return axeHost.emitEvent(eventType, dataStr)
 end
 
 _sdk_module = M

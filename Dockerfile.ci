@@ -13,9 +13,9 @@ RUN groupadd --gid 1000 app \
 WORKDIR /app
 
 COPY migrations/ migrations/
-COPY ${BINARY_PATH} /app/raisfast
+COPY ${BINARY_PATH} /app/axe
 
-RUN chmod +x /app/raisfast \
+RUN chmod +x /app/axe \
     && mkdir -p /app/data /app/logs /app/uploads /app/plugins-data \
     && chown -R app:app /app/data /app/logs /app/uploads /app/plugins-data
 
@@ -29,4 +29,4 @@ EXPOSE 9898
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:9898/healthz || exit 1
 
-CMD ["./raisfast"]
+CMD ["./axe"]

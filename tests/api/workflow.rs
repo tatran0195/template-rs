@@ -2,7 +2,7 @@ use crate::*;
 use serde_json::json;
 
 async fn create_simple_workflow(app: &mut axum::Router, token: &str) -> String {
-    let id = raisfast::utils::id::new_id().to_string();
+    let id = axe::utils::id::new_id().to_string();
     let (status, body) = send(
         app,
         post_json_auth(
@@ -30,7 +30,7 @@ async fn create_simple_workflow(app: &mut axum::Router, token: &str) -> String {
 #[tokio::test]
 async fn workflow_crud_lifecycle() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
 
     let id = create_simple_workflow(&mut app, &token).await;
 
@@ -57,7 +57,7 @@ async fn workflow_crud_lifecycle() {
 #[tokio::test]
 async fn workflow_start_and_execute_steps() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
 
     let id = create_simple_workflow(&mut app, &token).await;
 
@@ -110,9 +110,9 @@ async fn workflow_start_and_execute_steps() {
 #[tokio::test]
 async fn workflow_branch_condition() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
 
-    let id = raisfast::utils::id::new_id().to_string();
+    let id = axe::utils::id::new_id().to_string();
     let (status, body) = send(
         &mut app,
         post_json_auth(
@@ -163,9 +163,9 @@ async fn workflow_branch_condition() {
 #[tokio::test]
 async fn workflow_cancel_instance() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
 
-    let id = raisfast::utils::id::new_id().to_string();
+    let id = axe::utils::id::new_id().to_string();
     let (create_status, _) = send(
         &mut app,
         post_json_auth(
@@ -221,9 +221,9 @@ async fn workflow_cancel_instance() {
 #[tokio::test]
 async fn workflow_step_logs() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
 
-    let id = raisfast::utils::id::new_id().to_string();
+    let id = axe::utils::id::new_id().to_string();
     let (create_status, _) = send(
         &mut app,
         post_json_auth(
@@ -281,7 +281,7 @@ async fn workflow_step_logs() {
 #[tokio::test]
 async fn workflow_get_not_found() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
     let (status, _) = send(
         &mut app,
         get_auth("/api/v1/admin/workflows/9999999999999", &token),
@@ -293,8 +293,8 @@ async fn workflow_get_not_found() {
 #[tokio::test]
 async fn workflow_create_no_steps() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
-    let id = raisfast::utils::id::new_id().to_string();
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
+    let id = axe::utils::id::new_id().to_string();
     let (status, _) = send(
         &mut app,
         post_json_auth(
@@ -310,7 +310,7 @@ async fn workflow_create_no_steps() {
 #[tokio::test]
 async fn workflow_start_nonexistent() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
     let (status, _) = send(
         &mut app,
         post_json_auth(
@@ -326,7 +326,7 @@ async fn workflow_start_nonexistent() {
 #[tokio::test]
 async fn workflow_execute_nonexistent_instance() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
     let (status, _) = send(
         &mut app,
         post_json_auth(
@@ -342,9 +342,9 @@ async fn workflow_execute_nonexistent_instance() {
 #[tokio::test]
 async fn workflow_cancel_already_completed() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
 
-    let id = raisfast::utils::id::new_id().to_string();
+    let id = axe::utils::id::new_id().to_string();
     let (create_status, _) = send(
         &mut app,
         post_json_auth(
@@ -399,9 +399,9 @@ async fn workflow_cancel_already_completed() {
 #[tokio::test]
 async fn workflow_execute_not_running() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
 
-    let id = raisfast::utils::id::new_id().to_string();
+    let id = axe::utils::id::new_id().to_string();
     let (create_status, _) = send(
         &mut app,
         post_json_auth(
@@ -456,7 +456,7 @@ async fn workflow_execute_not_running() {
 #[tokio::test]
 async fn workflow_list_instances() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
 
     let id = create_simple_workflow(&mut app, &token).await;
 
@@ -486,7 +486,7 @@ async fn workflow_list_instances() {
 #[tokio::test]
 async fn workflow_get_instance_not_found() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
     let (status, _) = send(
         &mut app,
         get_auth("/api/v1/admin/workflows/instances/9999999999999", &token),
@@ -498,7 +498,7 @@ async fn workflow_get_instance_not_found() {
 #[tokio::test]
 async fn workflow_step_logs_not_found() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
     let (status, _) = send(
         &mut app,
         get_auth(
@@ -513,7 +513,7 @@ async fn workflow_step_logs_not_found() {
 #[tokio::test]
 async fn workflow_delete_nonexistent() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
     let (status, _) = send(
         &mut app,
         delete_auth("/api/v1/admin/workflows/9999999999999", &token),
@@ -525,9 +525,9 @@ async fn workflow_delete_nonexistent() {
 #[tokio::test]
 async fn workflow_parallel_with_join_next() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
 
-    let id = raisfast::utils::id::new_id().to_string();
+    let id = axe::utils::id::new_id().to_string();
     let (status, body) = send(
         &mut app,
         post_json_auth(
@@ -629,9 +629,9 @@ async fn workflow_parallel_with_join_next() {
 #[tokio::test]
 async fn workflow_parallel_no_join_completes() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
 
-    let id = raisfast::utils::id::new_id().to_string();
+    let id = axe::utils::id::new_id().to_string();
     let (create_status, _) = send(
         &mut app,
         post_json_auth(
@@ -704,9 +704,9 @@ async fn workflow_parallel_no_join_completes() {
 #[tokio::test]
 async fn workflow_parallel_step_logs() {
     let (mut app, _) = test_app().await;
-    let token = make_token("u1", 1, raisfast::models::user::UserRole::Admin);
+    let token = make_token("u1", 1, axe::models::user::UserRole::Admin);
 
-    let id = raisfast::utils::id::new_id().to_string();
+    let id = axe::utils::id::new_id().to_string();
     let (create_status, _) = send(
         &mut app,
         post_json_auth(

@@ -1,4 +1,4 @@
-//! raisfast full-stack development platform core library
+//! axe full-stack development platform core library
 //!
 //! A high-performance full-stack development platform built with Rust + Axum,
 //! supporting `SQLite` / `PostgreSQL` / `MySQL`.
@@ -36,7 +36,7 @@ pub mod middleware;
 pub mod models;
 pub mod notifier;
 pub mod oauth;
-pub mod payment;
+
 pub mod plugins;
 pub mod policy;
 pub mod protocols;
@@ -109,22 +109,12 @@ pub struct AppState {
     pub post_service: Arc<dyn crate::services::post::PostService>,
     pub page_service: Arc<dyn crate::services::page::PageService>,
     pub category_service: Arc<dyn crate::services::category::CategoryService>,
-    pub product_category_service:
-        Arc<dyn crate::services::product_category::ProductCategoryService>,
     pub tag_service: Arc<dyn crate::services::tag::TagService>,
     pub comment_service: Arc<dyn crate::services::comment::CommentService>,
     pub user_service: Arc<dyn crate::services::user::UserService>,
-    pub wallet_service: Arc<dyn crate::services::wallet::WalletService>,
-    pub product_service: Arc<dyn crate::services::product::ProductService>,
-    pub order_service: Arc<dyn crate::services::order::OrderService>,
-    pub cart_service: Arc<dyn crate::services::cart::CartService>,
-    pub product_variant_service: Arc<dyn crate::services::product_variant::ProductVariantService>,
-    pub product_comment_service: Arc<dyn crate::services::product_comment::ProductCommentService>,
-    pub coupon_service: Arc<dyn crate::services::coupon::CouponService>,
-    pub shipping_template_service:
-        Arc<dyn crate::services::shipping_template::ShippingTemplateService>,
-    pub user_address_service: Arc<dyn crate::services::user_address::UserAddressService>,
-    pub payment_service: Arc<dyn crate::services::payment::PaymentService>,
+
+
+
     pub search: Arc<dyn SearchEngine>,
     pub content_type_registry: Arc<ContentTypeRegistry>,
     pub aspect_engine: Arc<crate::aspects::engine::AspectEngine>,
@@ -174,59 +164,7 @@ pub async fn build_app_state(
     let options_service =
         Arc::new(OptionsService::new(Arc::new(pool.clone()), config.builtin_tenantable).await);
 
-    let order_service: Arc<dyn crate::services::order::OrderService> =
-        Arc::new(crate::services::order::OrderServiceImpl::new(
-            aspect_engine.clone(),
-            Arc::new(pool.clone()),
-            options_service.clone(),
-        ));
 
-    let cart_service: Arc<dyn crate::services::cart::CartService> = Arc::new(
-        crate::services::cart::CartServiceImpl::new(Arc::new(pool.clone())),
-    );
-
-    let product_variant_service: Arc<dyn crate::services::product_variant::ProductVariantService> =
-        Arc::new(
-            crate::services::product_variant::ProductVariantServiceImpl::new(Arc::new(
-                pool.clone(),
-            )),
-        );
-
-    let product_comment_service: Arc<dyn crate::services::product_comment::ProductCommentService> =
-        Arc::new(
-            crate::services::product_comment::ProductCommentServiceImpl::new(Arc::new(
-                pool.clone(),
-            )),
-        );
-
-    let coupon_service: Arc<dyn crate::services::coupon::CouponService> = Arc::new(
-        crate::services::coupon::CouponServiceImpl::new(Arc::new(pool.clone())),
-    );
-
-    let shipping_template_service: Arc<
-        dyn crate::services::shipping_template::ShippingTemplateService,
-    > = Arc::new(
-        crate::services::shipping_template::ShippingTemplateServiceImpl::new(Arc::new(
-            pool.clone(),
-        )),
-    );
-
-    let user_address_service: Arc<dyn crate::services::user_address::UserAddressService> = Arc::new(
-        crate::services::user_address::UserAddressServiceImpl::new(Arc::new(pool.clone())),
-    );
-
-    let wallet_service: Arc<dyn crate::services::wallet::WalletService> =
-        Arc::new(crate::services::wallet::WalletServiceImpl::new(
-            aspect_engine.clone(),
-            Arc::new(pool.clone()),
-        ));
-
-    let payment_service: Arc<dyn crate::services::payment::PaymentService> =
-        Arc::new(crate::services::payment::PaymentServiceImpl::new(
-            Arc::new(config.clone()),
-            aspect_engine.clone(),
-            Arc::new(pool.clone()),
-        ));
 
     let reserved = config.builtins.reserved_route_segments();
     let protocol_names: Vec<&str> = protocol_registry.names();
@@ -286,14 +224,7 @@ pub async fn build_app_state(
             aspect_engine.clone(),
             Arc::new(pool.clone()),
         ));
-    let product_category_service: Arc<
-        dyn crate::services::product_category::ProductCategoryService,
-    > = Arc::new(
-        crate::services::product_category::ProductCategoryServiceImpl::new(
-            aspect_engine.clone(),
-            Arc::new(pool.clone()),
-        ),
-    );
+
     let page_service: Arc<dyn crate::services::page::PageService> = Arc::new(
         crate::services::page::PageServiceImpl::new(aspect_engine.clone(), Arc::new(pool.clone())),
     );
@@ -301,13 +232,6 @@ pub async fn build_app_state(
         Arc::new(crate::services::comment::CommentServiceImpl::new(
             Arc::new(pool.clone()),
             aspect_engine.clone(),
-        ));
-
-    let product_service: Arc<dyn crate::services::product::ProductService> =
-        Arc::new(crate::services::product::ProductServiceImpl::new(
-            aspect_engine.clone(),
-            Arc::new(pool.clone()),
-            options_service.clone(),
         ));
 
     let rbac_service = Arc::new(RbacService::new(Arc::new(pool.clone())));
@@ -341,20 +265,11 @@ pub async fn build_app_state(
         post_service,
         page_service,
         category_service,
-        product_category_service,
         tag_service,
         comment_service,
         user_service,
-        wallet_service,
-        product_service,
-        order_service,
-        cart_service,
-        product_variant_service,
-        product_comment_service,
-        coupon_service,
-        shipping_template_service,
-        user_address_service,
-        payment_service,
+
+
         search,
         content_type_registry: ct_registry,
         aspect_engine,

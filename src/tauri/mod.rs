@@ -1,6 +1,6 @@
 //! Tauri desktop application adapter layer
 //!
-//! Exposes the raisfast Service layer as Tauri Commands,
+//! Exposes the axe Service layer as Tauri Commands,
 //! invoked by the frontend via `invoke("command_name", { args })`.
 //!
 //! # Architecture

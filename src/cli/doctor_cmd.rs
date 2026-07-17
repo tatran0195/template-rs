@@ -1,4 +1,4 @@
-//! `raisfast doctor` CLI subcommand.
+//! `axe doctor` CLI subcommand.
 //!
 //! Diagnose system health without starting the HTTP server.
 //! Checks configuration, database, storage directories, search index,
@@ -6,8 +6,8 @@
 
 use std::path::Path;
 
-use raisfast::config::app::AppConfig;
-use raisfast::db::{DbDriver, Driver};
+use axe::config::app::AppConfig;
+use axe::db::{DbDriver, Driver};
 
 // ── Result types ─────────────────────────────────────────────
 
@@ -271,7 +271,7 @@ fn check_writable(path: &Path) -> bool {
 }
 
 async fn check_database(config: &AppConfig) -> CheckResult {
-    match raisfast::db::connection::init_pool(&config.database_url, 1).await {
+    match axe::db::connection::init_pool(&config.database_url, 1).await {
         Ok(pool) => match sqlx::query("SELECT 1").execute(&pool).await {
             Ok(_) => {
                 let table_check = check_core_tables(&pool).await;
@@ -303,7 +303,7 @@ async fn check_database(config: &AppConfig) -> CheckResult {
     }
 }
 
-async fn check_core_tables(pool: &raisfast::db::Pool) -> Vec<String> {
+async fn check_core_tables(pool: &axe::db::Pool) -> Vec<String> {
     let core_tables = [
         "users",
         "posts",
@@ -439,7 +439,7 @@ fn print_summary(results: &[CheckResult]) {
 pub async fn run(config: &AppConfig) {
     let mut all_results: Vec<CheckResult> = Vec::new();
 
-    println!("{BOLD}{CYAN}raisfast doctor{RESET} — system diagnostics");
+    println!("{BOLD}{CYAN}axe doctor{RESET} — system diagnostics");
     println!("{DIM}version {}{RESET}", env!("CARGO_PKG_VERSION"));
 
     // Section 1: Environment files

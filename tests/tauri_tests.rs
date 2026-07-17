@@ -6,17 +6,16 @@
 
 use std::sync::Arc;
 
-use raisfast::config::app::AppConfig;
-use raisfast::content_type::repository::{ContentQuery, ContentRepository, SaveContext};
-use raisfast::content_type::schema::ContentTypeSchema;
-use raisfast::db::tenant;
-use raisfast::services::post::{PostService, PostServiceImpl};
-use raisfast::services::{auth, options, stats, user};
+use axe::config::app::AppConfig;
+use axe::content_type::repository::{ContentQuery, ContentRepository, SaveContext};
+use axe::content_type::schema::ContentTypeSchema;
+use axe::db::tenant;
+use axe::services::post::{PostService, PostServiceImpl};
+use axe::services::{auth, options, stats, user};
 
 fn build_post_service(pool: Arc<sqlx::SqlitePool>) -> Arc<dyn PostService> {
-    let engine = Arc::new(raisfast::aspects::engine::AspectEngine::new());
-    let search: Arc<dyn raisfast::search::SearchEngine> =
-        Arc::new(raisfast::search::NoopSearchEngine);
+    let engine = Arc::new(axe::aspects::engine::AspectEngine::new());
+    let search: Arc<dyn axe::search::SearchEngine> = Arc::new(axe::search::NoopSearchEngine);
     Arc::new(PostServiceImpl::new(pool, engine, search))
 }
 
@@ -37,29 +36,27 @@ fn test_config() -> AppConfig {
     config
 }
 
-fn test_protocol_registry() -> raisfast::protocols::ProtocolRegistry {
-    let mut reg = raisfast::protocols::ProtocolRegistry::new();
-    reg.register(raisfast::protocols::ownable::OwnableProtocol);
-    reg.register(raisfast::protocols::timestampable::TimestampableProtocol);
-    reg.register(raisfast::protocols::soft_deletable::SoftDeletableProtocol);
-    reg.register(raisfast::protocols::versionable::VersionableProtocol);
-    reg.register(raisfast::protocols::lockable::LockableProtocol);
-    reg.register(raisfast::protocols::sortable::SortableProtocol);
-    reg.register(raisfast::protocols::expirable::ExpirableProtocol);
-    reg.register(raisfast::protocols::nestable::NestableProtocol);
-    reg.register(raisfast::protocols::tenantable::TenantableProtocol);
+fn test_protocol_registry() -> axe::protocols::ProtocolRegistry {
+    let mut reg = axe::protocols::ProtocolRegistry::new();
+    reg.register(axe::protocols::ownable::OwnableProtocol);
+    reg.register(axe::protocols::timestampable::TimestampableProtocol);
+    reg.register(axe::protocols::soft_deletable::SoftDeletableProtocol);
+    reg.register(axe::protocols::versionable::VersionableProtocol);
+    reg.register(axe::protocols::lockable::LockableProtocol);
+    reg.register(axe::protocols::sortable::SortableProtocol);
+    reg.register(axe::protocols::expirable::ExpirableProtocol);
+    reg.register(axe::protocols::nestable::NestableProtocol);
+    reg.register(axe::protocols::tenantable::TenantableProtocol);
     reg
 }
 
-fn cache_ct(ct: &mut raisfast::content_type::schema::ContentTypeSchema) {
+fn cache_ct(ct: &mut axe::content_type::schema::ContentTypeSchema) {
     ct.cache_protocol_columns(&test_protocol_registry());
 }
 
 async fn setup_pool() -> sqlx::SqlitePool {
-    let pool = raisfast::db::Pool::connect("sqlite::memory:")
-        .await
-        .unwrap();
-    sqlx::query(raisfast::db::schema::SCHEMA_SQL)
+    let pool = axe::db::Pool::connect("sqlite::memory:").await.unwrap();
+    sqlx::query(axe::db::schema::SCHEMA_SQL)
         .execute(&pool)
         .await
         .unwrap();
@@ -67,8 +64,8 @@ async fn setup_pool() -> sqlx::SqlitePool {
     pool
 }
 async fn create_test_user(pool: &sqlx::SqlitePool, label: &str) -> (i64, String) {
-    let aspect_engine = raisfast::aspects::engine::AspectEngine::new();
-    let req = raisfast::dto::RegisterRequest {
+    let aspect_engine = axe::aspects::engine::AspectEngine::new();
+    let req = axe::dto::RegisterRequest {
         username: format!("user_{label}"),
         email: format!("{label}@test.com"),
         password: "Password123".into(),
@@ -122,9 +119,9 @@ label = "优先级"
 #[tokio::test]
 async fn tauri_auth_register_service() {
     let pool = setup_pool().await;
-    let aspect_engine = raisfast::aspects::engine::AspectEngine::new();
+    let aspect_engine = axe::aspects::engine::AspectEngine::new();
 
-    let req = raisfast::dto::RegisterRequest {
+    let req = axe::dto::RegisterRequest {
         username: "testuser".into(),
         email: "test@example.com".into(),
         password: "Password123".into(),
@@ -144,9 +141,9 @@ async fn tauri_auth_register_service() {
 #[tokio::test]
 async fn tauri_auth_register_duplicate_email() {
     let pool = setup_pool().await;
-    let aspect_engine = raisfast::aspects::engine::AspectEngine::new();
+    let aspect_engine = axe::aspects::engine::AspectEngine::new();
 
-    let req = raisfast::dto::RegisterRequest {
+    let req = axe::dto::RegisterRequest {
         username: "user1".into(),
         email: "dup@example.com".into(),
         password: "Password123".into(),
@@ -155,12 +152,12 @@ async fn tauri_auth_register_duplicate_email() {
         .await
         .unwrap();
 
-    let req2 = raisfast::dto::RegisterRequest {
+    let req2 = axe::dto::RegisterRequest {
         username: "user2".into(),
         email: "dup@example.com".into(),
         password: "Password456".into(),
     };
-    let aspect_engine2 = raisfast::aspects::engine::AspectEngine::new();
+    let aspect_engine2 = axe::aspects::engine::AspectEngine::new();
     let result = auth::register(&aspect_engine2, req2, None, false, &pool).await;
     assert!(result.is_err(), "duplicate email should fail");
 }
@@ -169,9 +166,9 @@ async fn tauri_auth_register_duplicate_email() {
 async fn tauri_auth_login_service() {
     let pool = setup_pool().await;
     let config = test_config();
-    let aspect_engine = raisfast::aspects::engine::AspectEngine::new();
+    let aspect_engine = axe::aspects::engine::AspectEngine::new();
 
-    let reg_req = raisfast::dto::RegisterRequest {
+    let reg_req = axe::dto::RegisterRequest {
         username: "loginuser".into(),
         email: "login@example.com".into(),
         password: "Password123".into(),
@@ -180,11 +177,11 @@ async fn tauri_auth_login_service() {
         .await
         .unwrap();
 
-    let login_req = raisfast::dto::LoginRequest {
+    let login_req = axe::dto::LoginRequest {
         email: "login@example.com".into(),
         password: "Password123".into(),
     };
-    let aspect_engine2 = raisfast::aspects::engine::AspectEngine::new();
+    let aspect_engine2 = axe::aspects::engine::AspectEngine::new();
     let result = auth::login(
         &aspect_engine2,
         &pool,
@@ -207,9 +204,9 @@ async fn tauri_auth_login_service() {
 async fn tauri_auth_login_wrong_password() {
     let pool = setup_pool().await;
     let config = test_config();
-    let aspect_engine = raisfast::aspects::engine::AspectEngine::new();
+    let aspect_engine = axe::aspects::engine::AspectEngine::new();
 
-    let reg_req = raisfast::dto::RegisterRequest {
+    let reg_req = axe::dto::RegisterRequest {
         username: "wrongpw".into(),
         email: "wrong@example.com".into(),
         password: "Password123".into(),
@@ -218,11 +215,11 @@ async fn tauri_auth_login_wrong_password() {
         .await
         .unwrap();
 
-    let login_req = raisfast::dto::LoginRequest {
+    let login_req = axe::dto::LoginRequest {
         email: "wrong@example.com".into(),
         password: "WrongPassword".into(),
     };
-    let aspect_engine2 = raisfast::aspects::engine::AspectEngine::new();
+    let aspect_engine2 = axe::aspects::engine::AspectEngine::new();
     let result = auth::login(
         &aspect_engine2,
         &pool,
@@ -241,9 +238,9 @@ async fn tauri_auth_login_wrong_password() {
 #[tokio::test]
 async fn tauri_auth_get_me_service() {
     let pool = setup_pool().await;
-    let aspect_engine = raisfast::aspects::engine::AspectEngine::new();
+    let aspect_engine = axe::aspects::engine::AspectEngine::new();
 
-    let reg_req = raisfast::dto::RegisterRequest {
+    let reg_req = axe::dto::RegisterRequest {
         username: "getme".into(),
         email: "getme@example.com".into(),
         password: "Password123".into(),
@@ -252,9 +249,9 @@ async fn tauri_auth_get_me_service() {
         .await
         .unwrap();
 
-    let auth = raisfast::middleware::auth::AuthUser::from_parts(
+    let auth = axe::middleware::auth::AuthUser::from_parts(
         Some(user.id.parse().unwrap()),
-        raisfast::models::user::UserRole::Author,
+        axe::models::user::UserRole::Author,
         None,
     );
     let result = user::get_me(&pool, &auth).await;
@@ -272,13 +269,13 @@ async fn tauri_post_create_and_list() {
     let (author_int_id, _author_id) = create_test_user(&pool, "author-001").await;
     let svc = build_post_service(Arc::new(pool.clone()));
 
-    let req = raisfast::dto::CreatePostRequest {
+    let req = axe::dto::CreatePostRequest {
         title: "Test Post".into(),
         content: "Hello world".into(),
         excerpt: None,
         cover_image: None,
         image_ids: None,
-        status: Some(raisfast::models::post::PostStatus::Published),
+        status: Some(axe::models::post::PostStatus::Published),
         category_id: None,
         tag_ids: None,
         slug: None,
@@ -290,9 +287,9 @@ async fn tauri_post_create_and_list() {
         canonical_url: None,
     };
 
-    let auth = raisfast::middleware::auth::AuthUser::from_parts(
+    let auth = axe::middleware::auth::AuthUser::from_parts(
         Some(author_int_id),
-        raisfast::models::user::UserRole::Author,
+        axe::models::user::UserRole::Author,
         None,
     );
     let created = svc.create(&auth, req).await.unwrap();
@@ -312,13 +309,13 @@ async fn tauri_post_get_by_slug() {
     let (author_int_id, _author_id) = create_test_user(&pool, "author-002").await;
     let svc = build_post_service(Arc::new(pool.clone()));
 
-    let req = raisfast::dto::CreatePostRequest {
+    let req = axe::dto::CreatePostRequest {
         title: "Slug Test".into(),
         content: "content".into(),
         excerpt: None,
         cover_image: None,
         image_ids: None,
-        status: Some(raisfast::models::post::PostStatus::Published),
+        status: Some(axe::models::post::PostStatus::Published),
         category_id: None,
         tag_ids: None,
         slug: None,
@@ -330,9 +327,9 @@ async fn tauri_post_get_by_slug() {
         canonical_url: None,
     };
 
-    let auth = raisfast::middleware::auth::AuthUser::from_parts(
+    let auth = axe::middleware::auth::AuthUser::from_parts(
         Some(author_int_id),
-        raisfast::models::user::UserRole::Author,
+        axe::models::user::UserRole::Author,
         None,
     );
     let created = svc.create(&auth, req).await.unwrap();
@@ -351,7 +348,7 @@ async fn tauri_post_get_by_slug() {
 async fn tauri_cms_create_and_list() {
     let pool = setup_pool().await;
     let ct = parse_todo_ct();
-    let registry = raisfast::content_type::ContentTypeRegistry::new();
+    let registry = axe::content_type::ContentTypeRegistry::new();
     let config = test_config();
     let protocol_reg = test_protocol_registry();
     let protocol_names: Vec<&str> = protocol_reg.names();
@@ -406,7 +403,7 @@ async fn tauri_cms_get_by_id() {
     let found = repo
         .find_by_id(
             &ct,
-            raisfast::types::snowflake_id::SnowflakeId(int_id),
+            axe::types::snowflake_id::SnowflakeId(int_id),
             None,
             true,
         )
@@ -432,7 +429,7 @@ async fn tauri_cms_update() {
     let update_data = serde_json::json!({"title": "Updated", "done": true});
     repo.update(
         &ct,
-        raisfast::types::snowflake_id::SnowflakeId(int_id),
+        axe::types::snowflake_id::SnowflakeId(int_id),
         update_data,
         None,
         &save_ctx,
@@ -443,7 +440,7 @@ async fn tauri_cms_update() {
     let found = repo
         .find_by_id(
             &ct,
-            raisfast::types::snowflake_id::SnowflakeId(int_id),
+            axe::types::snowflake_id::SnowflakeId(int_id),
             None,
             true,
         )
@@ -468,10 +465,10 @@ async fn tauri_cms_delete() {
     let int_id: i64 = id.parse().unwrap();
     repo.delete(
         &ct,
-        raisfast::types::snowflake_id::SnowflakeId(int_id),
+        axe::types::snowflake_id::SnowflakeId(int_id),
         None,
         &test_protocol_registry(),
-        &raisfast::content_type::ContentTypeRegistry::new(),
+        &axe::content_type::ContentTypeRegistry::new(),
     )
     .await
     .unwrap();
@@ -479,7 +476,7 @@ async fn tauri_cms_delete() {
     let found = repo
         .find_by_id(
             &ct,
-            raisfast::types::snowflake_id::SnowflakeId(int_id),
+            axe::types::snowflake_id::SnowflakeId(int_id),
             None,
             true,
         )
@@ -522,7 +519,7 @@ async fn tauri_cms_enum_field_validation() {
 
 #[tokio::test]
 async fn tauri_registry_register_and_query() {
-    let registry = raisfast::content_type::ContentTypeRegistry::new();
+    let registry = axe::content_type::ContentTypeRegistry::new();
     let config = test_config();
     let ct = parse_todo_ct();
     let protocol_reg = test_protocol_registry();
@@ -546,7 +543,7 @@ async fn tauri_registry_register_and_query() {
 
 #[tokio::test]
 async fn tauri_registry_unregister() {
-    let registry = raisfast::content_type::ContentTypeRegistry::new();
+    let registry = axe::content_type::ContentTypeRegistry::new();
     let config = test_config();
     let ct = parse_todo_ct();
     let protocol_reg = test_protocol_registry();
@@ -570,7 +567,7 @@ async fn tauri_registry_unregister() {
 
 #[tokio::test]
 async fn tauri_registry_list_all() {
-    let registry = raisfast::content_type::ContentTypeRegistry::new();
+    let registry = axe::content_type::ContentTypeRegistry::new();
     let config = test_config();
     let ct1 = parse_todo_ct();
 
@@ -785,7 +782,7 @@ async fn tauri_build_app_state_succeeds() {
     std::fs::create_dir_all(&config.content_type_dir).unwrap();
 
     let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
-    let result = raisfast::build_app_state(&config, shutdown_rx).await;
+    let result = axe::build_app_state(&config, shutdown_rx).await;
     assert!(
         result.is_ok(),
         "build_app_state should succeed: {:?}",

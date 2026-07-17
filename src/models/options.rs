@@ -42,7 +42,7 @@ pub struct OptionRow {
 
 /// Query all autoload options (preloaded at startup)
 pub async fn find_autoload(pool: &crate::db::Pool) -> AppResult<Vec<OptionRow>> {
-    Ok(raisfast_derive::crud_find_all!(pool, "options", OptionRow, where: ("autoload", 1_i64))?)
+    Ok(axe_derive::crud_find_all!(pool, "options", OptionRow, where: ("autoload", 1_i64))?)
 }
 
 /// Query a single option by key
@@ -52,7 +52,7 @@ pub async fn find_by_key(
     tenant_id: Option<&str>,
 ) -> AppResult<Option<OptionRow>> {
     Ok(
-        raisfast_derive::crud_find!(pool, "options", OptionRow, where: ("option_key", key), tenant: tenant_id)?,
+        axe_derive::crud_find!(pool, "options", OptionRow, where: ("option_key", key), tenant: tenant_id)?,
     )
 }
 
@@ -62,7 +62,7 @@ pub async fn find_all(
     tenant_id: Option<&str>,
 ) -> AppResult<Vec<OptionRow>> {
     Ok(
-        raisfast_derive::crud_list!(pool, "options", OptionRow, order_by: "sort_order, option_key", tenant: tenant_id)?,
+        axe_derive::crud_list!(pool, "options", OptionRow, order_by: "sort_order, option_key", tenant: tenant_id)?,
     )
 }
 
@@ -74,7 +74,7 @@ pub async fn upsert_value(
     tenant_id: Option<&str>,
 ) -> AppResult<()> {
     let now = crate::utils::tz::now_utc();
-    raisfast_derive::crud_update!(pool, "options",
+    axe_derive::crud_update!(pool, "options",
         bind: ["value" => value, "updated_at" => now],
         where: ("option_key", key),
         tenant: tenant_id
@@ -88,7 +88,7 @@ pub async fn delete_by_key(
     key: &str,
     tenant_id: Option<&str>,
 ) -> AppResult<()> {
-    raisfast_derive::crud_delete!(pool, "options", where: ("option_key", key), tenant: tenant_id)?;
+    axe_derive::crud_delete!(pool, "options", where: ("option_key", key), tenant: tenant_id)?;
     Ok(())
 }
 

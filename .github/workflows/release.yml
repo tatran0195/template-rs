@@ -302,7 +302,7 @@ jobs:
         shell: bash
         run: |
           cd artifacts
-          for f in raisfast-*.tar.xz raisfast-*.zip; do
+          for f in axe-*.tar.xz axe-*.zip; do
             [ -f "$f" ] || continue
             cosign sign-blob --yes --bundle "${f}.bundle" "$f"
           done
@@ -332,7 +332,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: true
-          repository: "RaisFast/homebrew-tap"
+          repository: "axe/homebrew-tap"
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
       # So we have access to the formula
       - name: Fetch homebrew formulae

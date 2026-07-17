@@ -1,6 +1,6 @@
 # Architecture
 
-> This document provides a comprehensive overview of the raisfast system architecture for developers and contributors.
+> This document provides a comprehensive overview of the axe system architecture for developers and contributors.
 
 ---
 
@@ -33,11 +33,11 @@
 
 ## Overview
 
-raisfast is a Rust-powered high-performance BaaS and headless CMS. It compiles to a single binary with zero runtime dependencies, providing blog, ecommerce, wallet, payment, and multi-tenant SaaS capabilities out of the box.
+axe is a Rust-powered high-performance BaaS and headless CMS. It compiles to a single binary with zero runtime dependencies, providing blog, ecommerce, wallet, payment, and multi-tenant SaaS capabilities out of the box.
 
 ```
                     ┌──────────────────────────────────┐
-                    │           raisfast binary         │
+                    │           axe binary         │
                     │  ┌────────┐  ┌────────────────┐  │
     HTTP ─────────► │  │  Axum  │  │  Admin SPA     │  │
     (9898)          │  │ Router │  │  (rust-embed)  │  │
@@ -337,7 +337,7 @@ in_transaction!(pool, |tx| {
 
 ### CRUD Macro System
 
-All database operations use the `raisfast-derive` macro DSL:
+All database operations use the `axe-derive` macro DSL:
 
 | Macro | Purpose |
 |-------|---------|
@@ -883,23 +883,23 @@ Paginated responses:
 ## CLI
 
 ```bash
-raisfast <command> [options]
+axe <command> [options]
 
 # Commands:
-raisfast server start        # Start HTTP server
-raisfast server stop         # Stop server
-raisfast server restart      # Restart server
-raisfast db migrate          # Run database migrations
-raisfast db rollback         # Rollback migration
-raisfast db backup           # Backup database
-raisfast db seed <email> <username> <password>  # Seed admin user
-raisfast plugin list         # List loaded plugins
-raisfast plugin reload <id>  # Reload plugin
-raisfast route list          # List all routes
-raisfast ct list             # List content types
-raisfast ct create <name>    # Create content type
-raisfast doctor              # System diagnostics
-raisfast codegen             # Code generation
+axe server start        # Start HTTP server
+axe server stop         # Stop server
+axe server restart      # Restart server
+axe db migrate          # Run database migrations
+axe db rollback         # Rollback migration
+axe db backup           # Backup database
+axe db seed <email> <username> <password>  # Seed admin user
+axe plugin list         # List loaded plugins
+axe plugin reload <id>  # Reload plugin
+axe route list          # List all routes
+axe ct list             # List content types
+axe ct create <name>    # Create content type
+axe doctor              # System diagnostics
+axe codegen             # Code generation
 ```
 
 ---

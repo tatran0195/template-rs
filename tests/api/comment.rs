@@ -1,10 +1,10 @@
 use super::*;
-use raisfast::DbDriver;
+use axe::DbDriver;
 
 async fn setup_with_post() -> (axum::Router, AppState, String, String) {
     let (mut app, state) = test_app().await;
     let (int_id, id) = create_author(&state.pool).await;
-    let tok = make_token(&id, int_id, raisfast::models::user::UserRole::Author);
+    let tok = make_token(&id, int_id, axe::models::user::UserRole::Author);
     let slug = create_published_post(&mut app, &tok).await;
     (app, state, tok, slug)
 }
@@ -74,7 +74,7 @@ async fn nested_comment() {
 
     let approve_sql = format!(
         "UPDATE comments SET status = 'approved' WHERE id = {}",
-        raisfast::db::Driver::ph(1)
+        axe::db::Driver::ph(1)
     );
     sqlx::query(&approve_sql)
         .bind(pid)
@@ -190,11 +190,7 @@ async fn update_status_admin() {
     let cid = cid_i64.to_string();
 
     let (admin_int_id, admin_id) = create_admin(&state.pool).await;
-    let admin_tok = make_token(
-        &admin_id,
-        admin_int_id,
-        raisfast::models::user::UserRole::Admin,
-    );
+    let admin_tok = make_token(&admin_id, admin_int_id, axe::models::user::UserRole::Admin);
     let (status, _): (StatusCode, Value) = send(
         &mut app,
         put_json_auth(

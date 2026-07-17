@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">RaisFast</h1>
+  <h1 align="center">axe</h1>
   <p align="center">
     <strong>The fastest CMS, easiest to deploy.</strong>
   </p>
@@ -16,10 +16,10 @@
 
 ---
 
-## Why raisfast?
+## Why axe?
 
 **Single binary, full capability**
-One binary, no Node.js, no Docker, no runtime. Blog, ecommerce, wallet, and payment are native built-in — not plugin assemblies, but the skeleton itself.
+One binary, no Node.js, no Docker, no runtime. Blog is native built-in — not plugin assemblies, but the skeleton itself.
 
 **Rust performance, zero-GC stability**
 Sub-millisecond reads, zero performance degradation over time. No GC pauses, no memory leaks, no 3 AM OOM alerts.
@@ -34,8 +34,6 @@ JS, Rhai, Lua, and WASM — a full spectrum from scripting to compiled. Dynamic 
 | Module | Features |
 |--------|----------|
 | **Blog / CMS** | Posts, pages, categories, tags, comments, media, RSS, sitemap |
-| **Ecommerce** | Cart, orders, product variants, coupons |
-| **Wallet & Payment** | Multi-currency wallet, Alipay / WeChat Pay / Stripe / Dodo / Creem |
 | **OAuth** | GitHub, Google and more social login |
 | **Workflow** | Job queue, cron scheduler, AOP aspects, event bus |
 | **Content Types** | Dynamic schema via TOML, automatic CRUD API |
@@ -52,8 +50,8 @@ JS, Rhai, Lua, and WASM — a full spectrum from scripting to compiled. Dynamic 
 
 ```bash
 # Clone
-git clone https://github.com/RaisFast/raisfast.git
-cd raisfast
+git clone https://github.com/axe/axe.git
+cd axe
 
 # Build and run (SQLite, default)
 cargo run --features "db-sqlite plugin-all search-tantivy"
@@ -65,7 +63,7 @@ cargo run --features "db-sqlite plugin-all search-tantivy"
 
 ### First run
 
-On first startup, raisfast automatically:
+On first startup, axe automatically:
 1. Creates all database tables
 2. Seeds default roles, permissions, and site options
 3. Starts serving API + Admin UI
@@ -79,8 +77,8 @@ cargo run -- db seed admin@example.com admin your-password
 ### Docker
 
 ```bash
-docker build -t raisfast .
-docker run -p 9898:9898 -v ./data:/app/data raisfast
+docker build -t axe .
+docker run -p 9898:9898 -v ./data:/app/data axe
 ```
 
 ---
@@ -172,7 +170,7 @@ All configuration via environment variables or `.env`:
 
 ```bash
 # Database
-DATABASE_URL=sqlite:./data/raisfast.db
+DATABASE_URL=sqlite:./data/axe.db
 
 # Server
 PORT=9898
@@ -226,32 +224,8 @@ PLUGIN_HOT_RELOAD=true
 | Multi-database | ✅ Working |
 | Plugin engine (JS/Rhai/Lua/WASM) | ✅ Working |
 | Content Type system | ✅ Working |
-| Ecommerce (cart/order/payment) | ✅ Working |
-| Wallet | ✅ Working |
 | Job queue + Cron | ✅ Working |
 | Tauri desktop | ✅ Working |
 | AOP aspects | ✅ Working |
 | Serverless adapter | 🔧 In design |
 | Plugin marketplace | 📋 Planned |
-
----
-
-## License
-
-Licensed under either of
-
-- [Apache License 2.0](LICENSE)
-
-at your option.
-
----
-
-## Contributing
-
-We welcome contributions! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
----
-
-<p align="center">
-  Built with ❤️ and Rust
-</p>

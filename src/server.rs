@@ -10,10 +10,10 @@ use crate::admin_spa;
 use crate::cache::MemoryCache;
 use crate::config::app::AppConfig;
 use crate::constants::DEFAULT_TENANT;
-use crate::handlers::payment as h_payment;
+
 use crate::handlers::{
-    api_token, auth, category, comment, cron, health, media, options, page, plugin, post,
-    product_category, rbac, reusable_block, rss, setup, sse, stats, tag, tenant, user, wallet, ws,
+    api_token, auth, category, comment, cron, health, media, options, page, plugin, post, rbac,
+    reusable_block, rss, setup, sse, stats, tag, tenant, user, ws,
 };
 use crate::middleware::locale::locale_middleware;
 use crate::middleware::metrics;
@@ -123,41 +123,10 @@ async fn build_app(
     if config.builtins.blog {
         api_v1 = api_v1
             .merge(category::routes(&mut registry, config))
-            .merge(product_category::routes(&mut registry, config))
             .merge(tag::routes(&mut registry, config))
             .merge(post::routes(&mut registry, config))
             .merge(post::admin_routes(&mut registry, config))
             .merge(comment::routes(&mut registry, config));
-    }
-
-    if config.builtins.ecommerce {
-        api_v1 = api_v1
-            .merge(crate::handlers::product::routes(&mut registry, config))
-            .merge(crate::handlers::order::routes(&mut registry, config))
-            .merge(crate::handlers::cart::routes(&mut registry, config))
-            .merge(crate::handlers::product_variant::routes(
-                &mut registry,
-                config,
-            ))
-            .merge(crate::handlers::product_comment::routes(
-                &mut registry,
-                config,
-            ))
-            .merge(crate::handlers::user_address::routes(&mut registry, config))
-            .merge(crate::handlers::coupon::routes(&mut registry, config))
-            .merge(crate::handlers::shipping_template::routes(
-                &mut registry,
-                config,
-            ))
-            .merge(crate::handlers::currencies::routes(&mut registry, config));
-    }
-
-    if config.builtins.payment {
-        api_v1 = api_v1.merge(h_payment::routes(&mut registry, config));
-    }
-
-    if config.builtins.wallet {
-        api_v1 = api_v1.merge(wallet::routes(&mut registry, config));
     }
 
     if config.builtins.pages {
@@ -423,7 +392,7 @@ pub async fn start(config: &AppConfig) -> anyhow::Result<()> {
     tracing::info!(
         version = env!("CARGO_PKG_VERSION"),
         env = %config.env,
-        "starting raisfast server"
+        "starting axe server"
     );
     let tz = crate::utils::tz::parse_tz_or_utc(&config.timezone);
     tracing::info!("site timezone: {}", tz);

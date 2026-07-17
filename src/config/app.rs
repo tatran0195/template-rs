@@ -225,10 +225,7 @@ pub struct BuiltinsConfig {
     pub workflow: bool,
     #[serde(default = "default_true")]
     pub ecommerce: bool,
-    #[serde(default = "default_true")]
-    pub payment: bool,
-    #[serde(default = "default_true")]
-    pub wallet: bool,
+
 }
 
 impl Default for BuiltinsConfig {
@@ -240,8 +237,7 @@ impl Default for BuiltinsConfig {
             fulltext: true,
             workflow: true,
             ecommerce: true,
-            payment: true,
-            wallet: true,
+
         }
     }
 }
@@ -273,14 +269,7 @@ impl BuiltinsConfig {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(true),
-            payment: env::var("BUILTIN_PAYMENT")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(true),
-            wallet: env::var("BUILTIN_WALLET")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(true),
+
         }
     }
 
@@ -292,8 +281,7 @@ impl BuiltinsConfig {
             && !self.fulltext
             && !self.workflow
             && !self.ecommerce
-            && !self.payment
-            && !self.wallet
+
     }
 
     /// Returns the list of protected tables.
@@ -329,11 +317,7 @@ impl BuiltinsConfig {
             "orders",
             "pages",
             "password",
-            "payment",
             "plugins",
-            "posts",
-            "products",
-            "rbac",
             "reusable-blocks",
             "routes",
             "rss",
@@ -346,7 +330,6 @@ impl BuiltinsConfig {
             "tokens",
             "user",
             "users",
-            "wallets",
             "webhooks",
             "workflows",
             "ws",
@@ -530,13 +513,7 @@ pub fn default_cron_schedules() -> Vec<CronScheduleConfig> {
             cron_expr: "0 0 3 * * *".into(),
             enabled: true,
         },
-        CronScheduleConfig {
-            label: "Expire Payment Orders".into(),
-            job_type: "expire_payment_orders".into(),
-            payload: None,
-            cron_expr: "0 */5 * * * *".into(),
-            enabled: true,
-        },
+
         CronScheduleConfig {
             label: "Expire Orders".into(),
             job_type: "expire_orders".into(),
@@ -544,20 +521,7 @@ pub fn default_cron_schedules() -> Vec<CronScheduleConfig> {
             cron_expr: "0 */5 * * * *".into(),
             enabled: true,
         },
-        CronScheduleConfig {
-            label: "Reconcile Payments".into(),
-            job_type: "reconcile_payments".into(),
-            payload: None,
-            cron_expr: "0 0 4 * * *".into(),
-            enabled: true,
-        },
-        CronScheduleConfig {
-            label: "Process Wallet Outbox".into(),
-            job_type: "process_wallet_outbox".into(),
-            payload: None,
-            cron_expr: "0 */10 * * * *".into(),
-            enabled: true,
-        },
+
         CronScheduleConfig {
             label: "Daily Database Backup".into(),
             job_type: "db_backup".into(),
@@ -724,15 +688,15 @@ impl AppConfig {
         let database_url: String = env::var("DATABASE_URL").unwrap_or_else(|_| {
             #[cfg(feature = "db-sqlite")]
             {
-                format!("sqlite:{}/db/raisfast.db?mode=rwc", storage_root_dir)
+                format!("sqlite:{}/db/axe.db?mode=rwc", storage_root_dir)
             }
             #[cfg(feature = "db-postgres")]
             {
-                "postgres://localhost/raisfast".into()
+                "postgres://localhost/axe".into()
             }
             #[cfg(feature = "db-mysql")]
             {
-                "mysql://root@localhost/raisfast".into()
+                "mysql://root@localhost/axe".into()
             }
         });
 
@@ -1300,8 +1264,6 @@ mod tests {
             fulltext: false,
             workflow: false,
             ecommerce: false,
-            payment: false,
-            wallet: false,
         };
         assert!(b.is_all_disabled());
     }

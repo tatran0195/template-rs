@@ -751,7 +751,7 @@ pub async fn do_list(
                         let parsed_id =
                             crate::types::snowflake_id::parse_id(v).unwrap_or(SnowflakeId(-1));
                         let int_id =
-                            raisfast_derive::crud_resolve_id!(&state.pool, &rel.target, *parsed_id)
+                            axe_derive::crud_resolve_id!(&state.pool, &rel.target, *parsed_id)
                                 .ok()
                                 .flatten()
                                 .unwrap_or(-1);
@@ -1210,7 +1210,7 @@ async fn do_admin_list(
                         let parsed_id =
                             crate::types::snowflake_id::parse_id(v).unwrap_or(SnowflakeId(-1));
                         let int_id =
-                            raisfast_derive::crud_resolve_id!(&state.pool, &rel.target, *parsed_id)
+                            axe_derive::crud_resolve_id!(&state.pool, &rel.target, *parsed_id)
                                 .ok()
                                 .flatten()
                                 .unwrap_or(-1);

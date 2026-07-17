@@ -271,10 +271,9 @@ impl StatsService {
         tenant_id: Option<&str>,
         limit: i64,
     ) -> Result<Vec<Value>, AppError> {
-        raisfast_derive::check_schema!("posts", "id", "title", "slug", "created_at");
-        raisfast_derive::check_schema!("comments", "content", "created_at");
-        raisfast_derive::check_schema!("orders", "id", "order_no", "total_amount", "created_at");
-        raisfast_derive::check_schema!("products", "id", "title", "created_at");
+        axe_derive::check_schema!("posts", "id", "title", "slug", "created_at");
+        axe_derive::check_schema!("comments", "content", "created_at");
+
         let mut activities = Vec::new();
 
         let tf_aliased = crate::db::tenant::tenant_filter_aliased_ph("p", tenant_id, 1);
@@ -286,7 +285,7 @@ impl StatsService {
             crate::db::Driver::cast_ts("p.created_at")
         );
 
-        let posts: Vec<(i64, Option<String>, String, String)> = raisfast_derive::crud_query!(
+        let posts: Vec<(i64, Option<String>, String, String)> = axe_derive::crud_query!(
             &self.pool,
             (i64, Option<String>, String, String),
             &post_sql,
@@ -313,7 +312,7 @@ impl StatsService {
             crate::db::Driver::cast_ts("c.created_at")
         );
 
-        let comments: Vec<(Option<String>, String)> = raisfast_derive::crud_query!(
+        let comments: Vec<(Option<String>, String)> = axe_derive::crud_query!(
             &self.pool,
             (Option<String>, String),
             &comment_sql,
@@ -331,57 +330,7 @@ impl StatsService {
             }));
         }
 
-        let tf = crate::db::tenant::tenant_filter_ph(tenant_id, 1);
-        let order_sql = format!(
-            "SELECT id, order_no, total_amount, {} FROM orders WHERE 1=1{tf} \
-             ORDER BY created_at DESC {limit_clause}",
-            crate::db::Driver::cast_ts("created_at")
-        );
-        let orders: Vec<(i64, String, i64, String)> = raisfast_derive::crud_query!(
-            &self.pool,
-            (i64, String, i64, String),
-            &order_sql,
-            [],
-            fetch_all,
-            tenant: tenant_id
-        )
-        .map_err(|e: sqlx::Error| AppError::Internal(e.into()))?;
 
-        for (raw_id, order_no, total_amount, at) in orders {
-            let encoded_id = crate::types::snowflake_id::encode_id(raw_id);
-            activities.push(json!({
-                "type": "order.created",
-                "id": encoded_id,
-                "title": order_no,
-                "amount": total_amount,
-                "at": at,
-            }));
-        }
-
-        let product_sql = format!(
-            "SELECT id, title, {} FROM products WHERE 1=1{tf} \
-             ORDER BY created_at DESC {limit_clause}",
-            crate::db::Driver::cast_ts("created_at")
-        );
-        let products: Vec<(i64, Option<String>, String)> = raisfast_derive::crud_query!(
-            &self.pool,
-            (i64, Option<String>, String),
-            &product_sql,
-            [],
-            fetch_all,
-            tenant: tenant_id
-        )
-        .map_err(|e: sqlx::Error| AppError::Internal(e.into()))?;
-
-        for (raw_id, title, at) in products {
-            let encoded_id = crate::types::snowflake_id::encode_id(raw_id);
-            activities.push(json!({
-                "type": "product.created",
-                "id": encoded_id,
-                "title": title.unwrap_or_default(),
-                "at": at,
-            }));
-        }
 
         activities.sort_by(|a, b| {
             let at_a = a["at"].as_str().unwrap_or("");

@@ -40,11 +40,6 @@ pub fn create_new(name: &str, template: &str) -> anyhow::Result<()> {
 
     match template {
         "blog" => copy_content_types(&project_dir, "blog", &["article", "category", "tag"])?,
-        "ecommerce" => copy_content_types(
-            &project_dir,
-            "ecommerce",
-            &["product", "product_category", "order"],
-        )?,
         _ => {}
     }
 
@@ -52,9 +47,8 @@ pub fn create_new(name: &str, template: &str) -> anyhow::Result<()> {
         include_str!("../../templates/app/README.md"),
         name,
         match template {
-            "blog" => "A blog project built with raisfast",
-            "ecommerce" => "An e-commerce project built with raisfast",
-            _ => "A raisfast project",
+            "blog" => "A blog project built with axe",
+            _ => "A axe project",
         },
     );
     std::fs::write(project_dir.join("README.md"), readme)?;
@@ -77,10 +71,10 @@ pub fn create_new(name: &str, template: &str) -> anyhow::Result<()> {
     println!();
     println!("  cd {name}");
     println!("  cp .env.example .env");
-    println!("  raisfast db migrate");
-    println!("  raisfast db rollback");
-    println!("  raisfast db seed");
-    println!("  raisfast server start");
+    println!("  axe db migrate");
+    println!("  axe db rollback");
+    println!("  axe db seed");
+    println!("  axe server start");
 
     Ok(())
 }
@@ -101,14 +95,6 @@ fn copy_content_types(project_dir: &Path, template: &str, files: &[&str]) -> any
                 "article" => include_str!("../../templates/app/blog/article.toml"),
                 "category" => include_str!("../../templates/app/blog/category.toml"),
                 "tag" => include_str!("../../templates/app/blog/tag.toml"),
-                _ => continue,
-            },
-            "ecommerce" => match *file {
-                "product" => include_str!("../../templates/app/ecommerce/product.toml"),
-                "product_category" => {
-                    include_str!("../../templates/app/ecommerce/product_category.toml")
-                }
-                "order" => include_str!("../../templates/app/ecommerce/order.toml"),
                 _ => continue,
             },
             _ => continue,

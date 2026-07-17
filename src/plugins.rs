@@ -1921,7 +1921,7 @@ mod tests {
     #[tokio::test]
     async fn manager_no_plugins_when_dir_not_exists() {
         let mut config = (*test_config()).clone();
-        config.plugin_dir = Some("/tmp/raisfast-plugin-test-nonexistent".into());
+        config.plugin_dir = Some("/tmp/axe-plugin-test-nonexistent".into());
         let mgr = PluginManager::new(Arc::new(config)).await;
         assert_eq!(mgr.plugin_count().await, 0);
     }
@@ -2423,7 +2423,7 @@ priority = 10
             r#"
 Plugin = {
     on_post_created = function(data)
-        RaisFastHost.log("info", "post created")
+        axeHost.log("info", "post created")
     end
 }
 "#,
@@ -2508,7 +2508,7 @@ priority = 10
             r#"
 Plugin = {
     on_post_creating = function(input)
-        local env = RaisFastHost.getConfig("app.env")
+        local env = axeHost.getConfig("app.env")
         if env then
             input.env = env
         end
@@ -2733,11 +2733,11 @@ Plugin = {
     on_post_creating = function(input)
         local slug = input.slug or ""
         if slug ~= "" then
-            local exists = RaisFastHost.vfsExists("cache/" .. slug .. ".txt")
+            local exists = axeHost.vfsExists("cache/" .. slug .. ".txt")
             if exists then
                 input.cache_hit = true
             end
-            local stat = RaisFastHost.vfsRead("stats.json")
+            local stat = axeHost.vfsRead("stats.json")
             if stat then
                 input.stats = stat
             end
@@ -2749,15 +2749,15 @@ Plugin = {
         local slug = input.slug or ""
         local title = input.title or ""
         if slug ~= "" then
-            RaisFastHost.vfsWrite("cache/" .. slug .. ".txt", title .. "|" .. (input.content or ""))
-            RaisFastHost.vfsWrite("stats.json", '{"writes":1}')
+            axeHost.vfsWrite("cache/" .. slug .. ".txt", title .. "|" .. (input.content or ""))
+            axeHost.vfsWrite("stats.json", '{"writes":1}')
 
-            local info = RaisFastHost.vfsStat("cache/" .. slug .. ".txt")
+            local info = axeHost.vfsStat("cache/" .. slug .. ".txt")
             if info then
                 input.file_stat = info
             end
 
-            local entries = RaisFastHost.vfsList("cache")
+            local entries = axeHost.vfsList("cache")
             if entries then
                 input.cache_files = table.concat(entries, ",")
             end
@@ -2768,8 +2768,8 @@ Plugin = {
     on_post_deleted = function(input)
         local slug = input.slug or ""
         if slug ~= "" then
-            RaisFastHost.vfsDelete("cache/" .. slug .. ".txt")
-            local entries = RaisFastHost.vfsList("cache")
+            axeHost.vfsDelete("cache/" .. slug .. ".txt")
+            local entries = axeHost.vfsList("cache")
             if entries then
                 input.remaining = table.concat(entries, ",")
             end
@@ -2872,7 +2872,7 @@ Plugin.ping = function(input)
 end
 
 Plugin.count = function(input)
-    local result = RaisFastHost.dbQuery("SELECT COUNT(*) as total FROM posts")
+    local result = axeHost.dbQuery("SELECT COUNT(*) as total FROM posts")
     if result and result:sub(1, 6) ~= "error:" then
         return {
             status = 200,
@@ -2971,7 +2971,7 @@ end
         );
         std::fs::write(plugin_dir.join("manifest.toml"), manifest).unwrap();
 
-        let lua_code = "Plugin = { on_cron_tick = function(data) RaisFastHost.setData(\"last_job\", data.job_type or \"\") end }";
+        let lua_code = "Plugin = { on_cron_tick = function(data) axeHost.setData(\"last_job\", data.job_type or \"\") end }";
         std::fs::write(plugin_dir.join("init.lua"), lua_code).unwrap();
 
         let pool = crate::db::Pool::connect("sqlite::memory:").await.unwrap();
@@ -3334,7 +3334,7 @@ fn on_post_creating(input) {
             plugin_dir.join("manifest.toml"),
             r#"
 [plugin]
-id = "com.raisfast.seo-rhai"
+id = "com.axe.seo-rhai"
 name = "SEO Rhai"
 version = "1.0.0"
 runtime = "rhai"
@@ -3358,7 +3358,7 @@ fn render_markdown(html) {
         og_str = "article";
     }
     let injection = `<meta property="og:type" content="` + og_str + `">` +
-        `<meta name="generator" content="raisfast-seo-rhai/1.0.0">`;
+        `<meta name="generator" content="axe-seo-rhai/1.0.0">`;
     replace(html, "<head>", "<head>" + injection)
 }
 "#,
@@ -3399,7 +3399,7 @@ fn render_markdown(html) {
             plugin_dir.join("manifest.toml"),
             r#"
 [plugin]
-id = "com.raisfast.seo-vfs"
+id = "com.axe.seo-vfs"
 name = "SEO VFS"
 version = "1.0.0"
 runtime = "rhai"
@@ -3462,7 +3462,7 @@ fn on_post_created(data) {
         mgr.dispatch_action("on_post_created", &created1).await;
 
         // Verify VFS cache file was written
-        let vfs_plugin = vfs_root.join("com.raisfast.seo-vfs");
+        let vfs_plugin = vfs_root.join("com.axe.seo-vfs");
         let cache_file = vfs_plugin.join("cache/posts/first-post.json");
         assert!(cache_file.exists(), "cache file should exist");
         let cached: serde_json::Value =
@@ -3506,7 +3506,7 @@ fn on_post_created(data) {
             plugin_dir.join("manifest.toml"),
             r#"
 [plugin]
-id = "com.raisfast.seo-routes"
+id = "com.axe.seo-routes"
 name = "SEO Routes"
 version = "1.0.0"
 runtime = "rhai"

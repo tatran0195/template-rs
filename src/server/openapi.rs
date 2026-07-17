@@ -102,54 +102,7 @@ use crate::dto;
         crate::handlers::options::update_options,
         crate::handlers::options::set_option,
         crate::handlers::options::delete_option,
-        crate::handlers::product::list_active,
-        crate::handlers::product::get_product,
-        crate::handlers::product::admin_list,
-        crate::handlers::product::admin_create,
-        crate::handlers::product::admin_update,
-        crate::handlers::product::admin_delete,
-        crate::handlers::order::create_order,
-        crate::handlers::order::list_orders,
-        crate::handlers::order::get_order,
-        crate::handlers::order::cancel_order_handler,
-        crate::handlers::order::confirm_receipt,
-        crate::handlers::order::admin_list,
-        crate::handlers::order::admin_get,
-        crate::handlers::order::admin_ship,
-        crate::handlers::order::admin_cancel,
-        crate::handlers::order::admin_pay,
-        crate::handlers::order::admin_refund,
-        crate::handlers::order::admin_update_remark,
-        crate::handlers::order::admin_stats,
-        crate::handlers::payment::create_payment_order_handler,
-        crate::handlers::payment::list_user_orders,
-        crate::handlers::payment::get_payment_order_handler,
-        crate::handlers::payment::cancel_payment_order_handler,
-        crate::handlers::payment::list_order_transactions,
-        crate::handlers::payment::list_order_refunds,
-        crate::handlers::payment::handle_callback,
-        crate::handlers::payment::list_available_channels_handler,
-        crate::handlers::payment::admin_list_channels,
-        crate::handlers::payment::admin_create_channel,
-        crate::handlers::payment::admin_get_channel,
-        crate::handlers::payment::admin_update_channel,
-        crate::handlers::payment::admin_delete_channel,
-        crate::handlers::payment::admin_list_orders,
-        crate::handlers::payment::admin_get_order,
-        crate::handlers::payment::admin_refund_order,
-        crate::handlers::payment::admin_list_transactions,
-        crate::handlers::payment::admin_list_refunds,
-        crate::handlers::wallet::list_wallets,
-        crate::handlers::wallet::get_wallet,
-        crate::handlers::wallet::list_transactions,
-        crate::handlers::wallet::list_all_transactions,
-        crate::handlers::wallet::list_all_wallets,
-        crate::handlers::wallet::list_all_transactions_admin,
-        crate::handlers::wallet::admin_credit,
-        crate::handlers::wallet::admin_debit,
-        crate::handlers::wallet::list_user_transactions,
-        crate::handlers::wallet::list_user_all_transactions,
-        crate::handlers::wallet::admin_reversal,
+
         crate::handlers::stats::overview,
         crate::handlers::stats::content_stats,
         crate::handlers::stats::trends,
@@ -167,10 +120,7 @@ use crate::dto;
         crate::handlers::cron::logs,
         crate::handlers::cron::cleanup_logs,
         crate::handlers::cron::admin_batch,
-        crate::handlers::currencies::list_currencies,
-        crate::handlers::currencies::get_currency,
-        crate::handlers::currencies::create_currency,
-        crate::handlers::currencies::update_currency,
+
         crate::handlers::rss::feed,
         crate::handlers::content_revision::list_revisions,
         crate::handlers::content_revision::get_revision,
@@ -223,14 +173,11 @@ use crate::dto;
         (name = "rbac", description = "RBAC"),
         (name = "tenants", description = "Tenants"),
         (name = "options", description = "Options"),
-        (name = "products", description = "Products"),
-        (name = "orders", description = "Orders"),
-        (name = "payments", description = "Payments"),
-        (name = "wallets", description = "Wallets"),
+
         (name = "stats", description = "Statistics"),
         (name = "oauth", description = "OAuth"),
         (name = "cron", description = "Cron Schedules"),
-        (name = "currencies", description = "Currencies"),
+
         (name = "rss", description = "RSS"),
         (name = "revisions", description = "Content Revisions"),
         (name = "plugins", description = "Plugins"),
@@ -286,7 +233,7 @@ pub async fn serve_scalar_ui() -> impl IntoResponse {
     let html = r#"<!DOCTYPE html>
 <html>
 <head>
-    <title>RaisFast API Docs</title>
+    <title>axe API Docs</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
@@ -314,7 +261,7 @@ pub async fn serve_scalar_ui() -> impl IntoResponse {
 <body>
     <div id="login-bar">
         <span>Quick Login:</span>
-        <input id="email" type="email" placeholder="Email" value="admin@raisfast.dev" style="width:180px" />
+        <input id="email" type="email" placeholder="Email" value="admin@axe.dev" style="width:180px" />
         <input id="password" type="password" placeholder="Password" value="admin123" style="width:140px" />
         <button onclick="doLogin()">Login</button>
         <span id="status" class="status"></span>
@@ -336,7 +283,7 @@ pub async fn serve_scalar_ui() -> impl IntoResponse {
             const data = await res.json();
             const token = data.access_token || data.data?.access_token;
             if (!token) throw new Error('No token in response');
-            localStorage.setItem('raisfast_token', token);
+            localStorage.setItem('axe_token', token);
             s.textContent = 'Token saved'; s.className = 'status ok';
             applyToken(token);
         } catch (e) {

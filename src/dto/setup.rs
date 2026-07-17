@@ -56,7 +56,7 @@ impl SetupDatabaseRequest {
                 let path = self
                     .database
                     .as_deref()
-                    .unwrap_or("./storage/db/raisfast.db");
+                    .unwrap_or("./storage/db/axe.db");
                 Ok(format!("sqlite:{path}?mode=rwc"))
             }
             "postgres" => {

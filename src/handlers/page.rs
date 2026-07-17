@@ -154,7 +154,7 @@ async fn resolve_page_parent_id(
         return Ok(None);
     };
     let parsed_id = crate::types::snowflake_id::parse_id(&raw_id)?;
-    raisfast_derive::crud_resolve_id!(pool, "pages", *parsed_id).map_err(Into::into)
+    axe_derive::crud_resolve_id!(pool, "pages", *parsed_id).map_err(Into::into)
 }
 
 // ── Public API ──

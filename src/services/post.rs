@@ -160,7 +160,7 @@ impl PostService for PostServiceImpl {
 
         let category_id = if let Some(ref raw_id) = req.category_id {
             let parsed = crate::types::snowflake_id::parse_id(raw_id)?;
-            raisfast_derive::crud_resolve_id!(&self.pool, "categories", *parsed, tenant: auth.tenant_id())?
+            axe_derive::crud_resolve_id!(&self.pool, "categories", *parsed, tenant: auth.tenant_id())?
         } else {
             None
         };
@@ -183,7 +183,7 @@ impl PostService for PostServiceImpl {
                 let mut resolved = Vec::new();
                 for raw_id in ids {
                     let parsed = crate::types::snowflake_id::parse_id(raw_id)?;
-                    if let Some(int_id) = raisfast_derive::crud_resolve_id!(&self.pool, "tags", *parsed, tenant: auth.tenant_id())?
+                    if let Some(int_id) = axe_derive::crud_resolve_id!(&self.pool, "tags", *parsed, tenant: auth.tenant_id())?
                     {
                         resolved.push(int_id);
                     }
@@ -364,7 +364,7 @@ impl PostService for PostServiceImpl {
             let Ok(parsed_id) = crate::types::snowflake_id::parse_id(raw_id) else {
                 continue;
             };
-            let Some(int_id) = raisfast_derive::crud_resolve_id!(&self.pool, "posts", *parsed_id, tenant: auth.tenant_id())?
+            let Some(int_id) = axe_derive::crud_resolve_id!(&self.pool, "posts", *parsed_id, tenant: auth.tenant_id())?
             else {
                 continue;
             };
@@ -514,7 +514,7 @@ impl PostServiceImpl {
 
         let category_id = if let Some(ref raw_id) = req.category_id {
             let parsed = crate::types::snowflake_id::parse_id(raw_id)?;
-            raisfast_derive::crud_resolve_id!(&self.pool, "categories", *parsed, tenant: auth.tenant_id())?
+            axe_derive::crud_resolve_id!(&self.pool, "categories", *parsed, tenant: auth.tenant_id())?
         } else {
             None
         };
@@ -523,7 +523,7 @@ impl PostServiceImpl {
                 let mut resolved = Vec::new();
                 for raw_id in ids {
                     let parsed = crate::types::snowflake_id::parse_id(raw_id)?;
-                    if let Some(int_id) = raisfast_derive::crud_resolve_id!(&self.pool, "tags", *parsed, tenant: auth.tenant_id())?
+                    if let Some(int_id) = axe_derive::crud_resolve_id!(&self.pool, "tags", *parsed, tenant: auth.tenant_id())?
                     {
                         resolved.push(int_id);
                     }
@@ -977,14 +977,14 @@ mod tests {
             .execute(&pool)
             .await
             .unwrap();
-        let result = raisfast_derive::crud_resolve_id!(&pool, "users", *SnowflakeId(42));
+        let result = axe_derive::crud_resolve_id!(&pool, "users", *SnowflakeId(42));
         assert_eq!(result.unwrap(), Some(42));
     }
 
     #[tokio::test]
     async fn resolve_id_unsafe_table() {
         let pool = crate::db::Pool::connect("sqlite::memory:").await.unwrap();
-        let result = raisfast_derive::crud_resolve_id!(&pool, "drop table", *SnowflakeId(999));
+        let result = axe_derive::crud_resolve_id!(&pool, "drop table", *SnowflakeId(999));
         assert_eq!(result.unwrap(), None);
     }
 
@@ -1004,7 +1004,7 @@ mod tests {
             .await
             .unwrap();
         let result =
-            raisfast_derive::crud_resolve_id!(&pool, "posts", *SnowflakeId(1), tenant: Some("t1"))
+            axe_derive::crud_resolve_id!(&pool, "posts", *SnowflakeId(1), tenant: Some("t1"))
                 .unwrap();
         assert_eq!(result, Some(1));
     }
@@ -1024,7 +1024,7 @@ mod tests {
             .execute(&pool)
             .await
             .unwrap();
-        let result = raisfast_derive::crud_resolve_id!(&pool, "posts", *SnowflakeId(1), tenant: Some("wrong"))
+        let result = axe_derive::crud_resolve_id!(&pool, "posts", *SnowflakeId(1), tenant: Some("wrong"))
             .unwrap();
         assert_eq!(result, None);
     }
@@ -1036,7 +1036,7 @@ mod tests {
             .execute(&pool)
             .await
             .unwrap();
-        let result = raisfast_derive::crud_resolve_id!(&pool, "users", *SnowflakeId(99999), tenant: Some("t1"))
+        let result = axe_derive::crud_resolve_id!(&pool, "users", *SnowflakeId(99999), tenant: Some("t1"))
             .unwrap();
         assert_eq!(result, None);
     }

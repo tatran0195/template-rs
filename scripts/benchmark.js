@@ -1,5 +1,5 @@
 /**
- * raisfast 压力测试 (k6)
+ * axe 压力测试 (k6)
  *
  * 用法:
  *     k6 run scripts/benchmark.js                         # 默认 20 VU, 每场景 8s
@@ -285,7 +285,7 @@ export function handleSummary(data) {
 
   let report = "\n";
   report += color("1;36") + "=".repeat(72) + color("0") + "\n";
-  report += color("1;36") + "  raisfast Benchmark Report" + color("0") + "\n";
+  report += color("1;36") + "  axe Benchmark Report" + color("0") + "\n";
   report += color("1;36") + "=".repeat(72) + color("0") + "\n";
   report += `  VUs: ${VUS}   Duration: ${DUR_SEC}s   Cooldown: ${COOLDOWN_SEC}s   Base: ${BASE}\n\n`;
 
