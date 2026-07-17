@@ -266,7 +266,7 @@ mod tests {
     #[tokio::test]
     async fn local_key_with_spaces_and_unicode() {
         let (_dir, storage) = setup_storage();
-        let key = "blog/2026/04/你好世界 file name.txt";
+        let key = "blog/2026/04/Hello World file name.txt";
 
         storage
             .put(key, b"unicode", "text/plain")

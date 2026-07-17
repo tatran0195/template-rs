@@ -74,32 +74,6 @@ pub fn build_email_sender(config: &crate::config::app::AppConfig) -> Arc<dyn Ema
             config.email_from.clone().unwrap_or_default(),
             config.email_from_name.clone(),
         )),
-        "aliyun" => Arc::new(email::AliyunDirectMailSender::new(
-            config
-                .email_aliyun_access_key_id
-                .clone()
-                .unwrap_or_default(),
-            config
-                .email_aliyun_access_key_secret
-                .clone()
-                .unwrap_or_default(),
-            config.email_from.clone().unwrap_or_default(),
-            config.email_from_name.clone(),
-            config
-                .email_aliyun_region
-                .clone()
-                .unwrap_or_else(|| "cn-hangzhou".into()),
-        )),
-        "tencent" => Arc::new(email::TencentSesSender::new(
-            config.email_tencent_secret_id.clone().unwrap_or_default(),
-            config.email_tencent_secret_key.clone().unwrap_or_default(),
-            config.email_from.clone().unwrap_or_default(),
-            config.email_from_name.clone(),
-            config
-                .email_tencent_region
-                .clone()
-                .unwrap_or_else(|| "ap-guangzhou".into()),
-        )),
         _ => Arc::new(email::LogSender),
     }
 }
@@ -107,15 +81,6 @@ pub fn build_email_sender(config: &crate::config::app::AppConfig) -> Arc<dyn Ema
 /// Build an SMS sender based on configuration
 pub fn build_sms_sender(config: &crate::config::app::AppConfig) -> Arc<dyn SmsSender> {
     match config.sms_provider.as_str() {
-        "aliyun" => Arc::new(sms::AliyunSender::new(
-            config.sms_aliyun_access_key_id.clone().unwrap_or_default(),
-            config
-                .sms_aliyun_access_key_secret
-                .clone()
-                .unwrap_or_default(),
-            config.sms_aliyun_sign_name.clone().unwrap_or_default(),
-            config.sms_aliyun_template_code.clone().unwrap_or_default(),
-        )),
         "twilio" => Arc::new(sms::TwilioSender::new(
             config.sms_twilio_account_sid.clone().unwrap_or_default(),
             config.sms_twilio_auth_token.clone().unwrap_or_default(),

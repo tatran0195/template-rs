@@ -756,14 +756,14 @@ All configuration via environment variables or `.env` file:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `EMAIL_PROVIDER` | `log` | `log`/`smtp`/`sendgrid`/`resend`/`aliyun`/`tencent` |
+| `EMAIL_PROVIDER` | `log` | `log`/`smtp`/`sendgrid`/`resend` |
 | `EMAIL_FROM` | — | Sender address |
 
 ### SMS
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SMS_PROVIDER` | `log` | `log`/`aliyun`/`twilio` |
+| `SMS_PROVIDER` | `log` | `log`/`twilio` |
 
 ---
 

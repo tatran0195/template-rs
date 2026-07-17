@@ -1,6 +1,6 @@
-//! proxy 模块集成测试。
+// ! proxy module integration test.
 //!
-//! 启动真实的 TCP 后端服务器，验证 proxy 的完整请求转发链路。
+// ! Start the real TCP backend server and verify the complete request forwarding link of the proxy.
 
 #![cfg(feature = "proxy")]
 
@@ -29,7 +29,7 @@ fn full(data: impl Into<Bytes>) -> BoxBody {
         .boxed()
 }
 
-/// 启动一个返回固定响应的后端服务器。
+// / Starts a backend server that returns a fixed response.
 async fn start_backend(body: String) -> (String, tokio::task::JoinHandle<()>) {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap().to_string();
@@ -55,7 +55,7 @@ async fn start_backend(body: String) -> (String, tokio::task::JoinHandle<()>) {
     (addr, handle)
 }
 
-/// 后端接收到的请求信息。
+// / Request information received by the backend.
 #[derive(Debug)]
 struct ReceivedRequest {
     method: String,
@@ -65,7 +65,7 @@ struct ReceivedRequest {
     x_forwarded_proto: String,
 }
 
-/// 启动一个记录请求头的后端服务器。
+// / Starts a backend server that logs request headers.
 async fn start_echo_backend() -> (
     String,
     tokio::task::JoinHandle<()>,
@@ -142,7 +142,7 @@ fn make_tenant(
     }
 }
 
-/// 通过 TCP 发送 HTTP 请求并读取响应。
+// / Sends an HTTP request over TCP and reads the response.
 async fn send_http_request(addr: &str, method: &str, path: &str, host: &str) -> (u16, String) {
     let stream = TcpStream::connect(addr).await.unwrap();
     let io = TokioIo::new(stream);
@@ -163,7 +163,7 @@ async fn send_http_request(addr: &str, method: &str, path: &str, host: &str) -> 
     (status, String::from_utf8_lossy(&body).to_string())
 }
 
-// ── 直接调用 handle_proxy_request 的测试 ──
+// ── Directly call the test of handle_proxy_request ──
 
 #[tokio::test]
 async fn no_backend_returns_502() {
@@ -171,10 +171,10 @@ async fn no_backend_returns_502() {
 
     let (backend_addr, _backend) = start_backend("ok".to_string()).await;
     let _stream = TcpStream::connect(&backend_addr).await.unwrap();
-    // 不注册任何路由
+    // Do not register any routes
 
     let _resp = send_http_request(&backend_addr, "GET", "/api/test", "unknown.example.com").await;
-    // 这里直接测 router 层面
+    // Here we directly test the router level
     assert!(router.find("unknown.example.com", "/api/test").is_none());
 }
 
@@ -281,9 +281,9 @@ async fn host_priority_over_prefix() {
     assert_eq!(b.unwrap().name, "fallback");
 }
 
-// ── 端到端测试：proxy → backend 全链路 ──
+// ── End-to-end test: proxy → backend full link ──
 
-/// 启动 proxy，连到真实后端，通过 TCP 客户端发请求验证。
+// / Start the proxy, connect to the real backend, and send requests for verification through the TCP client.
 async fn start_proxy(
     router: Arc<RouterTable>,
 ) -> (String, tokio::task::JoinHandle<anyhow::Result<()>>) {

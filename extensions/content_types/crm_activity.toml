@@ -3,7 +3,7 @@ name = "Activity"
 singular = "activity"
 plural = "activities"
 table = "crm_activities"
-description = "活动/互动记录"
+description = "Activity/Interaction Record"
 implements = ["ownable", "timestampable"]
 
 [fields.type]
@@ -11,57 +11,57 @@ type = "enum"
 enum_values = ["call", "email", "meeting", "note", "task", "demo", "follow_up"]
 required = true
 default = "note"
-label = "活动类型"
+label = "Activity type"
 
 [fields.subject]
 type = "text"
 required = true
 max_length = 300
-label = "主题"
+label = "theme"
 
 [fields.content]
 type = "richtext"
-label = "内容"
+label = "content"
 
 [fields.contact]
 type = "relation"
 relation_type = "many_to_one"
 target = "contacts"
 foreign_key = "contact_id"
-label = "关联联系人"
+label = "Associated contacts"
 
 [fields.company]
 type = "relation"
 relation_type = "many_to_one"
 target = "companies"
 foreign_key = "company_id"
-label = "关联公司"
+label = "Related companies"
 
 [fields.deal]
 type = "relation"
 relation_type = "many_to_one"
 target = "deals"
 foreign_key = "deal_id"
-label = "关联商机"
+label = "Related business opportunities"
 
 [fields.owner_id]
 type = "text"
-label = "负责人"
+label = "person in charge"
 
 [fields.activity_date]
 type = "datetime"
 required = true
-label = "活动时间"
+label = "Activity time"
 
 [fields.duration_minutes]
 type = "integer"
 min = 0
-label = "时长(分钟)"
+label = "Duration (minutes)"
 
 [fields.outcome]
 type = "enum"
 enum_values = ["successful", "unsuccessful", "scheduled", "cancelled"]
-label = "结果"
+label = "result"
 
 [[indexes]]
 fields = ["type"]

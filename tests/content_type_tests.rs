@@ -1,7 +1,7 @@
-//! Content Type 端到端集成测试
+// ! Content Type end-to-end integration testing
 //!
-//! 验证动态内容类型系统的完整链路：
-//! Schema 解析 → Migration 建表 → CRUD → 租户隔离
+// ! Full link to verify dynamic content type system:
+// ! Schema parsing → Migration table creation → CRUD → Tenant isolation
 
 use std::collections::HashMap;
 
@@ -19,7 +19,7 @@ name = "Product"
 singular = "product"
 plural = "products"
 table = "ct_products"
-description = "商品"
+description = "commodity"
 implements = ["ownable", "timestampable", "tenantable"]
 
 [fields.title]
@@ -868,7 +868,7 @@ default = 0
     assert_eq!(created["priority"], 5);
 }
 
-// ── Versioning 测试 ─────────────────────────────────────────────
+// ── Versioning test ───────────────────────────────────────────
 
 const VERSIONED_TOML: &str = r#"
 [content_type]

@@ -3,7 +3,7 @@ name = "Tag"
 singular = "tag"
 plural = "tags"
 table = "tags"
-description = "文章标签"
+description = "Article tags"
 implements = ["ownable", "timestampable", "tenantable"]
 
 [fields.name]
@@ -11,7 +11,7 @@ type = "text"
 required = true
 max_length = 50
 unique = true
-label = "标签名称"
+label = "Tag name"
 
 [fields.slug]
 type = "uid"

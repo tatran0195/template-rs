@@ -1,8 +1,8 @@
-//! Tauri 适配层集成测试
+// ! Tauri adaptation layer integration test
 //!
-//! 验证 Tauri command 背后的 service 调用链正确工作。
-//! 这些测试直接调用 service 函数（与 Tauri command 调用的完全相同的函数），
-//! 因为 command 层只是薄适配（参数透传 + 错误转字符串）。
+// ! Verify that the service call chain behind the Tauri command works correctly.
+// ! These tests call the service function directly (the exact same function called by the Tauri command),
+// ! Because the command layer is only thin adaptation (parameter transparent transmission + error conversion to string).
 
 use std::sync::Arc;
 
@@ -88,24 +88,24 @@ name = "Todo"
 singular = "todo"
 plural = "todos"
 table = "test_todos"
-description = "测试待办"
+description = "Test backlog"
 implements = ["ownable", "timestampable"]
 
     [fields.title]
 type = "text"
 required = true
-label = "标题"
+label = "title"
 
 [fields.done]
 type = "boolean"
 default = false
-label = "已完成"
+label = "Completed"
 
 [fields.priority]
 type = "enum"
 enum_values = ["low", "medium", "high"]
 default = "medium"
-label = "优先级"
+label = "priority"
 "#;
     let mut ct = ContentTypeSchema::parse_from_str(toml_str).unwrap();
     cache_ct(&mut ct);
@@ -113,7 +113,7 @@ label = "优先级"
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Auth service 测试
+// Auth service test
 // ═══════════════════════════════════════════════════════════════
 
 #[tokio::test]
@@ -260,7 +260,7 @@ async fn tauri_auth_get_me_service() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Post service 测试
+// Post service test
 // ═══════════════════════════════════════════════════════════════
 
 #[tokio::test]
@@ -341,7 +341,7 @@ async fn tauri_post_get_by_slug() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// CMS Content Type CRUD 测试
+// CMS Content Type CRUD test
 // ═══════════════════════════════════════════════════════════════
 
 #[tokio::test]
@@ -514,7 +514,7 @@ async fn tauri_cms_enum_field_validation() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Content Type Registry 测试
+// Content Type Registry Test
 // ═══════════════════════════════════════════════════════════════
 
 #[tokio::test]
@@ -581,7 +581,7 @@ implements = ["ownable", "timestampable"]
 
 [fields.body]
 type = "text"
-label = "内容"
+label = "content"
 "#;
     let ct2 = ContentTypeSchema::parse_from_str(ct2_toml).unwrap();
 
@@ -611,7 +611,7 @@ label = "内容"
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Options service 测试
+// Options service test
 // ═══════════════════════════════════════════════════════════════
 
 #[tokio::test]
@@ -653,7 +653,7 @@ async fn tauri_options_overwrite() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Stats service 测试
+// Stats service test
 // ═══════════════════════════════════════════════════════════════
 
 #[tokio::test]
@@ -669,7 +669,7 @@ async fn tauri_stats_overview() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// CMS list params 测试
+// CMS list params test
 // ═══════════════════════════════════════════════════════════════
 
 #[tokio::test]
@@ -722,7 +722,7 @@ async fn tauri_cms_list_with_pagination() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// SaveContext 测试
+// SaveContext test
 // ═══════════════════════════════════════════════════════════════
 
 #[tokio::test]
@@ -766,7 +766,7 @@ type = "text"
 }
 
 // ═══════════════════════════════════════════════════════════════
-// build_app_state 测试
+// build_app_state test
 // ═══════════════════════════════════════════════════════════════
 
 #[tokio::test]

@@ -3,43 +3,43 @@ name = "Note"
 singular = "note"
 plural = "notes"
 table = "crm_notes"
-description = "备注/跟进记录"
+description = "Notes/Follow-up Records"
 implements = ["ownable", "timestampable"]
 
 [fields.content]
 type = "richtext"
 required = true
-label = "内容"
+label = "content"
 
 [fields.contact]
 type = "relation"
 relation_type = "many_to_one"
 target = "contacts"
 foreign_key = "contact_id"
-label = "关联联系人"
+label = "Associated contacts"
 
 [fields.company]
 type = "relation"
 relation_type = "many_to_one"
 target = "companies"
 foreign_key = "company_id"
-label = "关联公司"
+label = "Related companies"
 
 [fields.deal]
 type = "relation"
 relation_type = "many_to_one"
 target = "deals"
 foreign_key = "deal_id"
-label = "关联商机"
+label = "Related business opportunities"
 
 [fields.owner_id]
 type = "text"
-label = "创建者"
+label = "Creator"
 
 [fields.pinned]
 type = "boolean"
 default = false
-label = "置顶"
+label = "pin to top"
 
 [[indexes]]
 fields = ["contact_id", "created_at"]

@@ -3,7 +3,7 @@ name = "Category"
 singular = "category"
 plural = "categories"
 table = "categories"
-description = "文章分类"
+description = "Article classification"
 implements = ["ownable", "timestampable", "tenantable"]
 
 [fields.name]
@@ -11,7 +11,7 @@ type = "text"
 required = true
 max_length = 100
 unique = true
-label = "分类名称"
+label = "Category name"
 
 [fields.slug]
 type = "uid"
@@ -21,7 +21,7 @@ unique = true
 [fields.description]
 type = "text"
 max_length = 500
-label = "描述"
+label = "describe"
 
 [[indexes]]
 fields = ["slug"]

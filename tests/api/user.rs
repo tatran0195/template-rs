@@ -58,7 +58,7 @@ async fn change_password_success() {
         ),
     )
     .await;
-    assert!(s.is_success(), "新密码应可登录");
+    assert!(s.is_success(), "The new password should be able to log in");
 }
 
 #[tokio::test]

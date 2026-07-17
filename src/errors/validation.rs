@@ -137,7 +137,7 @@ fn translate_errors(errors: &ValidationErrors) -> AppResult<()> {
 /// Translate a field name to a display name for the current locale
 ///
 /// Looks up the localized translation of the field name via the i18n key `fields.{field_name}`.
-/// For example, the field `email` in a Chinese locale looks up the `fields.email` key to get `"邮箱"`.
+// / For example, the field `email` in a Chinese locale looks up the `fields.email` key to get `"EMAIL"`.
 ///
 /// # Parameters
 ///

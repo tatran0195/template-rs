@@ -3,7 +3,7 @@ name = "Forum Poll Option"
 singular = "forum_poll_option"
 plural = "forum_poll_options"
 table = "forum_poll_options"
-description = "投票选项"
+description = "voting options"
 implements = ["ownable", "timestampable"]
 
 [fields.poll]
@@ -13,24 +13,24 @@ target = "forum_polls"
 foreign_key = "poll_id"
 required = true
 immutable = true
-label = "所属投票"
+label = "Belong vote"
 
 [fields.text]
 type = "text"
 required = true
 max_length = 200
-label = "选项文本"
+label = "option text"
 
 [fields.vote_count]
 type = "integer"
 default = 0
 private = true
-label = "得票数"
+label = "Number of votes"
 
 [fields.sort_order]
 type = "integer"
 default = 0
-label = "排序"
+label = "sort"
 
 [[indexes]]
 fields = ["poll_id", "sort_order"]

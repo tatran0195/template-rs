@@ -186,18 +186,8 @@ pub struct AppConfig {
     pub email_from_name: Option<String>,
     pub email_sendgrid_api_key: Option<String>,
     pub email_resend_api_key: Option<String>,
-    pub email_aliyun_access_key_id: Option<String>,
-    pub email_aliyun_access_key_secret: Option<String>,
-    pub email_aliyun_region: Option<String>,
-    pub email_tencent_secret_id: Option<String>,
-    pub email_tencent_secret_key: Option<String>,
-    pub email_tencent_region: Option<String>,
     #[serde(default = "default_sms_provider")]
     pub sms_provider: String,
-    pub sms_aliyun_access_key_id: Option<String>,
-    pub sms_aliyun_access_key_secret: Option<String>,
-    pub sms_aliyun_sign_name: Option<String>,
-    pub sms_aliyun_template_code: Option<String>,
     pub sms_twilio_account_sid: Option<String>,
     pub sms_twilio_auth_token: Option<String>,
     pub sms_twilio_from: Option<String>,
@@ -263,11 +253,7 @@ impl BuiltinsConfig {
 
     /// Whether all built-in modules are disabled (pure Headless CMS mode)
     pub fn is_all_disabled(&self) -> bool {
-        !self.blog
-            && !self.pages
-            && !self.media
-            && !self.fulltext
-            && !self.workflow
+        !self.blog && !self.pages && !self.media && !self.fulltext && !self.workflow
     }
 
     /// Returns the list of protected tables.
@@ -495,7 +481,6 @@ pub fn default_cron_schedules() -> Vec<CronScheduleConfig> {
             cron_expr: "0 0 3 * * *".into(),
             enabled: true,
         },
-
         CronScheduleConfig {
             label: "Daily Database Backup".into(),
             job_type: "db_backup".into(),
@@ -928,40 +913,10 @@ impl AppConfig {
             email_resend_api_key: env::var("EMAIL_RESEND_API_KEY")
                 .ok()
                 .filter(|s| !s.is_empty()),
-            email_aliyun_access_key_id: env::var("EMAIL_ALIYUN_ACCESS_KEY_ID")
-                .ok()
-                .filter(|s| !s.is_empty()),
-            email_aliyun_access_key_secret: env::var("EMAIL_ALIYUN_ACCESS_KEY_SECRET")
-                .ok()
-                .filter(|s| !s.is_empty()),
-            email_aliyun_region: env::var("EMAIL_ALIYUN_REGION")
-                .ok()
-                .filter(|s| !s.is_empty()),
-            email_tencent_secret_id: env::var("EMAIL_TENCENT_SECRET_ID")
-                .ok()
-                .filter(|s| !s.is_empty()),
-            email_tencent_secret_key: env::var("EMAIL_TENCENT_SECRET_KEY")
-                .ok()
-                .filter(|s| !s.is_empty()),
-            email_tencent_region: env::var("EMAIL_TENCENT_REGION")
-                .ok()
-                .filter(|s| !s.is_empty()),
             sms_provider: env::var("SMS_PROVIDER")
                 .ok()
                 .filter(|v| !v.is_empty())
                 .unwrap_or_else(default_sms_provider),
-            sms_aliyun_access_key_id: env::var("SMS_ALIYUN_ACCESS_KEY_ID")
-                .ok()
-                .filter(|s| !s.is_empty()),
-            sms_aliyun_access_key_secret: env::var("SMS_ALIYUN_ACCESS_KEY_SECRET")
-                .ok()
-                .filter(|s| !s.is_empty()),
-            sms_aliyun_sign_name: env::var("SMS_ALIYUN_SIGN_NAME")
-                .ok()
-                .filter(|s| !s.is_empty()),
-            sms_aliyun_template_code: env::var("SMS_ALIYUN_TEMPLATE_CODE")
-                .ok()
-                .filter(|s| !s.is_empty()),
             sms_twilio_account_sid: env::var("SMS_TWILIO_ACCOUNT_SID")
                 .ok()
                 .filter(|s| !s.is_empty()),
@@ -1070,17 +1025,7 @@ impl AppConfig {
             email_from_name: None,
             email_sendgrid_api_key: None,
             email_resend_api_key: None,
-            email_aliyun_access_key_id: None,
-            email_aliyun_access_key_secret: None,
-            email_aliyun_region: None,
-            email_tencent_secret_id: None,
-            email_tencent_secret_key: None,
-            email_tencent_region: None,
             sms_provider: default_sms_provider(),
-            sms_aliyun_access_key_id: None,
-            sms_aliyun_access_key_secret: None,
-            sms_aliyun_sign_name: None,
-            sms_aliyun_template_code: None,
             sms_twilio_account_sid: None,
             sms_twilio_auth_token: None,
             sms_twilio_from: None,

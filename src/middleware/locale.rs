@@ -6,7 +6,7 @@
 //!
 //! # Language detection priority
 //!
-//! 1. URL query parameter `?lang=` (e.g. `?lang=zh-CN`)
+//! 1. URL query parameter `?lang=` (e.g. `?lang=ja-JP`)
 //! 2. `Accept-Language` request header (follows RFC 7231 q-value weighting)
 //! 3. Default value `"en"`
 
@@ -50,7 +50,7 @@ pub fn detect_locale(req: &Request) -> String {
             .map(|(_, v)| v.to_string())
     }) {
         let lang = lang.to_lowercase();
-        if ["zh-cn", "zh-tw", "zh", "en", "ja", "ko"].contains(&lang.as_str()) {
+        if ["ja-JP", "en", "ja", "ko"].contains(&lang.as_str()) {
             return normalize_locale(&lang);
         }
     }
@@ -70,7 +70,7 @@ pub fn detect_locale(req: &Request) -> String {
 ///
 /// # Example
 ///
-/// Input `"zh-CN,zh;q=0.9,en;q=0.8"` returns `"zh-CN"`.
+/// Input `"ja-JP,ja;q=0.9,en;q=0.8"` returns `"ja-JP"`.
 fn parse_accept_language(header: &str) -> Option<String> {
     header
         .split(',')
@@ -101,18 +101,15 @@ fn parse_accept_language(header: &str) -> Option<String> {
 ///
 /// | Input | Output |
 /// |---|---|
-/// | `zh`, `zh-cn`, `zh-hans` | `zh-CN` |
-/// | `zh-tw`, `zh-hant` | `zh-TW` |
+/// | `ja`, `ja-JP` | `ja-JP` |
 /// | `en`, `en-us`, `en-gb` | `en` |
 /// | `ja` | `ja` |
 /// | `ko` | `ko` |
 /// | Other | Returned as-is |
 fn normalize_locale(lang: &str) -> String {
     match lang {
-        "zh" | "zh-cn" | "zh-hans" => "zh-CN".to_string(),
-        "zh-tw" | "zh-hant" => "zh-TW".to_string(),
+        "ja-JP" | "ja" => "ja-JP".to_string(),
         "en" | "en-us" | "en-gb" => "en".to_string(),
-        "ja" => "ja".to_string(),
         "ko" => "ko".to_string(),
         other => other.to_string(),
     }

@@ -1,9 +1,9 @@
-//! API 集成测试
+// ! API integration testing
 //!
-//! 覆盖所有 31 个 API 端点。使用 axum::Router + 内存 SQLite 数据库，
-//! 通过 tower::ServiceExt::oneshot 发送请求，验证响应状态码和 JSON 结构。
+// ! Covers all 31 API endpoints. Using axum::Router + in-memory SQLite database,
+// ! Send the request via tower::ServiceExt::oneshot and verify the response status code and JSON structure.
 //!
-//! # 运行方式
+// ! # Run mode
 //!
 //! ```bash
 //! cargo test

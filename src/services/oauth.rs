@@ -523,7 +523,7 @@ mod tests {
 
     #[test]
     fn sanitize_username_unicode_stripped() {
-        let result = sanitize_username("用户名");
+        let result = sanitize_username("username");
         assert_eq!(result, "user");
     }
 

@@ -3,7 +3,7 @@ name = "Example"
 singular = "example"
 plural = "examples"
 table = "examples"
-description = "示例内容类型"
+description = "Example content type"
 timestamps = true
 soft_delete = false
 
@@ -11,13 +11,13 @@ soft_delete = false
 type = "text"
 required = true
 max_length = 200
-label = "名称"
+label = "name"
 
 [fields.status]
 type = "enum"
 enum_values = ["active", "inactive"]
 default = "active"
-label = "状态"
+label = "state"
 
 [api]
 list = "public"

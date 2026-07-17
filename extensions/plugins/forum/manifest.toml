@@ -2,7 +2,7 @@
 id = "com.axe.forum"
 name = "Forum API"
 version = "0.1.0"
-description = "论坛 API：版块主题列表、投票、采纳、计数维护"
+description = "Forum API: Section topic list, voting, adoption, count maintenance"
 author = "axe"
 license = "MIT"
 runtime = "js"

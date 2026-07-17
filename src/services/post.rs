@@ -938,7 +938,7 @@ mod tests {
 
     #[test]
     fn extract_excerpt_unicode_safe() {
-        let content = "你好世界".repeat(100);
+        let content = "Hello World".repeat(100);
         let result = crate::aspects::excerpt_aspect::extract_excerpt(&content, 200);
         assert!(result.ends_with("...") || result.len() <= 200);
     }

@@ -3,7 +3,7 @@ name = "Article"
 singular = "article"
 plural = "articles"
 table = "articles"
-description = "博客文章"
+description = "blog post"
 slug_field = "title"
 implements = [
   "ownable",
@@ -20,7 +20,7 @@ implements = [
 type = "text"
 required = true
 max_length = 200
-label = "标题"
+label = "title"
 
 [fields.slug]
 type = "uid"
@@ -30,24 +30,24 @@ unique = true
 [fields.content]
 type = "richtext"
 required = true
-label = "内容"
+label = "content"
 
 [fields.excerpt]
 type = "text"
 max_length = 500
-label = "摘要"
+label = "summary"
 
 [fields.featured_image]
 type = "media"
 accept = ["image/*"]
-label = "封面图"
+label = "cover image"
 
 [fields.category]
 type = "relation"
 relation_type = "many_to_one"
 target = "categories"
 foreign_key = "category_id"
-label = "分类"
+label = "Classification"
 
 [fields.tags]
 type = "relation"

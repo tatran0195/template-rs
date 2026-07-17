@@ -140,14 +140,14 @@ async fn refresh_token_rotation() {
         post_json("/api/v1/auth/refresh", json!({"refresh_token": r1})),
     )
     .await;
-    assert_eq!(s, StatusCode::UNAUTHORIZED, "旧 token 应已失效");
+    assert_eq!(s, StatusCode::UNAUTHORIZED, "The old token should be expired");
 
     let (s, _): (StatusCode, Value) = send(
         &mut app,
         post_json("/api/v1/auth/refresh", json!({"refresh_token": r2})),
     )
     .await;
-    assert!(s.is_success(), "新 token 应可用");
+    assert!(s.is_success(), "New token should be available");
 }
 
 #[tokio::test]

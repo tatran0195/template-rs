@@ -3,7 +3,7 @@ name = "Article"
 singular = "article"
 plural = "articles"
 table = "articles"
-description = "文章"
+description = "article"
 implements = ["ownable", "timestampable"]
 slug_field = "title"
 
@@ -11,61 +11,61 @@ slug_field = "title"
 type = "text"
 required = true
 max_length = 200
-label = "标题"
+label = "title"
 
 [fields.slug]
 type = "uid"
 target_field = "title"
 unique = true
-label = "URL 标识"
+label = "URL identifier"
 
 [fields.content]
 type = "richtext"
 required = true
-label = "正文"
+label = "text"
 
 [fields.excerpt]
 type = "text"
 max_length = 500
-label = "摘要"
+label = "summary"
 
 [fields.cover_image]
 type = "media"
 accept = ["image/*"]
 max_count = 1
-label = "封面图片"
+label = "cover image"
 
 [fields.author]
 type = "relation"
 relation_type = "many_to_one"
 target = "users"
 foreign_key = "author_id"
-label = "作者"
+label = "author"
 
 [fields.category]
 type = "relation"
 relation_type = "many_to_one"
 target = "categories"
 foreign_key = "category_id"
-label = "分类"
+label = "Classification"
 
 [fields.tags]
 type = "relation"
 relation_type = "many_to_many"
 target = "tags"
 through = "articles_tags"
-label = "标签"
+label = "Label"
 
 [fields.view_count]
 type = "integer"
 default = 0
 private = true
-label = "浏览量"
+label = "Views"
 
 [fields.is_pinned]
 type = "boolean"
 default = false
-label = "是否置顶"
+label = "Whether to pin it to the top"
 
 [[indexes]]
 fields = ["slug"]

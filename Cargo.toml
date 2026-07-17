@@ -144,7 +144,7 @@ comrak = { version = "0.36", default-features = false, features = [
 ] }
 slug = "0.1"
 
-# Media（仅启用博客常用格式：jpeg/png/gif/webp/ico）
+# Media (only common blog formats enabled: jpeg/png/gif/webp/ico)
 image = { version = "0.25", default-features = false, features = [
     "jpeg",
     "png",

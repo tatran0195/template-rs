@@ -3,13 +3,13 @@ name = "Forum Reply"
 singular = "forum_reply"
 plural = "forum_replies"
 table = "forum_replies"
-description = "论坛回复"
+description = "Forum reply"
 implements = ["ownable", "timestampable"]
 
 [fields.content]
 type = "richtext"
 required = true
-label = "回复内容"
+label = "Reply content"
 
 [fields.topic]
 type = "relation"
@@ -18,13 +18,13 @@ target = "forum_topics"
 foreign_key = "topic_id"
 required = true
 immutable = true
-label = "所属主题"
+label = "Topic"
 
 [fields.author_id]
 type = "text"
 required = true
 immutable = true
-label = "回复人"
+label = "Respondent"
 
 [fields.parent_reply]
 type = "relation"
@@ -32,18 +32,18 @@ relation_type = "many_to_one"
 target = "forum_replies"
 foreign_key = "parent_reply_id"
 immutable = true
-label = "父回复"
+label = "parent reply"
 
 [fields.is_answer]
 type = "boolean"
 default = false
-label = "最佳答案"
+label = "Best answer"
 
 [fields.vote_count]
 type = "integer"
 default = 0
 private = true
-label = "投票数"
+label = "Number of votes"
 
 [[indexes]]
 fields = ["topic_id", "created_at"]

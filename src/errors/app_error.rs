@@ -129,7 +129,7 @@ impl AppError {
     ///
     /// # Arguments
     ///
-    /// - `locale` — Target locale identifier (e.g., `"en"`, `"zh-CN"`), typically obtained from request middleware
+    /// - `locale` — Target locale identifier (e.g., `"en"`, `"ja-JP"`), typically obtained from request middleware
     ///
     /// # Returns
     ///
