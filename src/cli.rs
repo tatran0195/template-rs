@@ -72,14 +72,14 @@ enum Commands {
         action: CodegenAction,
     },
     /// Proxy management (multi-tenant reverse proxy)
-    #[cfg(all(feature = "proxy", unix))]
+    #[cfg(feature = "proxy")]
     Proxy {
         #[command(subcommand)]
         action: ProxyAction,
     },
 }
 
-#[cfg(all(feature = "proxy", unix))]
+#[cfg(feature = "proxy")]
 #[derive(Subcommand)]
 pub enum ProxyAction {
     /// Start the proxy server
@@ -102,7 +102,7 @@ pub enum AppAction {
     New {
         /// Project name (used as directory name)
         name: String,
-        /// Template: blank, blog, ecommerce
+        /// Template: blank, blog
         #[arg(short, long, default_value = "blank")]
         template: String,
     },
@@ -521,7 +521,7 @@ pub async fn run(cli: Cli, config: &AppConfig) -> anyhow::Result<()> {
             codegen_cmd::run_model(&tables, force, dry_run)?;
         }
 
-        #[cfg(all(feature = "proxy", unix))]
+        #[cfg(feature = "proxy")]
         Some(Commands::Proxy {
             action: ProxyAction::Start {
                 config: proxy_config,
@@ -530,7 +530,7 @@ pub async fn run(cli: Cli, config: &AppConfig) -> anyhow::Result<()> {
             axe::proxy::start(&proxy_config).await?;
         }
 
-        #[cfg(all(feature = "proxy", unix))]
+        #[cfg(feature = "proxy")]
         Some(Commands::Proxy {
             action: ProxyAction::Check {
                 config: proxy_config,

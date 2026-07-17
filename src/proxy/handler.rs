@@ -13,6 +13,7 @@ use hyper::body::Incoming;
 use hyper::client::conn::http1;
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpStream;
+#[cfg(unix)]
 use tokio::net::UnixStream;
 
 use crate::proxy::router::{Backend, BackendAddr, RouterTable};
@@ -119,6 +120,7 @@ async fn proxy_to_backend(
     let read_timeout = backend.read_timeout;
 
     match &backend.addr {
+        #[cfg(unix)]
         BackendAddr::UnixSocket(path) => {
             let stream = tokio::time::timeout(backend.connect_timeout, UnixStream::connect(path))
                 .await

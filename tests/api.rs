@@ -111,10 +111,6 @@ async fn build_test_app(pool: axe::db::Pool) -> (axum::Router, AppState) {
             Arc::new(axe::aspects::engine::AspectEngine::new()),
         )),
 
-        user_address_service: Arc::new(axe::services::user_address::UserAddressServiceImpl::new(
-            Arc::new(pool.clone()),
-        )),
-
         user_service: Arc::new(axe::services::user::UserServiceImpl::new(Arc::new(
             pool.clone(),
         ))),
@@ -563,8 +559,6 @@ mod tenant_admin;
 mod tenant_e2e;
 #[path = "api/user.rs"]
 mod user;
-#[path = "api/user_address.rs"]
-mod user_address;
 
 #[path = "api/webhook.rs"]
 mod webhook;

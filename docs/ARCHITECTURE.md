@@ -120,17 +120,6 @@ Feature flags control which components are compiled. Only the needed features ar
 |------|-------------|
 | `storage-s3` | S3-compatible object storage |
 
-### Payment Providers
-
-| Flag | Description |
-|------|-------------|
-| `payment-alipay` | Alipay |
-| `payment-wechat` | WeChat Pay |
-| `payment-stripe` | Stripe |
-| `payment-dodo` | Dodo Payments |
-| `payment-creem` | Creem |
-| `payment-all` | All payment providers |
-
 ### Other
 
 | Flag | Description |
@@ -147,8 +136,8 @@ Feature flags control which components are compiled. Only the needed features ar
 # Minimal: SQLite + JS plugins + search
 cargo build --no-default-features --features "db-sqlite,plugin-js,search-tantivy"
 
-# Full: all databases, all plugins, all payments
-cargo build --features "db-sqlite,plugin-all,search-tantivy,payment-all,openapi"
+# Full: all databases, all plugins
+cargo build --features "db-sqlite,plugin-all,search-tantivy,openapi"
 ```
 
 ---
@@ -615,10 +604,6 @@ Protocols are composable, declarative behaviors that can be mixed into any conte
 | `SendPasswordResetEmail` | Password reset requested |
 | `SendSmsCode` | SMS verification |
 | `SendEmailVerification` | Email verification |
-| `ExpirePaymentOrders` | Cron (every 5min) |
-| `RetryPaymentCallback` | Payment callback failed |
-| `ReconcilePayments` | Cron (daily 4am) |
-| `ProcessWalletOutbox` | Cron (every 10min) |
 
 ### Job Lifecycle
 
@@ -653,10 +638,6 @@ Service → eventbus.emit(Event::PostCreated { ... })
 | Post | Creating, Created, Updating, Updated, Deleted |
 | Comment | Created, Updated, Deleted |
 | Page | Created, Updated, Deleted |
-| Product | Created, Updated, Deleted |
-| Order | Created, Paid, Shipped, Completed, Cancelled |
-| Payment | Created, Paid, Refunded |
-| Wallet | Credited, Debited |
 | User | Registered, LoggedIn |
 | Media | Uploaded, Deleted |
 | CMS | Generic content CRUD |
@@ -691,46 +672,6 @@ Service → eventbus.emit(Event::PostCreated { ... })
 | `S3Storage` | `storage-s3` | S3-compatible object storage with presigned URLs |
 
 **Operations:** `put()`, `get()`, `delete()`, `url()`, `presigned_upload()`
-
----
-
-## Payment
-
-### Architecture
-
-```
-┌──────────┐  POST /payment/orders  ┌──────────────┐
-│  Client  │ ─────────────────────► │ PaymentService│
-│          │ ◄───────────────────── │              │
-│          │  { payment_url }       │  ┌────────┐  │
-│          │                        │  │ Router │  │
-│          │  Callback (async)      │  │  Alipay│  │
-│          │ ◄───────────────────── │  │ Stripe │  │
-│          │                        │  │ WeChat │  │
-│          │                        │  │ Dodo   │  │
-│          │                        │  │ Creem  │  │
-│          │                        │  └────────┘  │
-└──────────┘                        └──────────────┘
-```
-
-### Providers
-
-| Provider | Feature Flag | Description |
-|----------|-------------|-------------|
-| Alipay | `payment-alipay` | Alipay web/mobile payment |
-| WeChat Pay | `payment-wechat` | WeChat Pay (JSAPI/Native) |
-| Stripe | `payment-stripe` | Stripe Checkout |
-| Dodo | `payment-dodo` | Dodo Payments |
-| Creem | `payment-creem` | Creem |
-| All | `payment-all` | Enable all providers |
-
-### Payment Flow
-
-1. Client creates payment order → get payment URL
-2. User pays via provider
-3. Provider sends async callback → verify signature → update order status
-4. EventBus emits `PaymentPaid` → triggers webhook, wallet operations
-5. Failed callbacks retried via worker jobs, reconciled daily
 
 ---
 

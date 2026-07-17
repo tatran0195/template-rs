@@ -15,7 +15,7 @@ plugin_type := "all"
 
 default:
     @just --list
-features := "db-" + db + " plugin-js plugin-rhai search-tantivy payment-all"
+features := "db-" + db + " plugin-js plugin-rhai search-tantivy"
 
 # ── Build ─────────────────────────────────────────────────────────
 
@@ -70,19 +70,18 @@ test-integration:
 
 # Create SQLite database and run migrations
 db-init:
-    mkdir -p data
-    sqlite3 {{ db_url }} < migrations/001_init.sql
-    sqlite3 {{ db_url }} < migrations/002_add_indexes.sql
+    mkdir -p storage/db
+    sqlite3 ./storage/db/axe.db < migrations/sqlite/schema.sqlite.sql
 # Recreate database (dangerous: deletes existing data)
 db-reset:
-    rm -f data/blog.db
+    rm -f storage/db/axe.db
     just db-init
 # Run CLI migrations
 db-migrate:
-    DATABASE_URL={{ db_url }} cargo run --no-default-features --features "{{ features }}" -- db migrate
+    SQLX_OFFLINE=true DATABASE_URL={{ db_url }} cargo run --no-default-features --features "{{ features }}" -- db migrate
 # Backup database
 db-backup:
-    DATABASE_URL={{ db_url }} cargo run --no-default-features --features "{{ features }}" -- db backup ./backups
+    SQLX_OFFLINE=true DATABASE_URL={{ db_url }} cargo run --no-default-features --features "{{ features }}" -- db backup ./backups
 # Generate sqlx offline query metadata
 db-prepare:
     DATABASE_URL={{ db_url }} cargo sqlx prepare -- --no-default-features --features "{{ features }}"
@@ -93,7 +92,7 @@ check-offline:
 
 # Start development server
 dev:
-    DATABASE_URL={{ db_url }} cargo run --no-default-features --features "{{ features }}"
+    SQLX_OFFLINE=true DATABASE_URL={{ db_url }} cargo run --no-default-features --features "{{ features }}"
 # ── Database Backend Switch ───────────────────────────────────────
 
 # Check compilation with PostgreSQL

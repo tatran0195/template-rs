@@ -445,15 +445,15 @@ version = "1.0.0"
     fn parse_manifest_with_route_params() {
         let toml = r#"
 [plugin]
-id = "com.example.ecommerce"
-name = "E-Commerce"
+id = "com.example.catalog"
+name = "Catalog"
 version = "0.1.0"
 
 [[routes]]
 method = "GET"
-path = "/api/v1/plugins/ecommerce/products"
-handler = "listProducts"
-description = "Get product list"
+path = "/api/v1/plugins/catalog/items"
+handler = "listItems"
+description = "Get item list"
 
 [[routes.input]]
 name = "page"
@@ -489,9 +489,9 @@ description = "Total count"
 
 [[routes]]
 method = "POST"
-path = "/api/v1/plugins/ecommerce/cart"
-handler = "addToCart"
-description = "Add to cart"
+path = "/api/v1/plugins/catalog/favorites"
+handler = "addFavorite"
+description = "Add to favorites"
 
 [[routes.input]]
 name = "product_id"

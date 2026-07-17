@@ -2,6 +2,8 @@
 //!
 //! 启动真实的 TCP 后端服务器，验证 proxy 的完整请求转发链路。
 
+#![cfg(feature = "proxy")]
+
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 

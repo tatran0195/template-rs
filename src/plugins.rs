@@ -1872,8 +1872,8 @@ mod tests {
     #[test]
     fn route_param_match() {
         assert!(path_matches_route(
-            "/api/v1/plugins/ecommerce/products/abc-123",
-            "/api/v1/plugins/ecommerce/products/:id"
+            "/api/v1/plugins/catalog/items/abc-123",
+            "/api/v1/plugins/catalog/items/:id"
         ));
     }
 

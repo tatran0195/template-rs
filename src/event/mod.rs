@@ -24,7 +24,6 @@ use crate::models::post::Post;
 use crate::models::tag::Tag;
 use crate::models::user::User;
 
-
 pub use axe_derive::EventMeta;
 
 pub struct AuditInfo {
@@ -84,9 +83,6 @@ pub enum Event {
     PageUpdated(Page),
     #[event(table = "pages")]
     PageDeleted(Page),
-
-
-
 
     // ── Generic CMS content lifecycle ──
     ContentCreating,

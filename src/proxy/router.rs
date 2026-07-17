@@ -3,6 +3,7 @@
 //! Maintains Host/Prefix → Backend mapping with runtime dynamic add/remove.
 
 use std::net::SocketAddr;
+#[cfg(unix)]
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -15,6 +16,7 @@ use crate::proxy::config::TenantSection;
 /// Backend address.
 #[derive(Debug, Clone)]
 pub enum BackendAddr {
+    #[cfg(unix)]
     UnixSocket(PathBuf),
     Tcp(SocketAddr),
 }
@@ -22,6 +24,7 @@ pub enum BackendAddr {
 impl std::fmt::Display for BackendAddr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            #[cfg(unix)]
             Self::UnixSocket(p) => write!(f, "unix:{}", p.display()),
             Self::Tcp(addr) => write!(f, "tcp:{addr}"),
         }
@@ -199,8 +202,15 @@ impl RouterTable {
 /// - `unix:/path/to/socket`
 /// - `127.0.0.1:9901`
 fn parse_backend(s: &str) -> anyhow::Result<BackendAddr> {
-    if let Some(path) = s.strip_prefix("unix:") {
-        Ok(BackendAddr::UnixSocket(PathBuf::from(path)))
+    if let Some(_path) = s.strip_prefix("unix:") {
+        #[cfg(unix)]
+        {
+            Ok(BackendAddr::UnixSocket(PathBuf::from(_path)))
+        }
+        #[cfg(not(unix))]
+        {
+            anyhow::bail!("Unix sockets are not supported on this platform");
+        }
     } else {
         let addr: SocketAddr = s.parse()?;
         Ok(BackendAddr::Tcp(addr))
@@ -231,6 +241,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn parse_unix_backend() {
         let addr = parse_backend("unix:/run/axe/user1.sock").unwrap();
         let BackendAddr::UnixSocket(p) = addr else {
@@ -258,13 +269,13 @@ mod tests {
                 "user1",
                 Some("user1.example.com"),
                 None,
-                "unix:/run/user1.sock",
+                "127.0.0.1:9001",
             ),
             make_tenant(
                 "user2",
                 Some("user2.example.com"),
                 None,
-                "unix:/run/user2.sock",
+                "127.0.0.1:9002",
             ),
         ]);
 
@@ -281,12 +292,12 @@ mod tests {
     fn route_by_prefix_longest_match() {
         let router = RouterTable::new();
         router.load_from_tenants(&[
-            make_tenant("user1", None, Some("/user1"), "unix:/run/user1.sock"),
+            make_tenant("user1", None, Some("/user1"), "127.0.0.1:9001"),
             make_tenant(
                 "user1-admin",
                 None,
                 Some("/user1/admin"),
-                "unix:/run/user1-admin.sock",
+                "127.0.0.1:9002",
             ),
         ]);
 
