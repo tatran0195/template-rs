@@ -32,7 +32,6 @@ fn collect_routes(config: &AppConfig) -> Vec<RouteInfo> {
 
     let _ = axe::handlers::sse::routes(&mut registry, config);
     let _ = axe::handlers::ws::routes(&mut registry, config);
-    let _ = axe::graphql::handler::routes(&mut registry, config);
 
     let _ = axe::handlers::plugin::routes(&mut registry, config);
     let _ = axe::handlers::cron::routes(&mut registry, config);

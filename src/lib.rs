@@ -30,7 +30,6 @@ pub mod dto;
 pub mod errors;
 pub mod event;
 pub mod eventbus;
-pub mod graphql;
 pub mod handlers;
 pub mod middleware;
 pub mod models;

@@ -929,8 +929,6 @@ dependencies = [
  "anyhow",
  "arc-swap",
  "argon2",
- "async-graphql",
- "async-graphql-axum",
  "async-trait",
  "aws-config",
  "aws-sdk-s3",

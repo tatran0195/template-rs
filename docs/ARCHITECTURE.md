@@ -1,6 +1,14 @@
 # Architecture
 
 > This document provides a comprehensive overview of the axe system architecture for developers and contributors.
+>
+> **For AI agents / automated tooling:** this file is intended to be a *self-contained mental model* of the
+> project so you do **not** need to re-scan the entire source tree before making changes. It stays in sync with
+> `AGENTS.md` (agent commands & constraints) and `README.md` (user-facing overview). If you change architecture,
+> update this file. Key invariants are collected in [Key Design Decisions](#key-design-decisions).
+>
+> **API surface:** the only public HTTP API is a **REST/JSON API under `/api/v1/...`** (plus Server-Sent Events
+> and an optional WebSocket channel). There is **no GraphQL** — the former `async-graphql` endpoint has been removed.
 
 ---
 
@@ -14,6 +22,8 @@
 - [Application State](#application-state)
 - [Request Lifecycle](#request-lifecycle)
 - [Database Layer](#database-layer)
+- [Code Generation (axe-derive)](#code-generation-axe-derive)
+- [Type Export (TypeScript SDK)](#type-export-typescript-sdk)
 - [Auth System](#auth-system)
 - [Plugin Engine](#plugin-engine)
 - [Content Type System](#content-type-system)
@@ -128,7 +138,7 @@ Feature flags control which components are compiled. Only the needed features ar
 | `openapi` | Swagger UI |
 | `proxy` | Multi-tenant reverse proxy |
 | `tauri` | Tauri desktop mode |
-| `export-types` | TypeScript type generation |
+| `export-types` | TypeScript type generation via ts-rs (off by default; see [Type Export](#type-export-typescript-sdk)) |
 
 ### Example Build
 
@@ -177,14 +187,25 @@ src/
 ├── types/                  # Snowflake ID (ferroid + base62)
 ├── policy.rs               # Resource-level authorization
 ├── audit.rs                # Audit logging
-├── graphql/                # GraphQL endpoint (async-graphql)
+├── export_type.rs          # ts-rs TypeScript type export registry (feature: export-types)
 ├── proxy/                  # Multi-tenant reverse proxy
 ├── tauri/                  # Tauri desktop commands
 ├── admin_spa.rs            # Embedded Admin UI (rust-embed)
 ├── constants.rs            # Path prefixes and constants
-├── macros.rs               # Internal macros
+├── macros.rs               # Internal macros (reg_route!, export_types!, in_transaction!, ...)
 └── utils/                  # Timezone, ID generation utilities
+
+axe-derive/                 # Workspace member: proc-macro crate
+├── src/lib.rs              # Macro entry points (authoritative syntax reference)
+├── src/crud.rs             # crud_*! SQL macro implementations
+├── src/where_dsl.rs        # WhereExpr DSL for WHERE clauses
+├── src/schema.rs           # Compile-time SQL schema parsing/validation
+├── src/event_meta.rs       # #[derive(EventMeta)]
+└── src/aspect_service.rs   # #[aspect_service]
 ```
+
+> **Module counts** above are approximate and drift as the project grows; treat the layout, not the
+> exact numbers, as authoritative.
 
 ---
 
@@ -326,27 +347,97 @@ in_transaction!(pool, |tx| {
 
 ### CRUD Macro System
 
-All database operations use the `axe-derive` macro DSL:
+All database operations use the `axe-derive` macro DSL (see [Code Generation](#code-generation-axe-derive)
+for how these are implemented). Each write macro accepts an optional `tenant: expr` section that appends
+`AND tenant_id = ?` at runtime for multi-tenant isolation.
 
 | Macro | Purpose |
 |-------|---------|
 | `crud_insert!` | INSERT with auto-generated columns |
-| `crud_update!` | UPDATE with dynamic SET clauses |
-| `crud_delete!` | DELETE with WHERE conditions |
-| `crud_find!` | SELECT with dynamic WHERE + pagination |
-| `crud_find_one!` | SELECT single row |
-| `crud_find_all!` | SELECT all matching rows |
-| `crud_find_page!` | Paginated SELECT |
-| `crud_join_paged!` | Paginated SELECT with JOINs |
-| `crud_resolve_id!` | Resolve encoded ID to internal ID |
-| `crud_resolve_ids!` | Batch ID resolution |
-| `in_transaction!` | Transaction wrapper (auto write lock) |
+| `crud_upsert!` | INSERT ... ON CONFLICT DO UPDATE |
+| `crud_update!` | UPDATE with dynamic SET (`bind:` / `optional:` / `raw:`) |
+| `crud_delete!` | DELETE with Where-DSL conditions |
+| `crud_find!` | SELECT explicit columns → `fetch_optional` |
+| `crud_find_one!` | SELECT single row → `fetch_one` |
+| `crud_find_all!` | SELECT all matching rows → `fetch_all` |
+| `crud_list!` | SELECT all rows (no WHERE) |
+| `crud_count!` | `SELECT COUNT(*)` → `i64` |
+| `crud_exists!` | `SELECT EXISTS(...)` → `bool` |
+| `crud_query!` / `crud_scalar!` / `crud_select!` | runtime `query_as` / `query_scalar` helpers |
+| `crud_join!` / `crud_join_paged!` | JOIN queries (optionally paginated) |
+| `crud_query_paged!` | Paginated data + COUNT pair |
+| `crud_resolve_id!` | Resolve/verify a Snowflake ID → `Option<i64>` |
+| `crud_resolve_ids!` | Batch ID resolution (all-must-exist) |
+| `check_schema!` | **Compile-time only** table/column validation (expands to nothing) |
+| `in_transaction!` | Transaction wrapper (auto-acquires write lock) |
 
 ### Schema
 
 - All timestamps stored as `TEXT` in ISO 8601 format
 - Primary keys: Snowflake ID with multiplicative inverse cipher + base62 encoding
 - Schema defined in `src/db/schema.rs`, auto-created on first run
+- The proc-macros read `schema.sqlite.sql` (+ `tenantable.sqlite.sql`) at compile time to
+  validate table/column names and expand explicit column lists (no `SELECT *`)
+
+---
+
+## Code Generation (axe-derive)
+
+`axe-derive/` is the project's own **procedural-macro crate** — core infrastructure the whole
+codebase depends on (it is *not* an optional/removable feature). It provides three categories of macros:
+
+### 1. Bang macros — SQL CRUD Where-DSL
+
+The `crud_*!` family listed under [CRUD Macro System](#crud-macro-system). They are implemented in
+`axe-derive/src/crud.rs` and share a small `WhereExpr` DSL (`axe-derive/src/where_dsl.rs`) for building
+type-safe `WHERE` clauses. At compile time they consult the parsed SQL schema
+(`axe-derive/src/schema.rs`) to:
+
+- validate that referenced tables/columns exist (fail the build otherwise),
+- generate explicit column lists so no query uses `SELECT *`,
+- inject optional tenant filtering when a `tenant:` section is supplied.
+
+### 2. `#[derive(EventMeta)]`
+
+Applied to event enums (`src/event/`). Generates `name()`, `display_name()`, and `table()` methods
+from per-variant `#[event(table = "...", name = "...", dynamic)]` attributes, keeping the ~40 event
+types consistent without hand-written boilerplate. Implemented in `axe-derive/src/event_meta.rs`.
+
+### 3. `#[aspect_service(entity = "...", model = Type)]`
+
+Attribute macro applied to a service struct (see [AOP & Protocols](#aop--protocols)). Generates the
+constructor plus `before_create/update/delete` hooks (delegating to the aspect engine) and
+`after_created/updated/deleted` hooks (emitting the matching domain events on the EventBus). The struct
+declares its engine field with `#[engine]`. Implemented in `axe-derive/src/aspect_service.rs`.
+
+> **Where to look:** `axe-derive/src/lib.rs` is heavily doc-commented and is the authoritative reference
+> for every macro's exact syntax.
+
+---
+
+## Type Export (TypeScript SDK)
+
+An **optional, off-by-default** system that derives a TypeScript type SDK from Rust structs — used to keep
+the React Admin UI / external clients in sync. It has zero effect on normal (non-`export-types`) builds.
+
+- **Feature flag:** `export-types` (pulls in the `ts-rs` dependency).
+- **Opt-in per type:** structs are annotated `#[cfg_attr(feature = "export-types", derive(TS))]`, so the
+  `ts_rs::TS` derive only compiles under the feature.
+- **Registration:** the `export_types!(TypeA, TypeB, ...)` macro (`src/macros.rs`) registers each type via
+  the `inventory` crate. Under the feature it submits an `ExportType` entry; without the feature it expands
+  to nothing.
+- **Collection:** `src/export_type.rs` iterates the `inventory` registry (`collect_all()`), de-duplicates,
+  and returns `(name, decl)` pairs.
+- **Emit:** `cargo run --example export-types --features export-types` (`src/tools/export-types.rs`) writes
+  `frontend/sdk/src/generated/types.ts`.
+
+```bash
+# Regenerate the TypeScript SDK types
+cargo run --example export-types --features export-types
+```
+
+> Note: this `ts-rs` "type derivation" is entirely separate from the `axe-derive` proc-macro crate above.
+> `axe-derive` is required core infra; `export-types` is an optional developer tool.
 
 ---
 

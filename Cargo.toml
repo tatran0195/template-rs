@@ -73,8 +73,6 @@ lto = "thin"
 indexmap = "2"
 # Web framework
 axum = { version = "0.8", features = ["macros", "multipart", "ws"] }
-async-graphql = "7"
-async-graphql-axum = "7"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
 futures = "0.3"

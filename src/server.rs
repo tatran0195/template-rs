@@ -146,11 +146,6 @@ async fn build_app(
         api_v1 = api_v1.merge(ws::routes(&mut registry, config));
     }
 
-    if config.graphql_enabled {
-        tracing::info!("GraphQL enabled at /api/v1/graphql");
-        api_v1 = api_v1.merge(crate::graphql::handler::routes(&mut registry, config));
-    }
-
     api_v1 = api_v1
         .merge(plugin::routes(&mut registry, config))
         .merge(cron::routes(&mut registry, config))
