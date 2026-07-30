@@ -33,7 +33,6 @@ use serde::{Deserialize, Serialize};
 /// | `PLUGIN_LUA_POOL_SIZE` | u32 | `4` | Lua instance pool size |
 /// | `PLUGIN_JS_POOL_SIZE` | u32 | `4` | JS instance pool size |
 /// | `APP_TIMEZONE` | String | `UTC` | Site timezone (IANA format, e.g., `Asia/Shanghai`) |
-/// | `GRAPHQL_ENABLED` | bool | `false` | Whether to enable GraphQL API |
 /// | `WEBSOCKET_ENABLED` | bool | `false` | Whether to enable WebSocket real-time push |
 /// | `STORAGE_ROOT_DIR` | String | `./storage` | Local file storage root directory (parent of uploads/logs/search_index/vfs/db) |
 /// | `UPLOAD_DIR` | String | `{STORAGE_ROOT_DIR}/uploads` | Media upload directory |
@@ -150,9 +149,6 @@ pub struct AppConfig {
     pub s3_public_url: Option<String>,
     #[serde(default)]
     pub rule_engine: RuleEngineConfig,
-    /// Whether to enable GraphQL API (default false)
-    #[serde(default)]
-    pub graphql_enabled: bool,
     /// Whether to enable WebSocket real-time push (default false)
     #[serde(default)]
     pub websocket_enabled: bool,
@@ -281,7 +277,6 @@ impl BuiltinsConfig {
             "comments",
             "crons",
             "events",
-            "graphql",
             "health",
             "media",
             "oauth",
@@ -855,10 +850,6 @@ impl AppConfig {
             s3_region: env::var("S3_REGION").unwrap_or_else(|_| default_s3_region()),
             s3_public_url: env::var("S3_PUBLIC_URL").ok().filter(|s| !s.is_empty()),
             rule_engine: RuleEngineConfig::from_env(),
-            graphql_enabled: env::var("GRAPHQL_ENABLED")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(false),
             websocket_enabled: env::var("WEBSOCKET_ENABLED")
                 .ok()
                 .and_then(|v| v.parse().ok())
@@ -998,7 +989,6 @@ impl AppConfig {
             s3_region: default_s3_region(),
             s3_public_url: None,
             rule_engine: RuleEngineConfig::default(),
-            graphql_enabled: false,
             websocket_enabled: false,
             oauth: crate::config::oauth::OAuthConfig {
                 enabled: false,
@@ -1144,7 +1134,6 @@ mod tests {
         assert_eq!(c.jwt_refresh_expires, 604800);
         assert_eq!(c.max_upload_size, 104857600);
         assert_eq!(c.db_pool_size, 1);
-        assert!(!c.graphql_enabled);
         assert!(!c.websocket_enabled);
         assert!(!c.worker_enabled);
         assert!(c.registration_email_enabled);

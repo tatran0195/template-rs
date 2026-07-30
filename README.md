@@ -85,6 +85,13 @@ docker run -p 9898:9898 -v ./data:/app/data axe
 
 ## Architecture
 
+> **Full reference:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) is the single source of truth for
+> system design. It is written so an AI agent (or new contributor) can understand the codebase
+> **without re-analyzing the whole tree** — read it first.
+
+The public API surface is a **REST/JSON API** (`/api/v1/...`) plus SSE and optional WebSocket.
+There is no GraphQL endpoint.
+
 ```
 src/
 ├── main.rs              # CLI entry point
@@ -105,7 +112,11 @@ src/
 ├── oauth/               # OAuth providers
 ├── protocols/           # AOP protocol definitions
 ├── aspects/             # AOP aspect engine
+├── export_type.rs       # ts-rs TypeScript type export (feature: export-types)
 └── admin_spa.rs         # Embedded Admin UI (rust-embed)
+
+axe-derive/              # Proc-macro crate: CRUD Where-DSL, schema validation,
+                         # #[derive(EventMeta)], #[aspect_service]
 ```
 
 ### Layering
