@@ -10,22 +10,53 @@ axe — Rust-powered high-performance BaaS and headless CMS. Single binary, zero
 - **Plugin engines:** JS (QuickJS) / Rhai / Lua (mlua) / WASM (wasmtime)
 - **Databases:** SQLite / PostgreSQL / MySQL (feature-gated)
 
+## Environment & First Steps
+
+1. If `cargo` is unavailable, run `./scripts/setup-rust.sh`. The repository's
+   `rust-toolchain.toml` selects stable Rust and installs `rustfmt` and `clippy`.
+2. Read `docs/ARCHITECTURE.md` before architectural or cross-layer work; it is the
+   self-contained system model. Read only the focused module(s) needed for a small change.
+3. Never load, print, commit, or alter real secrets. Use `.env.example` as the configuration reference;
+   local databases and runtime storage are ignored by Git.
+4. Preserve the requested scope. Do not rewrite unrelated code, change feature defaults, or regenerate
+   SQLx metadata unless the task specifically requires it.
+
 ## Commands
 
+These commands match the CI feature set. `SQLX_OFFLINE=true` uses the checked-in `.sqlx/` metadata,
+so no local database is required for normal quality checks.
+
 ```bash
-# Compile (SQLite + JS + Rhai)
-SQLX_OFFLINE=false DATABASE_URL="sqlite:./storage/db/axe.db?mode=rwc" \
-  cargo clippy --tests --no-default-features \
-  --features "db-sqlite,plugin-js,plugin-rhai" -- -D warnings
+# Format check (always run after Rust edits)
+cargo fmt --all -- --check
 
-# Test
-SQLX_OFFLINE=false DATABASE_URL="sqlite:./storage/db/axe.db?mode=rwc" \
-  cargo test --no-default-features \
-  --features "db-sqlite,plugin-js,plugin-rhai"
+# Lint with warnings treated as errors
+SQLX_OFFLINE=true cargo clippy --no-default-features \
+  --features "db-sqlite,plugin-all,search-tantivy" -- -D warnings
 
-# Format check
-cargo fmt --check
+# Run the full test suite
+SQLX_OFFLINE=true cargo test --no-default-features \
+  --features "db-sqlite,plugin-all,search-tantivy"
+
+# Optional local server (uses the SQLite development database)
+SQLX_OFFLINE=true DATABASE_URL="sqlite:./storage/db/axe.db?mode=rwc" \
+  cargo run --no-default-features --features "db-sqlite,plugin-all,search-tantivy"
 ```
+
+`just` recipes provide shortcuts when `just` is installed (`just qa`, `just test`), but direct Cargo
+commands above are the portable baseline.
+
+## Agent Workflow
+
+- State the intended change, inspect the nearest existing implementation and tests, then make the
+  smallest coherent edit. Reuse established patterns instead of introducing a parallel abstraction.
+- Add or update focused tests whenever behavior changes. Validate with formatting plus the narrowest
+  relevant test; run the full commands above when practical. Report commands that could not run and why.
+- Treat public REST routes, DTOs, migrations, config keys, feature flags, and plugin interfaces as
+  compatibility-sensitive. Do not change them incidentally.
+- Update `docs/ARCHITECTURE.md`, `README.md`, or `.env.example` when a change alters architecture,
+  user-visible behavior, configuration, or setup. Keep `AGENTS.md` canonical for shared AI guidance;
+  `CLAUDE.md` intentionally only points Claude-compatible agents here.
 
 ## Architecture
 

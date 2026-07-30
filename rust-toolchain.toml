@@ -1,0 +1,5 @@
+# Keep local development and CI on the same Rust release channel.
+[toolchain]
+channel = "stable"
+profile = "minimal"
+components = ["rustfmt", "clippy"]
