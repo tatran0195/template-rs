@@ -200,7 +200,7 @@ impl ContentRepository {
         let columns = ct.column_names(None, include_private);
         let select_cols = columns.join(", ");
 
-        let where_parts = vec![format!("{COL_ID} = {}", crate::db::Driver::ph(1))];
+        let where_parts = [format!("{COL_ID} = {}", crate::db::Driver::ph(1))];
         let sql = format!(
             "SELECT {select_cols} FROM {} WHERE {}",
             ct.table,
@@ -879,7 +879,7 @@ impl ContentRepository {
         let has_cleanup = !source_junctions.is_empty() || !reverse_junctions.is_empty();
 
         let mut idx = 1;
-        let where_parts = vec![format!("{COL_ID} = {}", crate::db::Driver::ph(idx))];
+        let where_parts = [format!("{COL_ID} = {}", crate::db::Driver::ph(idx))];
         idx += 1;
         let values: Vec<String> = Vec::new();
         if has_cleanup {
@@ -1060,7 +1060,7 @@ impl ContentRepository {
             idx += 1;
         }
 
-        let where_parts = vec![format!("{COL_ID} = {}", crate::db::Driver::ph(idx))];
+        let where_parts = [format!("{COL_ID} = {}", crate::db::Driver::ph(idx))];
 
         let sql = format!(
             "UPDATE {} SET {} WHERE {}",

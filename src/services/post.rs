@@ -922,7 +922,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn resolve_id_numeric_no_tenant() {
+    async fn resolve_id_numeric() {
         let pool = crate::db::Pool::connect("sqlite::memory:").await.unwrap();
         sqlx::query(crate::db::schema::SCHEMA_SQL)
             .execute(&pool)

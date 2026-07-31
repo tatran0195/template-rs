@@ -106,7 +106,7 @@ pub async fn handle_proxy_request(
     match proxy_to_backend(req, &backend, client_ip).await {
         Ok(resp) => resp,
         Err(e) => {
-            tracing::warn!(tenant = %backend.name, error = %e, "proxy request failed");
+            tracing::warn!(route = %backend.name, error = %e, "proxy request failed");
             e.into()
         }
     }

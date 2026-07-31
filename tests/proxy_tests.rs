@@ -18,7 +18,7 @@ use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 use tokio::net::TcpStream;
 
-use mcms::proxy::config::TenantSection;
+use mcms::proxy::config::RouteSection;
 use mcms::proxy::router::RouterTable;
 
 type BoxBody = http_body_util::combinators::BoxBody<Bytes, hyper::Error>;
@@ -123,13 +123,13 @@ async fn start_echo_backend() -> (
     (addr, handle, received)
 }
 
-fn make_tenant(
+fn make_route(
     name: &str,
     host: Option<&str>,
     prefix: Option<&str>,
     backend: &str,
-) -> TenantSection {
-    TenantSection {
+) -> RouteSection {
+    RouteSection {
         name: name.to_string(),
         host: host.map(|s| s.to_string()),
         prefix: prefix.map(|s| s.to_string()),
@@ -183,7 +183,7 @@ async fn healthy_backend_responds() {
     let (backend_addr, _backend) = start_backend("hello from backend".to_string()).await;
 
     let router = Arc::new(RouterTable::new());
-    router.load_from_tenants(&[make_tenant(
+    router.load_from_routes(&[make_route(
         "test",
         Some("test.example.com"),
         None,
@@ -200,7 +200,7 @@ async fn unhealthy_backend_marks() {
     let (backend_addr, _backend) = start_backend("ok".to_string()).await;
 
     let router = Arc::new(RouterTable::new());
-    router.load_from_tenants(&[make_tenant(
+    router.load_from_routes(&[make_route(
         "sick",
         Some("sick.example.com"),
         None,
@@ -213,14 +213,14 @@ async fn unhealthy_backend_marks() {
 }
 
 #[tokio::test]
-async fn multiple_tenants_routing() {
+async fn multiple_routes_routing() {
     let (backend1, _h1) = start_backend("backend1".to_string()).await;
     let (backend2, _h2) = start_backend("backend2".to_string()).await;
 
     let router = Arc::new(RouterTable::new());
-    router.load_from_tenants(&[
-        make_tenant("user1", Some("user1.example.com"), None, &backend1),
-        make_tenant("user2", Some("user2.example.com"), None, &backend2),
+    router.load_from_routes(&[
+        make_route("user1", Some("user1.example.com"), None, &backend1),
+        make_route("user2", Some("user2.example.com"), None, &backend2),
     ]);
 
     let b1 = router.find("user1.example.com", "/").unwrap();
@@ -237,7 +237,7 @@ async fn prefix_routing() {
     let (backend_addr, _h) = start_backend("prefix backend".to_string()).await;
 
     let router = Arc::new(RouterTable::new());
-    router.load_from_tenants(&[make_tenant("user1", None, Some("/user1"), &backend_addr)]);
+    router.load_from_routes(&[make_route("user1", None, Some("/user1"), &backend_addr)]);
 
     let b = router.find("any.example.com", "/user1/api/posts");
     assert_eq!(b.unwrap().name, "user1");
@@ -251,9 +251,9 @@ async fn longest_prefix_match() {
     let (b2, _h2) = start_backend("long".to_string()).await;
 
     let router = Arc::new(RouterTable::new());
-    router.load_from_tenants(&[
-        make_tenant("short", None, Some("/user1"), &b1),
-        make_tenant("long", None, Some("/user1/admin"), &b2),
+    router.load_from_routes(&[
+        make_route("short", None, Some("/user1"), &b1),
+        make_route("long", None, Some("/user1/admin"), &b2),
     ]);
 
     let b = router.find("x.com", "/user1/admin/posts");
@@ -269,9 +269,9 @@ async fn host_priority_over_prefix() {
     let (b2, _h2) = start_backend("prefix".to_string()).await;
 
     let router = Arc::new(RouterTable::new());
-    router.load_from_tenants(&[
-        make_tenant("host", Some("special.example.com"), None, &b1),
-        make_tenant("fallback", None, Some("/"), &b2),
+    router.load_from_routes(&[
+        make_route("host", Some("special.example.com"), None, &b1),
+        make_route("fallback", None, Some("/"), &b2),
     ]);
 
     let b = router.find("special.example.com", "/anything");
@@ -323,7 +323,7 @@ async fn e2e_proxy_forward_request() {
     let (backend_addr, _bh) = start_backend("hello-world".to_string()).await;
 
     let router = Arc::new(RouterTable::new());
-    router.load_from_tenants(&[make_tenant(
+    router.load_from_routes(&[make_route(
         "test",
         Some("test.example.com"),
         None,
@@ -354,7 +354,7 @@ async fn e2e_proxy_503_unhealthy() {
     let (backend_addr, _bh) = start_backend("ok".to_string()).await;
 
     let router = Arc::new(RouterTable::new());
-    router.load_from_tenants(&[make_tenant(
+    router.load_from_routes(&[make_route(
         "sick",
         Some("sick.example.com"),
         None,
@@ -375,7 +375,7 @@ async fn e2e_proxy_503_unhealthy() {
 #[tokio::test]
 async fn e2e_proxy_502_connection_refused() {
     let router = Arc::new(RouterTable::new());
-    router.load_from_tenants(&[make_tenant(
+    router.load_from_routes(&[make_route(
         "dead",
         Some("dead.example.com"),
         None,
@@ -394,7 +394,7 @@ async fn e2e_proxy_forward_headers() {
     let (backend_addr, _bh, received) = start_echo_backend().await;
 
     let router = Arc::new(RouterTable::new());
-    router.load_from_tenants(&[make_tenant(
+    router.load_from_routes(&[make_route(
         "test",
         Some("test.example.com"),
         None,
@@ -417,14 +417,14 @@ async fn e2e_proxy_forward_headers() {
 }
 
 #[tokio::test]
-async fn e2e_proxy_multiple_tenants() {
+async fn e2e_proxy_multiple_routes() {
     let (b1, _h1) = start_backend("response-from-user1".to_string()).await;
     let (b2, _h2) = start_backend("response-from-user2".to_string()).await;
 
     let router = Arc::new(RouterTable::new());
-    router.load_from_tenants(&[
-        make_tenant("user1", Some("user1.example.com"), None, &b1),
-        make_tenant("user2", Some("user2.example.com"), None, &b2),
+    router.load_from_routes(&[
+        make_route("user1", Some("user1.example.com"), None, &b1),
+        make_route("user2", Some("user2.example.com"), None, &b2),
     ]);
 
     let (proxy_addr, _ph) = start_proxy(router).await;
@@ -443,7 +443,7 @@ async fn e2e_proxy_host_strip_port() {
     let (backend_addr, _bh, received) = start_echo_backend().await;
 
     let router = Arc::new(RouterTable::new());
-    router.load_from_tenants(&[make_tenant(
+    router.load_from_routes(&[make_route(
         "test",
         Some("test.example.com"),
         None,
@@ -464,7 +464,7 @@ async fn e2e_proxy_host_strip_port() {
 #[tokio::test]
 async fn e2e_proxy_504_connect_timeout() {
     let router = Arc::new(RouterTable::new());
-    router.load_from_tenants(&[TenantSection {
+    router.load_from_routes(&[RouteSection {
         name: "timeout".to_string(),
         host: Some("timeout.example.com".to_string()),
         prefix: None,
@@ -488,7 +488,7 @@ async fn e2e_proxy_prefix_routing() {
     let (backend_addr, _bh) = start_backend("prefix-response".to_string()).await;
 
     let router = Arc::new(RouterTable::new());
-    router.load_from_tenants(&[make_tenant("user1", None, Some("/user1"), &backend_addr)]);
+    router.load_from_routes(&[make_route("user1", None, Some("/user1"), &backend_addr)]);
 
     let (proxy_addr, _ph) = start_proxy(router).await;
 
@@ -510,7 +510,7 @@ async fn e2e_dynamic_upsert_remove() {
     assert_eq!(status, 502);
 
     router
-        .upsert(&make_tenant(
+        .upsert(&make_route(
             "dynamic",
             Some("dynamic.example.com"),
             None,

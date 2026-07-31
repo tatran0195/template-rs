@@ -71,7 +71,7 @@ enum Commands {
         #[command(subcommand)]
         action: CodegenAction,
     },
-    /// Proxy management (multi-tenant reverse proxy)
+    /// Proxy management (reverse proxy)
     #[cfg(feature = "proxy")]
     Proxy {
         #[command(subcommand)]

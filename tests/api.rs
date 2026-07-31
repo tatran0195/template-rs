@@ -64,19 +64,8 @@ pub(crate) async fn test_pool() -> mcms::db::Pool {
     }
 }
 
-pub(crate) async fn test_pool_with_tenants() -> mcms::db::Pool {
-    #[cfg(feature = "db-sqlite")]
-    {
-        test_pool().await
-    }
-}
-
 pub(crate) async fn test_app() -> (axum::Router, AppState) {
     build_test_app(test_pool().await).await
-}
-
-pub(crate) async fn test_app_with_tenants() -> (axum::Router, AppState) {
-    build_test_app(test_pool_with_tenants().await).await
 }
 
 async fn build_test_app(pool: mcms::db::Pool) -> (axum::Router, AppState) {

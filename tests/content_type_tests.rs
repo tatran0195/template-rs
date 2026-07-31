@@ -1,7 +1,7 @@
 // ! Content Type end-to-end integration testing
-//!
+// !
 // ! Full link to verify dynamic content type system:
-// ! Schema parsing → Migration table creation → CRUD → Tenant isolation
+// ! Schema parsing → Migration table creation → CRUD
 
 use std::collections::HashMap;
 

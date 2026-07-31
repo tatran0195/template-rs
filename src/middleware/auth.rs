@@ -1,6 +1,6 @@
 //! Unified authentication extractor
 //!
-//! Resolves user identity and tenant from JWT / API Token + `X-Tenant-ID` header combined.
+//! Resolves user identity from JWT / API Token.
 //! Never rejects; when not logged in, `user_id()` returns `None`.
 //!
 //! # Usage
@@ -17,22 +17,7 @@
 //!     auth.ensure_admin()?;
 //!     ...
 //! }
-//!
-//! // Public endpoint
-//! async fn public_list(auth: AuthUser, ...) {
-//!     // Don't call ensure_*, just use auth.tenant_id()
-//! }
 //! ```
-//!
-//! # Tenant resolution rules
-//!
-//! | Scenario | tenant_id | Description |
-//! |---|---|---|
-//! | Super admin + `X-Tenant-ID` | `Some(header)` | Super admin switches to specified tenant |
-//! | Super admin + no Header | `None` | Super admin views all tenant data |
-//! | Regular user | `Some(jwt_tenant_id)` | Ignores header, uses tenant from JWT |
-//! | Not logged in + `X-Tenant-ID` | `Some(header)` | Public API specifies tenant |
-//! | Not logged in + no Header | `Some("default")` | Fallback |
 
 use crate::types::snowflake_id::SnowflakeId;
 use axum::extract::FromRequestParts;

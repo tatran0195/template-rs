@@ -38,9 +38,8 @@ pub fn create_new(name: &str, template: &str) -> anyhow::Result<()> {
         include_str!("../../templates/app/gitignore"),
     )?;
 
-    match template {
-        "blog" => copy_content_types(&project_dir, "blog", &["article", "category", "tag"])?,
-        _ => {}
+    if template == "blog" {
+        copy_content_types(&project_dir, "blog", &["article", "category", "tag"])?;
     }
 
     let readme = render_template(

@@ -16,9 +16,6 @@
 //!
 //! ## 3. Bang macros (SQL CRUD helpers)
 //!
-//! All macros use optional `tenant: expr` named section for tenant filtering.
-//! When provided, the SQL includes `AND tenant_id = ?` at runtime.
-//!
 //! | Macro | SQL operation |
 //! |-------|---------------|
 //! | `crud_delete!` | `DELETE FROM ... WHERE WhereExpr` |

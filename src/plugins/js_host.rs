@@ -101,8 +101,8 @@ pub fn register_host_functions(
     let hc = host_ctx.clone();
     let db_insert_fn = Function::new(
         ctx.clone(),
-        move |table: String, data: String, options: String| -> String {
-            hc.db_insert(&table, &data, &options)
+        move |table: String, data: String, _options: Option<String>| -> String {
+            hc.db_insert(&table, &data)
         },
     )?;
     host.set("dbInsert", db_insert_fn)?;
@@ -128,8 +128,8 @@ pub fn register_host_functions(
     let hc = host_ctx.clone();
     let db_update_fn = Function::new(
         ctx.clone(),
-        move |table: String, data: String, r#where: String, options: String| -> String {
-            hc.db_update(&table, &data, &r#where, &options)
+        move |table: String, data: String, r#where: String, _options: Option<String>| -> String {
+            hc.db_update(&table, &data, &r#where)
         },
     )?;
     host.set("dbUpdate", db_update_fn)?;
@@ -137,8 +137,8 @@ pub fn register_host_functions(
     let hc = host_ctx.clone();
     let db_delete_fn = Function::new(
         ctx.clone(),
-        move |table: String, r#where: String, options: String| -> String {
-            hc.db_delete(&table, &r#where, &options)
+        move |table: String, r#where: String, _options: Option<String>| -> String {
+            hc.db_delete(&table, &r#where)
         },
     )?;
     host.set("dbDelete", db_delete_fn)?;
@@ -146,8 +146,8 @@ pub fn register_host_functions(
     let hc = host_ctx.clone();
     let db_count_fn = Function::new(
         ctx.clone(),
-        move |table: String, r#where: String, options: String| -> String {
-            hc.db_count(&table, &r#where, &options)
+        move |table: String, r#where: String, _options: Option<String>| -> String {
+            hc.db_count(&table, &r#where)
         },
     )?;
     host.set("dbCount", db_count_fn)?;
@@ -164,8 +164,8 @@ pub fn register_host_functions(
     let hc = host_ctx.clone();
     let db_sum_fn = Function::new(
         ctx.clone(),
-        move |table: String, column: String, r#where: String, options: String| -> String {
-            hc.db_sum(&table, &column, &r#where, &options)
+        move |table: String, column: String, r#where: String, _options: Option<String>| -> String {
+            hc.db_sum(&table, &column, &r#where)
         },
     )?;
     host.set("dbSum", db_sum_fn)?;

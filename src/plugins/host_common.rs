@@ -29,14 +29,7 @@ struct WhereResult {
     params: Vec<serde_json::Value>,
 }
 
-enum CrudTenant {
-    Auto,
-    Disabled,
-    Explicit(String),
-}
-
 struct CrudOptions {
-    tenant: CrudTenant,
     order_by: Option<String>,
     limit: Option<usize>,
     offset: Option<usize>,
@@ -45,7 +38,6 @@ struct CrudOptions {
 impl CrudOptions {
     fn parse(json: &str) -> Self {
         let mut opts = Self {
-            tenant: CrudTenant::Auto,
             order_by: None,
             limit: None,
             offset: None,
@@ -54,11 +46,6 @@ impl CrudOptions {
         else {
             return opts;
         };
-        match obj.get("tenant") {
-            Some(serde_json::Value::Bool(false)) => opts.tenant = CrudTenant::Disabled,
-            Some(serde_json::Value::String(s)) => opts.tenant = CrudTenant::Explicit(s.clone()),
-            _ => {}
-        }
         if let Some(serde_json::Value::String(s)) = obj.get("order_by") {
             opts.order_by = Some(s.clone());
         }
@@ -69,17 +56,6 @@ impl CrudOptions {
             opts.offset = n.as_u64().map(|v| v as usize);
         }
         opts
-    }
-
-    fn tenant_is_disabled(&self) -> bool {
-        matches!(self.tenant, CrudTenant::Disabled)
-    }
-
-    fn tenant_value_owned(&self) -> Option<String> {
-        match &self.tenant {
-            CrudTenant::Explicit(s) => Some(s.clone()),
-            _ => None,
-        }
     }
 }
 
@@ -300,10 +276,7 @@ impl HostContext {
         }
         let handle = tokio::runtime::Handle::current();
         tokio::task::block_in_place(|| {
-            match handle.block_on(crate::models::post::find_by_slug(
-                pool,
-                slug,
-            )) {
+            match handle.block_on(crate::models::post::find_by_slug(pool, slug)) {
                 Ok(Some(post)) => serde_json::to_string(&post).ok(),
                 Ok(None) => None,
                 Err(e) => {
@@ -555,11 +528,6 @@ impl HostContext {
 
     // ── High-level CRUD API ─────────────────────────────────────
 
-    /// Check if a table is a content type table with tenantable protocol
-    fn is_tenantable_table(&self, _table: &str) -> bool {
-        false
-    }
-
     fn check_table_readable(&self, table: &str) -> Result<(), String> {
         if !crate::db::driver::is_safe_identifier(table) {
             return Err(format!("invalid table name: {table}"));
@@ -601,33 +569,22 @@ impl HostContext {
     /// Insert a row into a table.
     ///
     /// `data_json` is a JSON object of column-value pairs.
-    /// `options_json` is optional: `{ "tenant": "tenant_id" }` or `{ "tenant": false }`.
+    /// `options_json` is optional JSON options.
     ///
     /// Returns `{"data":{...},"rows_affected":1}` or `{"error":"..."}`.
     #[must_use]
-    pub fn db_insert(&self, table: &str, data_json: &str, options_json: &str) -> String {
+    pub fn db_insert(&self, table: &str, data_json: &str) -> String {
         if let Err(e) = self.check_table_writable(table) {
             return format!(r#"{{"error":"{e}"}}"#);
         }
         let Ok(pool) = self.require_pool() else {
             return r#"{"error":"no database access"}"#.to_string();
         };
-        let mut data: serde_json::Map<String, serde_json::Value> =
-            match serde_json::from_str(data_json) {
-                Ok(d) => d,
-                Err(e) => return format!(r#"{{"error":"invalid data JSON: {e}"}}"#),
-            };
-
-        let opts = CrudOptions::parse(options_json);
-        if self.is_tenantable_table(table) {
-            match &opts.tenant {
-                CrudTenant::Auto => {}
-                CrudTenant::Explicit(tid) => {
-                    data.insert("tenant_id".into(), serde_json::Value::String(tid.clone()));
-                }
-                CrudTenant::Disabled => {}
-            }
-        }
+        let data: serde_json::Map<String, serde_json::Value> = match serde_json::from_str(data_json)
+        {
+            Ok(d) => d,
+            Err(e) => return format!(r#"{{"error":"invalid data JSON: {e}"}}"#),
+        };
 
         let mut cols = Vec::new();
         let mut vals = Vec::new();
@@ -684,8 +641,8 @@ impl HostContext {
             Err(e) => return format!(r#"{{"error":"{e}"}}"#),
         };
         let opts = CrudOptions::parse(options_json);
-        let tenantable = self.is_tenantable_table(table);
-        let (sql, args) = Self::build_query_args(tenantable, table, &where_result, &opts);
+        let (sql_where, args) = Self::build_query_args(&where_result, &opts);
+        let sql = format!("SELECT * FROM {table}{sql_where}");
 
         let handle = tokio::runtime::Handle::current();
         tokio::task::block_in_place(|| {
@@ -707,7 +664,7 @@ impl HostContext {
     /// Fetch multiple rows from a table.
     ///
     /// `where_json` same as `db_fetch_one`.
-    /// `options_json` can include `order_by`, `limit`, `offset`, `tenant`.
+    /// `options_json` can include `order_by`, `limit`, `offset`.
     ///
     /// Returns `{"data":[...],"total":N}` or `{"error":"..."}`.
     #[must_use]
@@ -723,8 +680,8 @@ impl HostContext {
             Err(e) => return format!(r#"{{"error":"{e}"}}"#),
         };
         let opts = CrudOptions::parse(options_json);
-        let tenantable = self.is_tenantable_table(table);
-        let (sql, args) = Self::build_query_args(tenantable, table, &where_result, &opts);
+        let (sql_where, args) = Self::build_query_args(&where_result, &opts);
+        let sql = format!("SELECT * FROM {table}{sql_where}");
 
         let handle = tokio::runtime::Handle::current();
         tokio::task::block_in_place(|| {
@@ -751,13 +708,7 @@ impl HostContext {
     ///
     /// Returns `{"rows_affected":N}` or `{"error":"..."}`.
     #[must_use]
-    pub fn db_update(
-        &self,
-        table: &str,
-        data_json: &str,
-        where_json: &str,
-        options_json: &str,
-    ) -> String {
+    pub fn db_update(&self, table: &str, data_json: &str, where_json: &str) -> String {
         if let Err(e) = self.check_table_writable(table) {
             return format!(r#"{{"error":"{e}"}}"#);
         }
@@ -776,17 +727,14 @@ impl HostContext {
             Ok(w) => w,
             Err(e) => return format!(r#"{{"error":"{e}"}}"#),
         };
-        let opts = CrudOptions::parse(options_json);
 
         let mut set_parts = Vec::new();
         let mut args = DbArguments::default();
-        let mut idx = 1;
-        for (k, v) in &data {
+        for (idx, (k, v)) in (1..).zip(&data) {
             if !crate::db::driver::is_safe_identifier(k) {
                 return format!(r#"{{"error":"invalid column name: {k}"}}"#);
             }
             set_parts.push(format!("{k} = {}", crate::db::Driver::ph(idx)));
-            idx += 1;
             Self::add_param(&mut args, v);
         }
 
@@ -796,20 +744,6 @@ impl HostContext {
         }
         for p in &where_result.params {
             Self::add_param(&mut args, p);
-        }
-
-        if self.is_tenantable_table(table) && !opts.tenant_is_disabled() {
-            let ph = crate::db::Driver::ph(idx);
-            let connector = if where_sql.is_empty() {
-                " WHERE"
-            } else {
-                " AND"
-            };
-            where_sql.push_str(&format!("{connector} tenant_id = {ph}"));
-            let tid = opts
-                .tenant_value_owned()
-                .unwrap_or_else(|| "default".to_string());
-            args.add(tid).ok();
         }
 
         let sql = format!("UPDATE {table} SET {}{where_sql}", set_parts.join(", "));
@@ -836,7 +770,7 @@ impl HostContext {
     ///
     /// Returns `{"rows_affected":N}` or `{"error":"..."}`.
     #[must_use]
-    pub fn db_delete(&self, table: &str, where_json: &str, options_json: &str) -> String {
+    pub fn db_delete(&self, table: &str, where_json: &str) -> String {
         if let Err(e) = self.check_table_writable(table) {
             return format!(r#"{{"error":"{e}"}}"#);
         }
@@ -847,7 +781,6 @@ impl HostContext {
             Ok(w) => w,
             Err(e) => return format!(r#"{{"error":"{e}"}}"#),
         };
-        let opts = CrudOptions::parse(options_json);
 
         let mut args = DbArguments::default();
         let mut where_sql = String::new();
@@ -856,21 +789,6 @@ impl HostContext {
         }
         for p in &where_result.params {
             Self::add_param(&mut args, p);
-        }
-
-        if self.is_tenantable_table(table) && !opts.tenant_is_disabled() {
-            let idx = where_result.params.len() + 1;
-            let ph = crate::db::Driver::ph(idx);
-            let connector = if where_sql.is_empty() {
-                " WHERE"
-            } else {
-                " AND"
-            };
-            where_sql.push_str(&format!("{connector} tenant_id = {ph}"));
-            let tid = opts
-                .tenant_value_owned()
-                .unwrap_or_else(|| "default".to_string());
-            args.add(tid).ok();
         }
 
         let sql = format!("DELETE FROM {table}{where_sql}");
@@ -897,7 +815,7 @@ impl HostContext {
     ///
     /// Returns `{"count":N}` or `{"error":"..."}`.
     #[must_use]
-    pub fn db_count(&self, table: &str, where_json: &str, options_json: &str) -> String {
+    pub fn db_count(&self, table: &str, where_json: &str) -> String {
         if let Err(e) = self.check_table_readable(table) {
             return format!(r#"{{"error":"{e}"}}"#);
         }
@@ -908,7 +826,6 @@ impl HostContext {
             Ok(w) => w,
             Err(e) => return format!(r#"{{"error":"{e}"}}"#),
         };
-        let opts = CrudOptions::parse(options_json);
 
         let mut args = DbArguments::default();
         let mut where_sql = String::new();
@@ -917,21 +834,6 @@ impl HostContext {
         }
         for p in &where_result.params {
             Self::add_param(&mut args, p);
-        }
-
-        if self.is_tenantable_table(table) && !opts.tenant_is_disabled() {
-            let idx = where_result.params.len() + 1;
-            let ph = crate::db::Driver::ph(idx);
-            let connector = if where_sql.is_empty() {
-                " WHERE"
-            } else {
-                " AND"
-            };
-            where_sql.push_str(&format!("{connector} tenant_id = {ph}"));
-            let tid = opts
-                .tenant_value_owned()
-                .unwrap_or_else(|| "default".to_string());
-            args.add(tid).ok();
         }
 
         let sql = format!("SELECT COUNT(*) as cnt FROM {table}{where_sql}");
@@ -980,7 +882,6 @@ impl HostContext {
             return r#"{"error":"no columns to increment"}"#.to_string();
         }
 
-        let opts = CrudOptions::parse(options_json);
         let set_data: Option<serde_json::Map<String, serde_json::Value>> =
             serde_json::from_str(options_json)
                 .ok()
@@ -1045,20 +946,6 @@ impl HostContext {
             Self::add_param(&mut args, p);
         }
 
-        if self.is_tenantable_table(table) && !opts.tenant_is_disabled() {
-            let ph = crate::db::Driver::ph(idx);
-            let connector = if where_sql.is_empty() {
-                " WHERE"
-            } else {
-                " AND"
-            };
-            where_sql.push_str(&format!("{connector} tenant_id = {ph}"));
-            let tid = opts
-                .tenant_value_owned()
-                .unwrap_or_else(|| "default".to_string());
-            args.add(tid).ok();
-        }
-
         let sql = format!("UPDATE {table} SET {}{where_sql}", set_parts.join(", "));
         let handle = tokio::runtime::Handle::current();
         tokio::task::block_in_place(|| {
@@ -1081,13 +968,7 @@ impl HostContext {
     ///
     /// Returns `{"sum":<number>}` or `{"error":"..."}`.
     #[must_use]
-    pub fn db_sum(
-        &self,
-        table: &str,
-        column: &str,
-        where_json: &str,
-        options_json: &str,
-    ) -> String {
+    pub fn db_sum(&self, table: &str, column: &str, where_json: &str) -> String {
         if let Err(e) = self.check_table_readable(table) {
             return format!(r#"{{"error":"{e}"}}"#);
         }
@@ -1098,7 +979,6 @@ impl HostContext {
             Ok(w) => w,
             Err(e) => return format!(r#"{{"error":"{e}"}}"#),
         };
-        let opts = CrudOptions::parse(options_json);
 
         let mut args = DbArguments::default();
         let mut where_sql = String::new();
@@ -1107,21 +987,6 @@ impl HostContext {
         }
         for p in &where_result.params {
             Self::add_param(&mut args, p);
-        }
-
-        if self.is_tenantable_table(table) && !opts.tenant_is_disabled() {
-            let idx = where_result.params.len() + 1;
-            let ph = crate::db::Driver::ph(idx);
-            let connector = if where_sql.is_empty() {
-                " WHERE"
-            } else {
-                " AND"
-            };
-            where_sql.push_str(&format!("{connector} tenant_id = {ph}"));
-            let tid = opts
-                .tenant_value_owned()
-                .unwrap_or_else(|| "default".to_string());
-            args.add(tid).ok();
         }
 
         let sql = format!("SELECT COALESCE(SUM({column}), 0) as total FROM {table}{where_sql}");
@@ -1237,21 +1102,7 @@ impl HostContext {
             Self::add_param(&mut args, p);
         }
 
-        let mut idx = where_result.params.len() + 1;
-        if self.is_tenantable_table(table) && !opts.tenant_is_disabled() {
-            let ph = crate::db::Driver::ph(idx);
-            idx += 1;
-            let connector = if where_sql.is_empty() {
-                " WHERE"
-            } else {
-                " AND"
-            };
-            where_sql.push_str(&format!("{connector} tenant_id = {ph}"));
-            let tid = opts
-                .tenant_value_owned()
-                .unwrap_or_else(|| "default".to_string());
-            args.add(tid).ok();
-        }
+        let idx = where_result.params.len() + 1;
 
         let group_clause = group_by.join(", ");
         let mut sql = format!(
@@ -1367,8 +1218,6 @@ impl HostContext {
     }
 
     fn build_query_args(
-        tenantable: bool,
-        table: &str,
         where_result: &WhereResult,
         opts: &CrudOptions,
     ) -> (String, DbArguments<'static>) {
@@ -1381,20 +1230,6 @@ impl HostContext {
             Self::add_param(&mut args, p);
         }
         let mut idx = where_result.params.len() + 1;
-        if tenantable && !opts.tenant_is_disabled() {
-            let ph = crate::db::Driver::ph(idx);
-            idx += 1;
-            let connector = if where_sql.is_empty() {
-                " WHERE"
-            } else {
-                " AND"
-            };
-            where_sql.push_str(&format!("{connector} tenant_id = {ph}"));
-            let tid = opts
-                .tenant_value_owned()
-                .unwrap_or_else(|| "default".to_string());
-            args.add(tid).ok();
-        }
         if let Some(ref order_by) = opts.order_by
             && Self::is_safe_order_by(order_by)
         {
@@ -1411,7 +1246,7 @@ impl HostContext {
             where_sql.push_str(&format!(" OFFSET {ph}"));
             args.add(off as i64).ok();
         }
-        (format!("SELECT * FROM {table}{where_sql}"), args)
+        (where_sql, args)
     }
 
     /// Read a file from the virtual file system
@@ -2212,7 +2047,7 @@ mod tests {
             .unwrap();
         let ctx = make_crud_ctx(&pool);
 
-        let result = ctx.db_insert("tags", r#"{"name":"Rust","slug":"rust"}"#, "{}");
+        let result = ctx.db_insert("tags", r#"{"name":"Rust","slug":"rust"}"#);
         assert!(result.contains(r#""rows_affected":1"#), "insert: {result}");
 
         let found = ctx.db_fetch_one("tags", r#"{"slug":"rust"}"#, "{}");
@@ -2241,7 +2076,7 @@ mod tests {
             .unwrap();
         let ctx = make_crud_ctx(&pool);
 
-        let _ = ctx.db_insert("tags", r#"{"name":"Go","slug":"go"}"#, "{}");
+        let _ = ctx.db_insert("tags", r#"{"name":"Go","slug":"go"}"#);
 
         let found = ctx.db_fetch_one("tags", r#"{"name":"Go"}"#, "{}");
         assert!(found.contains(r#""slug":"go""#), "string where: {found}");
@@ -2256,8 +2091,6 @@ mod tests {
             .unwrap();
         let ctx = make_crud_ctx(&pool);
 
-        let _ = ctx.db_insert("tags", r#"{"name":"Python","slug":"python"}"#, "{}");
-
         let found = ctx.db_fetch_one("tags", r#"["name = ?", "Python"]"#, "{}");
         assert!(found.contains(r#""slug":"python""#), "array where: {found}");
     }
@@ -2271,9 +2104,9 @@ mod tests {
             .unwrap();
         let ctx = make_crud_ctx(&pool);
 
-        let _ = ctx.db_insert("tags", r#"{"name":"A","slug":"a"}"#, "{}");
-        let _ = ctx.db_insert("tags", r#"{"name":"B","slug":"b"}"#, "{}");
-        let _ = ctx.db_insert("tags", r#"{"name":"C","slug":"c"}"#, "{}");
+        let _ = ctx.db_insert("tags", r#"{"name":"A","slug":"a"}"#);
+        let _ = ctx.db_insert("tags", r#"{"name":"B","slug":"b"}"#);
+        let _ = ctx.db_insert("tags", r#"{"name":"C","slug":"c"}"#);
 
         let result = ctx.db_fetch_all("tags", "{}", r#"{"order_by":"name DESC","limit":2}"#);
         assert!(result.contains(r#""total":2"#), "fetch_all limit: {result}");
@@ -2288,9 +2121,9 @@ mod tests {
             .unwrap();
         let ctx = make_crud_ctx(&pool);
 
-        let _ = ctx.db_insert("tags", r#"{"name":"Old","slug":"old"}"#, "{}");
+        let _ = ctx.db_insert("tags", r#"{"name":"Old","slug":"old"}"#);
 
-        let result = ctx.db_update("tags", r#"{"name":"New"}"#, r#"{"slug":"old"}"#, "{}");
+        let result = ctx.db_update("tags", r#"{"name":"New"}"#, r#"{"slug":"old"}"#);
         assert!(result.contains(r#""rows_affected":1"#), "update: {result}");
 
         let found = ctx.db_fetch_one("tags", r#"{"slug":"old"}"#, "{}");
@@ -2306,7 +2139,7 @@ mod tests {
             .unwrap();
         let ctx = make_crud_ctx(&pool);
 
-        let result = ctx.db_update("tags", "{}", "{}", "{}");
+        let result = ctx.db_update("tags", "{}", "{}");
         assert!(result.contains("no columns"), "empty data: {result}");
     }
 
@@ -2319,9 +2152,9 @@ mod tests {
             .unwrap();
         let ctx = make_crud_ctx(&pool);
 
-        let _ = ctx.db_insert("tags", r#"{"name":"Delete","slug":"del"}"#, "{}");
+        let _ = ctx.db_insert("tags", r#"{"name":"Delete","slug":"del"}"#);
 
-        let result = ctx.db_delete("tags", r#"{"slug":"del"}"#, "{}");
+        let result = ctx.db_delete("tags", r#"{"slug":"del"}"#);
         assert!(result.contains(r#""rows_affected":1"#), "delete: {result}");
 
         let found = ctx.db_fetch_one("tags", r#"{"slug":"del"}"#, "{}");
@@ -2337,10 +2170,10 @@ mod tests {
             .unwrap();
         let ctx = make_crud_ctx(&pool);
 
-        let _ = ctx.db_insert("tags", r#"{"name":"Count1","slug":"c1"}"#, "{}");
-        let _ = ctx.db_insert("tags", r#"{"name":"Count2","slug":"c2"}"#, "{}");
+        let _ = ctx.db_insert("tags", r#"{"name":"Count1","slug":"c1"}"#);
+        let _ = ctx.db_insert("tags", r#"{"name":"Count2","slug":"c2"}"#);
 
-        let result = ctx.db_count("tags", "{}", "{}");
+        let result = ctx.db_count("tags", "{}");
         assert!(result.contains(r#""count":2"#), "count: {result}");
     }
 
@@ -2353,10 +2186,10 @@ mod tests {
             .unwrap();
         let ctx = make_crud_ctx(&pool);
 
-        let _ = ctx.db_insert("tags", r#"{"name":"Go","slug":"go"}"#, "{}");
-        let _ = ctx.db_insert("tags", r#"{"name":"Rust","slug":"rust"}"#, "{}");
+        let _ = ctx.db_insert("tags", r#"{"name":"Go","slug":"go"}"#);
+        let _ = ctx.db_insert("tags", r#"{"name":"Rust","slug":"rust"}"#);
 
-        let result = ctx.db_count("tags", r#"["name = ?", "Rust"]"#, "{}");
+        let result = ctx.db_count("tags", r#"["name = ?", "Rust"]"#);
         assert!(
             result.contains(r#""count":1"#),
             "count with where: {result}"
@@ -2372,15 +2205,12 @@ mod tests {
         };
         let ctx = HostContext::new("test", config, "p1".into(), perms, None);
 
-        assert!(ctx.db_insert("tags", "{}", "{}").contains("no database"));
+        assert!(ctx.db_insert("tags", "{}").contains("no database"));
         assert!(ctx.db_fetch_one("tags", "{}", "{}").contains("no database"));
         assert!(ctx.db_fetch_all("tags", "{}", "{}").contains("no database"));
-        assert!(
-            ctx.db_update("tags", "{}", "{}", "{}")
-                .contains("no database")
-        );
-        assert!(ctx.db_delete("tags", "{}", "{}").contains("no database"));
-        assert!(ctx.db_count("tags", "{}", "{}").contains("no database"));
+        assert!(ctx.db_update("tags", "{}", "{}").contains("no database"));
+        assert!(ctx.db_delete("tags", "{}").contains("no database"));
+        assert!(ctx.db_count("tags", "{}").contains("no database"));
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -2399,12 +2229,12 @@ mod tests {
             Some(pool),
         );
 
-        assert!(ctx.db_insert("tags", "{}", "{}").contains("error"));
+        assert!(ctx.db_insert("tags", "{}").contains("error"));
         assert!(ctx.db_fetch_one("tags", "{}", "{}").contains("error"));
         assert!(ctx.db_fetch_all("tags", "{}", "{}").contains("error"));
-        assert!(ctx.db_update("tags", "{}", "{}", "{}").contains("error"));
-        assert!(ctx.db_delete("tags", "{}", "{}").contains("error"));
-        assert!(ctx.db_count("tags", "{}", "{}").contains("error"));
+        assert!(ctx.db_update("tags", "{}", "{}").contains("error"));
+        assert!(ctx.db_delete("tags", "{}").contains("error"));
+        assert!(ctx.db_count("tags", "{}").contains("error"));
     }
 
     // ── db_increment / db_sum / db_group_by tests ────────────────
@@ -2421,7 +2251,6 @@ mod tests {
         let _ = ctx.db_insert(
             "categories",
             r#"{"name":"Test","slug":"test","sort_order":"0"}"#,
-            "{}",
         );
 
         let r = ctx.db_increment(
@@ -2432,7 +2261,7 @@ mod tests {
         );
         assert!(r.contains(r#""rows_affected":1"#), "increment: {r}");
 
-        let s = ctx.db_sum("categories", "sort_order", r#"{"slug":"test"}"#, "{}");
+        let s = ctx.db_sum("categories", "sort_order", r#"{"slug":"test"}"#);
         assert!(s.contains(r#""sum":1"#), "after increment sum: {s}");
 
         let r2 = ctx.db_increment(
@@ -2443,7 +2272,7 @@ mod tests {
         );
         assert!(r2.contains(r#""rows_affected":1"#));
 
-        let s2 = ctx.db_sum("categories", "sort_order", r#"{"slug":"test"}"#, "{}");
+        let s2 = ctx.db_sum("categories", "sort_order", r#"{"slug":"test"}"#);
         assert!(s2.contains(r#""sum":2"#), "after 2nd sum: {s2}");
     }
 
@@ -2459,7 +2288,6 @@ mod tests {
         let _ = ctx.db_insert(
             "categories",
             r#"{"name":"Dec","slug":"dec","sort_order":"5"}"#,
-            "{}",
         );
 
         let r = ctx.db_increment(
@@ -2470,7 +2298,7 @@ mod tests {
         );
         assert!(r.contains(r#""rows_affected":1"#), "decrement: {r}");
 
-        let s = ctx.db_sum("categories", "sort_order", r#"{"slug":"dec"}"#, "{}");
+        let s = ctx.db_sum("categories", "sort_order", r#"{"slug":"dec"}"#);
         assert!(s.contains(r#""sum":4"#), "after decrement sum: {s}");
     }
 
@@ -2486,7 +2314,6 @@ mod tests {
         let _ = ctx.db_insert(
             "categories",
             r#"{"name":"Clamp","slug":"clamp","sort_order":"1"}"#,
-            "{}",
         );
 
         let r = ctx.db_increment(
@@ -2497,7 +2324,7 @@ mod tests {
         );
         assert!(r.contains(r#""rows_affected":1"#), "clamp: {r}");
 
-        let s = ctx.db_sum("categories", "sort_order", r#"{"slug":"clamp"}"#, "{}");
+        let s = ctx.db_sum("categories", "sort_order", r#"{"slug":"clamp"}"#);
         assert!(s.contains(r#""sum":0"#), "clamped to 0 sum: {s}");
     }
 
@@ -2513,7 +2340,6 @@ mod tests {
         let _ = ctx.db_insert(
             "categories",
             r#"{"name":"Set","slug":"set","sort_order":"0"}"#,
-            "{}",
         );
 
         let r = ctx.db_increment(
@@ -2524,7 +2350,7 @@ mod tests {
         );
         assert!(r.contains(r#""rows_affected":1"#), "increment+set: {r}");
 
-        let s = ctx.db_sum("categories", "sort_order", r#"{"slug":"set"}"#, "{}");
+        let s = ctx.db_sum("categories", "sort_order", r#"{"slug":"set"}"#);
         assert!(s.contains(r#""sum":1"#), "incremented sum: {s}");
 
         let found = ctx.db_fetch_one("categories", r#"{"slug":"set"}"#, "{}");
@@ -2571,23 +2397,10 @@ mod tests {
             .unwrap();
         let ctx = make_crud_ctx(&pool);
 
-        let _ = ctx.db_insert(
-            "categories",
-            r#"{"name":"A","slug":"sa","sort_order":"3"}"#,
-            "{}",
-        );
-        let _ = ctx.db_insert(
-            "categories",
-            r#"{"name":"B","slug":"sb","sort_order":"7"}"#,
-            "{}",
-        );
+        let _ = ctx.db_insert("categories", r#"{"name":"A","slug":"sa","sort_order":"3"}"#);
+        let _ = ctx.db_insert("categories", r#"{"name":"B","slug":"sb","sort_order":"7"}"#);
 
-        let r = ctx.db_sum(
-            "categories",
-            "sort_order",
-            "{}",
-            "{}",
-        );
+        let r = ctx.db_sum("categories", "sort_order", "{}");
         assert!(r.contains(r#""sum":10"#), "sum: {r}");
     }
 
@@ -2600,7 +2413,7 @@ mod tests {
             .unwrap();
         let ctx = make_crud_ctx(&pool);
 
-        let r = ctx.db_sum("categories", "sort_order", "{}", "{}");
+        let r = ctx.db_sum("categories", "sort_order", "{}");
         assert!(r.contains(r#""sum":0"#), "sum empty: {r}");
     }
 
@@ -2612,7 +2425,7 @@ mod tests {
             ..Permissions::default()
         };
         let ctx = HostContext::new("test", config, "p1".into(), perms, None);
-        let r = ctx.db_sum("categories", "sort_order", "{}", "{}");
+        let r = ctx.db_sum("categories", "sort_order", "{}");
         assert!(r.contains("no database access"));
     }
 
@@ -2628,17 +2441,11 @@ mod tests {
         let _ = ctx.db_insert(
             "categories",
             r#"{"name":"Rust1","slug":"rust1","parent_id":1}"#,
-            "{}",
         );
-        let _ = ctx.db_insert(
-            "categories",
-            r#"{"name":"Go","slug":"go","parent_id":2}"#,
-            "{}",
-        );
+        let _ = ctx.db_insert("categories", r#"{"name":"Go","slug":"go","parent_id":2}"#);
         let _ = ctx.db_insert(
             "categories",
             r#"{"name":"Rust2","slug":"rust2","parent_id":1}"#,
-            "{}",
         );
 
         let r = ctx.db_group_by(
@@ -2662,17 +2469,14 @@ mod tests {
         let _ = ctx.db_insert(
             "categories",
             r#"{"name":"A1","slug":"gsa","sort_order":"3","parent_id":1}"#,
-            "{}",
         );
         let _ = ctx.db_insert(
             "categories",
             r#"{"name":"A2","slug":"gsb","sort_order":"7","parent_id":1}"#,
-            "{}",
         );
         let _ = ctx.db_insert(
             "categories",
             r#"{"name":"B1","slug":"gsc","sort_order":"2","parent_id":2}"#,
-            "{}",
         );
 
         let r = ctx.db_group_by(
@@ -2695,21 +2499,9 @@ mod tests {
             .unwrap();
         let ctx = make_crud_ctx(&pool);
 
-        let _ = ctx.db_insert(
-            "categories",
-            r#"{"name":"W1","slug":"wa","parent_id":1}"#,
-            "{}",
-        );
-        let _ = ctx.db_insert(
-            "categories",
-            r#"{"name":"W2","slug":"wb","parent_id":1}"#,
-            "{}",
-        );
-        let _ = ctx.db_insert(
-            "categories",
-            r#"{"name":"W3","slug":"wc","parent_id":2}"#,
-            "{}",
-        );
+        let _ = ctx.db_insert("categories", r#"{"name":"W1","slug":"wa","parent_id":1}"#);
+        let _ = ctx.db_insert("categories", r#"{"name":"W2","slug":"wb","parent_id":1}"#);
+        let _ = ctx.db_insert("categories", r#"{"name":"W3","slug":"wc","parent_id":2}"#);
 
         let r = ctx.db_group_by(
             "categories",
@@ -2728,9 +2520,9 @@ mod tests {
             .unwrap();
         let ctx = make_crud_ctx(&pool);
 
-        let _ = ctx.db_insert("categories", r#"{"name":"X","slug":"lx"}"#, "{}");
-        let _ = ctx.db_insert("categories", r#"{"name":"Y","slug":"ly"}"#, "{}");
-        let _ = ctx.db_insert("categories", r#"{"name":"Z","slug":"lz"}"#, "{}");
+        let _ = ctx.db_insert("categories", r#"{"name":"X","slug":"lx"}"#);
+        let _ = ctx.db_insert("categories", r#"{"name":"Y","slug":"ly"}"#);
+        let _ = ctx.db_insert("categories", r#"{"name":"Z","slug":"lz"}"#);
 
         let r = ctx.db_group_by(
             "categories",
@@ -2795,7 +2587,6 @@ mod tests {
         let _ = ctx.db_insert(
             "categories",
             r#"{"name":"Multi","slug":"multi","sort_order":"2"}"#,
-            "{}",
         );
 
         let r = ctx.db_increment(
@@ -2806,7 +2597,7 @@ mod tests {
         );
         assert!(r.contains(r#""rows_affected":1"#), "multi clamp: {r}");
 
-        let s = ctx.db_sum("categories", "sort_order", r#"{"slug":"multi"}"#, "{}");
+        let s = ctx.db_sum("categories", "sort_order", r#"{"slug":"multi"}"#);
         assert!(s.contains(r#""sum":0"#), "clamped sum: {s}");
     }
 }

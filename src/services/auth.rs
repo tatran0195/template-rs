@@ -27,7 +27,6 @@ use crate::models::user_credential::AuthType;
 ///
 /// - `sub`: User ID.
 /// - `role`: User role (e.g. `"admin"`, `"author"`).
-/// - `tenant_id`: Tenant ID (defaults to `"default"`).
 /// - `exp`: Expiration time (UNIX timestamp).
 /// - `iat`: Issued-at time (UNIX timestamp).
 #[derive(Debug, Serialize, Deserialize, Clone)]

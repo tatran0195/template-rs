@@ -95,8 +95,8 @@ pub fn register_host_functions(
     let hc = host_ctx.clone();
     engine.register_fn(
         "dbInsert",
-        move |table: &str, data: &str, options: &str| -> String {
-            hc.db_insert(table, data, options)
+        move |table: &str, data: &str, _options: &str| -> String {
+            hc.db_insert(table, data)
         },
     );
 
@@ -119,24 +119,24 @@ pub fn register_host_functions(
     let hc = host_ctx.clone();
     engine.register_fn(
         "dbUpdate",
-        move |table: &str, data: &str, r#where: &str, options: &str| -> String {
-            hc.db_update(table, data, r#where, options)
+        move |table: &str, data: &str, r#where: &str, _options: &str| -> String {
+            hc.db_update(table, data, r#where)
         },
     );
 
     let hc = host_ctx.clone();
     engine.register_fn(
         "dbDelete",
-        move |table: &str, r#where: &str, options: &str| -> String {
-            hc.db_delete(table, r#where, options)
+        move |table: &str, r#where: &str, _options: &str| -> String {
+            hc.db_delete(table, r#where)
         },
     );
 
     let hc = host_ctx.clone();
     engine.register_fn(
         "dbCount",
-        move |table: &str, r#where: &str, options: &str| -> String {
-            hc.db_count(table, r#where, options)
+        move |table: &str, r#where: &str, _options: &str| -> String {
+            hc.db_count(table, r#where)
         },
     );
 
@@ -151,8 +151,8 @@ pub fn register_host_functions(
     let hc = host_ctx.clone();
     engine.register_fn(
         "dbSum",
-        move |table: &str, column: &str, r#where: &str, options: &str| -> String {
-            hc.db_sum(table, column, r#where, options)
+        move |table: &str, column: &str, r#where: &str, _options: &str| -> String {
+            hc.db_sum(table, column, r#where)
         },
     );
 

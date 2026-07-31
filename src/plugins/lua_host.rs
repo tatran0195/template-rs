@@ -115,9 +115,9 @@ pub fn register_host_functions(
 
     let hc = host_ctx.clone();
     let db_insert_fn = lua.create_function(
-        move |lua, (table, data, options): (String, String, String)| {
+        move |lua, (table, data, _options): (String, String, Option<String>)| {
             Ok(mlua::Value::String(
-                lua.create_string(hc.db_insert(&table, &data, &options))?,
+                lua.create_string(hc.db_insert(&table, &data))?,
             ))
         },
     )?;
@@ -145,9 +145,9 @@ pub fn register_host_functions(
 
     let hc = host_ctx.clone();
     let db_update_fn = lua.create_function(
-        move |lua, (table, data, r#where, options): (String, String, String, String)| {
+        move |lua, (table, data, r#where, _options): (String, String, String, Option<String>)| {
             Ok(mlua::Value::String(lua.create_string(
-                hc.db_update(&table, &data, &r#where, &options),
+                hc.db_update(&table, &data, &r#where),
             )?))
         },
     )?;
@@ -155,9 +155,9 @@ pub fn register_host_functions(
 
     let hc = host_ctx.clone();
     let db_delete_fn = lua.create_function(
-        move |lua, (table, r#where, options): (String, String, String)| {
+        move |lua, (table, r#where, _options): (String, String, Option<String>)| {
             Ok(mlua::Value::String(
-                lua.create_string(hc.db_delete(&table, &r#where, &options))?,
+                lua.create_string(hc.db_delete(&table, &r#where))?,
             ))
         },
     )?;
@@ -165,9 +165,9 @@ pub fn register_host_functions(
 
     let hc = host_ctx.clone();
     let db_count_fn = lua.create_function(
-        move |lua, (table, r#where, options): (String, String, String)| {
+        move |lua, (table, r#where, _options): (String, String, Option<String>)| {
             Ok(mlua::Value::String(
-                lua.create_string(hc.db_count(&table, &r#where, &options))?,
+                lua.create_string(hc.db_count(&table, &r#where))?,
             ))
         },
     )?;
@@ -185,9 +185,9 @@ pub fn register_host_functions(
 
     let hc = host_ctx.clone();
     let db_sum_fn = lua.create_function(
-        move |lua, (table, column, r#where, options): (String, String, String, String)| {
+        move |lua, (table, column, r#where, _options): (String, String, String, Option<String>)| {
             Ok(mlua::Value::String(lua.create_string(
-                hc.db_sum(&table, &column, &r#where, &options),
+                hc.db_sum(&table, &column, &r#where),
             )?))
         },
     )?;

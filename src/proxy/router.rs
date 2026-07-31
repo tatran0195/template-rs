@@ -111,11 +111,6 @@ impl RouterTable {
         }
     }
 
-    /// Alias for load_from_routes
-    pub fn load_from_tenants(&self, routes: &[RouteSection]) {
-        self.load_from_routes(routes);
-    }
-
     /// Find backend by Host.
     pub fn find_by_host(&self, host: &str) -> Option<Arc<Backend>> {
         let host = host.split(':').next().unwrap_or(host);
@@ -251,18 +246,8 @@ mod tests {
     fn route_by_host() {
         let router = RouterTable::new();
         router.load_from_routes(&[
-            make_route(
-                "user1",
-                Some("user1.example.com"),
-                None,
-                "127.0.0.1:9001",
-            ),
-            make_route(
-                "user2",
-                Some("user2.example.com"),
-                None,
-                "127.0.0.1:9002",
-            ),
+            make_route("user1", Some("user1.example.com"), None, "127.0.0.1:9001"),
+            make_route("user2", Some("user2.example.com"), None, "127.0.0.1:9002"),
         ]);
 
         let b = router.find_by_host("user1.example.com").unwrap();

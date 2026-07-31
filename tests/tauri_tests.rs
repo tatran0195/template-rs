@@ -1,5 +1,5 @@
 // ! Tauri adaptation layer integration test
-//!
+// !
 // ! Verify that the service call chain behind the Tauri command works correctly.
 // ! These tests call the service function directly (the exact same function called by the Tauri command),
 // ! Because the command layer is only thin adaptation (parameter transparent transmission + error conversion to string).

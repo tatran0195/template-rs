@@ -173,7 +173,7 @@ pub async fn delete_token(
     api_token::delete_by_id(pool, parse_id(token_id)?).await
 }
 
-/// Verify an API token and return (user_id, role, tenant_id)
+/// Verify an API token and return (user_id, role)
 ///
 /// Uses a cache-aside pattern: when the cache hits, all 3 DB operations are skipped.
 /// Cache key is `api_token:{sha256_hash}`, TTL 300s.

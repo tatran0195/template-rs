@@ -348,8 +348,7 @@ in_transaction!(pool, |tx| {
 ### CRUD Macro System
 
 All database operations use the `axe-derive` macro DSL (see [Code Generation](#code-generation-axe-derive)
-for how these are implemented). Each write macro accepts an optional `tenant: expr` section that appends
-`AND tenant_id = ?` at runtime for multi-tenant isolation.
+for how these are implemented).
 
 | Macro | Purpose |
 |-------|---------|

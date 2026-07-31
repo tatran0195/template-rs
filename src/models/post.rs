@@ -596,7 +596,7 @@ pub async fn find_all_joined(
         );
         let (data, _) = result;
 
-        let count_sql = format!("SELECT COUNT(*) FROM posts WHERE status = ?",);
+        let count_sql = "SELECT COUNT(*) FROM posts WHERE status = ?".to_string();
         let total = sqlx::query_scalar::<_, i64>(&count_sql)
             .bind(PostStatus::Published)
             .fetch_one(pool)
