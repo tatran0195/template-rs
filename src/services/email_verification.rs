@@ -93,7 +93,6 @@ mod tests {
                 registered_via: crate::models::user::RegisteredVia::Email,
                 role: None,
             },
-            None,
         )
         .await
         .unwrap();

@@ -1,26 +1,14 @@
 -- ============================================================
--- axe complete database schema — PostgreSQL (with multi-tenant support)
+-- mcms complete database schema — PostgreSQL
 -- Merged from all migration files for one-click initialization of new deployments
 -- Generated date：2026-05-07
 -- ============================================================
 
 -- ── Platform foundation layer (always enabled) ──────────────────────────────────
 
--- Tenants
-CREATE TABLE IF NOT EXISTS tenants (
-    id BIGINT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    domain VARCHAR(255) UNIQUE,
-    config JSONB NOT NULL DEFAULT '{}',
-    status VARCHAR(50) NOT NULL DEFAULT 'active',
-    created_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW()
-);
-
 -- Users
 CREATE TABLE IF NOT EXISTS users (
     id BIGINT PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
     username VARCHAR(255) UNIQUE NOT NULL,
     role VARCHAR(50) NOT NULL DEFAULT 'reader',
     avatar VARCHAR(500),
@@ -36,8 +24,6 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW()
 );
-
-CREATE INDEX IF NOT EXISTS idx_users_tenant ON users(tenant_id);
 
 -- User credentials
 CREATE TABLE IF NOT EXISTS user_credentials (
@@ -90,15 +76,13 @@ CREATE INDEX IF NOT EXISTS idx_oauth_states_expires ON oauth_states(expires_at);
 -- Currency configuration
 CREATE TABLE IF NOT EXISTS currencies (
     id BIGINT PRIMARY KEY,
-    tenant_id VARCHAR(36) NOT NULL DEFAULT 'default',
-    code VARCHAR(10) NOT NULL CHECK(code = UPPER(code) AND LENGTH(code) BETWEEN 1 AND 10),
+    code VARCHAR(10) NOT NULL UNIQUE CHECK(code = UPPER(code) AND LENGTH(code) BETWEEN 1 AND 10),
     name TEXT NOT NULL,
     decimals INTEGER NOT NULL DEFAULT 0 CHECK(decimals BETWEEN 0 AND 18),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     version INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW(),
-    UNIQUE(tenant_id, code)
+    updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW()
 );
 
 
@@ -119,8 +103,7 @@ CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expir
 -- Site options
 CREATE TABLE IF NOT EXISTS options (
     id BIGINT PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
-    option_key VARCHAR(255) NOT NULL,
+    option_key VARCHAR(255) NOT NULL UNIQUE,
     value TEXT NOT NULL,
     type VARCHAR(50) NOT NULL DEFAULT 'text',
     group_name VARCHAR(100) NOT NULL DEFAULT 'general',
@@ -130,28 +113,22 @@ CREATE TABLE IF NOT EXISTS options (
     is_public BOOLEAN NOT NULL DEFAULT FALSE,
     autoload BOOLEAN NOT NULL DEFAULT TRUE,
     sort_order INTEGER NOT NULL DEFAULT 0,
-    updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW(),
-    UNIQUE(tenant_id, option_key)
+    updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW()
 );
 
 -- RBAC roles
 CREATE TABLE IF NOT EXISTS roles (
     id BIGINT PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL UNIQUE,
     description TEXT,
     is_system BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW(),
-    UNIQUE(tenant_id, name)
+    updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW()
 );
-
-CREATE INDEX IF NOT EXISTS idx_roles_tenant ON roles(tenant_id);
 
 -- RBAC permissions
 CREATE TABLE IF NOT EXISTS permissions (
     id BIGINT PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
     role_id BIGINT NOT NULL,
     action VARCHAR(255) NOT NULL,
     subject VARCHAR(255) NOT NULL,
@@ -162,12 +139,10 @@ CREATE TABLE IF NOT EXISTS permissions (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_permissions_role_action_subject
     ON permissions(role_id, action, subject);
-CREATE INDEX IF NOT EXISTS idx_permissions_tenant ON permissions(tenant_id);
 
 -- Audit log
 CREATE TABLE IF NOT EXISTS audit_log (
     id BIGINT PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
     actor_id BIGINT,
     actor_role VARCHAR(50),
     action VARCHAR(255) NOT NULL,
@@ -181,7 +156,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
 
 CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
 CREATE INDEX IF NOT EXISTS idx_audit_log_actor ON audit_log(actor_id);
-CREATE INDEX IF NOT EXISTS idx_audit_log_tenant_created ON audit_log(tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at DESC);
 
 -- API Token
 CREATE TABLE IF NOT EXISTS api_tokens (
@@ -342,9 +317,8 @@ CREATE INDEX IF NOT EXISTS idx_cron_log_started ON cron_execution_log(started_at
 -- Categories
 CREATE TABLE IF NOT EXISTS categories (
     id BIGINT PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
-    name VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    slug VARCHAR(255) NOT NULL UNIQUE,
     description TEXT,
     parent_id BIGINT,
     sort_order INTEGER NOT NULL DEFAULT 0,
@@ -357,21 +331,16 @@ CREATE TABLE IF NOT EXISTS categories (
     og_description VARCHAR(500),
     og_image VARCHAR(500),
     created_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW(),
-    UNIQUE(tenant_id, name),
-    UNIQUE(tenant_id, slug)
+    updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW()
 );
-
-CREATE INDEX IF NOT EXISTS idx_categories_tenant ON categories(tenant_id);
 
 
 
 -- Tags
 CREATE TABLE IF NOT EXISTS tags (
     id BIGINT PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
-    name VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    slug VARCHAR(255) NOT NULL UNIQUE,
     description TEXT,
     cover_image VARCHAR(500),
     meta_title VARCHAR(255),
@@ -382,17 +351,12 @@ CREATE TABLE IF NOT EXISTS tags (
     created_by BIGINT,
     updated_by BIGINT,
     created_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW(),
-    UNIQUE(tenant_id, name),
-    UNIQUE(tenant_id, slug)
+    updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW()
 );
-
-CREATE INDEX IF NOT EXISTS idx_tags_tenant ON tags(tenant_id);
 
 -- Posts
 CREATE TABLE IF NOT EXISTS posts (
     id BIGINT PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
     title TEXT NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
     content TEXT NOT NULL,
@@ -430,7 +394,6 @@ CREATE INDEX IF NOT EXISTS idx_posts_status_category
     ON posts(status, category_id);
 CREATE INDEX IF NOT EXISTS idx_posts_status_author
     ON posts(status, created_by);
-CREATE INDEX IF NOT EXISTS idx_posts_tenant ON posts(tenant_id);
 
 -- Posts-Tags (many-to-many)
 CREATE TABLE IF NOT EXISTS posts_tags (
@@ -446,8 +409,7 @@ CREATE TABLE IF NOT EXISTS taggings (
     tag_id BIGINT NOT NULL,
     taggable_type VARCHAR(50) NOT NULL,
     taggable_id BIGINT NOT NULL,
-    tenant_id VARCHAR(64) NOT NULL DEFAULT 'default',
-    UNIQUE(tenant_id, tag_id, taggable_type, taggable_id)
+    UNIQUE(tag_id, taggable_type, taggable_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_taggings_tag ON taggings(tag_id);
@@ -456,7 +418,6 @@ CREATE INDEX IF NOT EXISTS idx_taggings_taggable ON taggings(taggable_type, tagg
 -- Comments
 CREATE TABLE IF NOT EXISTS comments (
     id BIGINT PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
     post_id BIGINT NOT NULL,
     created_by BIGINT,
     updated_by BIGINT,
@@ -477,13 +438,11 @@ CREATE INDEX IF NOT EXISTS idx_comments_post_status
     ON comments(post_id, status);
 CREATE INDEX IF NOT EXISTS idx_comments_parent_id
     ON comments(parent_id);
-CREATE INDEX IF NOT EXISTS idx_comments_tenant ON comments(tenant_id);
 
 -- ── Built-in module: Pages (BUILTIN_PAGES=true) ────────────────
 
 CREATE TABLE IF NOT EXISTS pages (
     id               BIGINT PRIMARY KEY,
-    tenant_id        TEXT NOT NULL DEFAULT 'default',
     title            TEXT NOT NULL,
     slug             VARCHAR(255) NOT NULL UNIQUE,
     content          TEXT,
@@ -511,12 +470,9 @@ CREATE TABLE IF NOT EXISTS pages (
 CREATE INDEX IF NOT EXISTS idx_pages_status    ON pages(status);
 CREATE INDEX IF NOT EXISTS idx_pages_parent    ON pages(parent_id);
 CREATE INDEX IF NOT EXISTS idx_pages_author    ON pages(created_by);
-CREATE INDEX IF NOT EXISTS idx_pages_tenant_slug ON pages(tenant_id, slug);
-CREATE INDEX IF NOT EXISTS idx_pages_tenant_status ON pages(tenant_id, status);
 
 CREATE TABLE IF NOT EXISTS reusable_blocks (
     id          BIGINT PRIMARY KEY,
-    tenant_id   TEXT NOT NULL DEFAULT 'default',
     name        VARCHAR(255) NOT NULL,
     block_type  TEXT NOT NULL,
     content     TEXT NOT NULL,
@@ -527,13 +483,10 @@ CREATE TABLE IF NOT EXISTS reusable_blocks (
     updated_at  TIMESTAMPTZ(0) NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_reusable_blocks_tenant ON reusable_blocks(tenant_id);
-
 -- ── Built-in module: Media (BUILTIN_MEDIA=true) ────────────────
 
 CREATE TABLE IF NOT EXISTS media (
     id BIGINT PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
     user_id BIGINT NOT NULL,
     filename VARCHAR(255) NOT NULL,
     filepath VARCHAR(500) NOT NULL,
@@ -551,7 +504,6 @@ CREATE TABLE IF NOT EXISTS media (
 
 CREATE INDEX IF NOT EXISTS idx_media_user_created
     ON media(user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_media_tenant ON media(tenant_id);
 
 -- ── Built-in module: Workflow (BUILTIN_WORKFLOW=true) ──────────
 
@@ -603,66 +555,61 @@ CREATE INDEX IF NOT EXISTS idx_wf_step_logs_instance ON workflow_step_logs(insta
 -- Seed data
 -- ============================================================
 
--- Default tenant
-INSERT INTO tenants (id, name, domain, config, status, created_at, updated_at) VALUES
-    (10001, 'Default', NULL, '{}', 'active', NOW(), NOW())
-ON CONFLICT (name) DO NOTHING;
-
 -- Default currencies
-INSERT INTO currencies (id, tenant_id, code, name, decimals) VALUES
-    (10001, 'default', 'CNY', 'Chinese Yuan', 2),
-    (10002, 'default', 'USD', 'US Dollar', 2),
-    (10003, 'default', 'EUR', 'Euro', 2),
-    (10004, 'default', 'GBP', 'British Pound', 2),
-    (10005, 'default', 'JPY', 'Japanese Yen', 0)
+INSERT INTO currencies (id, code, name, decimals) VALUES
+    (10001, 'CNY', 'Chinese Yuan', 2),
+    (10002, 'USD', 'US Dollar', 2),
+    (10003, 'EUR', 'Euro', 2),
+    (10004, 'GBP', 'British Pound', 2),
+    (10005, 'JPY', 'Japanese Yen', 0)
 ON CONFLICT DO NOTHING;
 
 -- System roles
-INSERT INTO roles (id, tenant_id, name, description, is_system, created_at, updated_at) VALUES
-    (10001, 'default', 'admin', 'Super administrator', TRUE, NOW(), NOW()),
-    (10002, 'default', 'editor', 'Editor', FALSE, NOW(), NOW()),
-    (10003, 'default', 'author', 'Author', FALSE, NOW(), NOW()),
-    (10004, 'default', 'reader', 'Reader', TRUE, NOW(), NOW())
+INSERT INTO roles (id, name, description, is_system, created_at, updated_at) VALUES
+    (10001, 'admin', 'Super administrator', TRUE, NOW(), NOW()),
+    (10002, 'editor', 'Editor', FALSE, NOW(), NOW()),
+    (10003, 'author', 'Author', FALSE, NOW(), NOW()),
+    (10004, 'reader', 'Reader', TRUE, NOW(), NOW())
 ON CONFLICT (name) DO NOTHING;
 
 -- Admin global permissions
-INSERT INTO permissions (id, tenant_id, role_id, action, subject, fields, conditions, created_at) VALUES
-    (10001, 'default', (SELECT id FROM roles WHERE name = 'admin'), '*', '*', '["*"]', NULL, NOW())
+INSERT INTO permissions (id, role_id, action, subject, fields, conditions, created_at) VALUES
+    (10001, (SELECT id FROM roles WHERE name = 'admin'), '*', '*', '["*"]', NULL, NOW())
 ON CONFLICT (role_id, action, subject) DO NOTHING;
 
 -- Editor permissions
-INSERT INTO permissions (id, tenant_id, role_id, action, subject, fields, conditions, created_at) VALUES
-    (10002, 'default', (SELECT id FROM roles WHERE name = 'editor'), 'content-type::*.*', 'content-type::*', '["*"]', NULL, NOW())
+INSERT INTO permissions (id, role_id, action, subject, fields, conditions, created_at) VALUES
+    (10002, (SELECT id FROM roles WHERE name = 'editor'), 'content-type::*.*', 'content-type::*', '["*"]', NULL, NOW())
 ON CONFLICT (role_id, action, subject) DO NOTHING;
 
 -- Author permissions
-INSERT INTO permissions (id, tenant_id, role_id, action, subject, fields, conditions, created_at) VALUES
-    (10003, 'default', (SELECT id FROM roles WHERE name = 'author'), 'content-type::post.create', 'content-type::post', '["*"]', NULL, NOW()),
-    (10004, 'default', (SELECT id FROM roles WHERE name = 'author'), 'content-type::post.read', 'content-type::post', '["*"]', NULL, NOW()),
-    (10005, 'default', (SELECT id FROM roles WHERE name = 'author'), 'content-type::post.update', 'content-type::post', '["*"]', '{"author_id":"$user.id"}', NOW()),
-    (10006, 'default', (SELECT id FROM roles WHERE name = 'author'), 'content-type::post.delete', 'content-type::post', '["*"]', '{"author_id":"$user.id"}', NOW())
+INSERT INTO permissions (id, role_id, action, subject, fields, conditions, created_at) VALUES
+    (10003, (SELECT id FROM roles WHERE name = 'author'), 'content-type::post.create', 'content-type::post', '["*"]', NULL, NOW()),
+    (10004, (SELECT id FROM roles WHERE name = 'author'), 'content-type::post.read', 'content-type::post', '["*"]', NULL, NOW()),
+    (10005, (SELECT id FROM roles WHERE name = 'author'), 'content-type::post.update', 'content-type::post', '["*"]', '{"author_id":"$user.id"}', NOW()),
+    (10006, (SELECT id FROM roles WHERE name = 'author'), 'content-type::post.delete', 'content-type::post', '["*"]', '{"author_id":"$user.id"}', NOW())
 ON CONFLICT (role_id, action, subject) DO NOTHING;
 
 -- Reader permissions
-INSERT INTO permissions (id, tenant_id, role_id, action, subject, fields, conditions, created_at) VALUES
-    (10007, 'default', (SELECT id FROM roles WHERE name = 'reader'), 'content-type::post.read', 'content-type::post', '["title","slug","content","excerpt","status"]', NULL, NOW()),
-    (10008, 'default', (SELECT id FROM roles WHERE name = 'reader'), 'content-type::comment.create', 'content-type::comment', '["content","nickname","email"]', NULL, NOW())
+INSERT INTO permissions (id, role_id, action, subject, fields, conditions, created_at) VALUES
+    (10007, (SELECT id FROM roles WHERE name = 'reader'), 'content-type::post.read', 'content-type::post', '["title","slug","content","excerpt","status"]', NULL, NOW()),
+    (10008, (SELECT id FROM roles WHERE name = 'reader'), 'content-type::comment.create', 'content-type::comment', '["content","nickname","email"]', NULL, NOW())
 ON CONFLICT (role_id, action, subject) DO NOTHING;
 
 -- Site options
-INSERT INTO options (id, tenant_id, option_key, value, type, group_name, label, description, validation, is_public, autoload, sort_order, updated_at) VALUES
-    (10001, 'default', 'site_title', '"My Blog"', 'text', 'general', 'Site title', 'Displayed in browser title bar and page header', '{"max_length":100}', TRUE, TRUE, 1, NOW()),
-    (10002, 'default', 'site_description', '""', 'text', 'general', 'Site description', 'Brief description of the site purpose', '{"max_length":500}', TRUE, TRUE, 2, NOW()),
-    (10003, 'default', 'site_url', '""', 'url', 'general', 'Site URL', 'e.g. https://example.com', NULL, TRUE, TRUE, 3, NOW()),
-    (10004, 'default', 'admin_email', '""', 'email', 'general', 'Admin email', NULL, NULL, FALSE, TRUE, 4, NOW()),
-    (10005, 'default', 'timezone', '"UTC"', 'select', 'general', 'Timezone', NULL, '{"values":["UTC","Asia/Shanghai","Asia/Tokyo","US/Eastern","US/Pacific","Europe/London","Europe/Berlin"]}', TRUE, TRUE, 5, NOW()),
-    (10006, 'default', 'date_format', '"%Y-%m-%d"', 'select', 'general', 'Date format', NULL, '{"values":["%Y-%m-%d","%d/%m/%Y","%m/%d/%Y","%Y年%m月%d日"]}', TRUE, TRUE, 6, NOW()),
-    (10007, 'default', 'posts_per_page', '10', 'integer', 'reading', 'Posts per page', NULL, '{"min":1,"max":100}', TRUE, TRUE, 10, NOW()),
-    (10008, 'default', 'rss_items', '20', 'integer', 'reading', 'RSS item count', NULL, '{"min":1,"max":100}', TRUE, TRUE, 11, NOW()),
-    (10009, 'default', 'permalink_structure', '"/:year/:month/:slug"', 'select', 'reading', 'URL structure', NULL, '{"values":["/:year/:month/:slug","/:slug","/posts/:slug"]}', TRUE, TRUE, 12, NOW()),
-    (10010, 'default', 'comment_moderation', 'true', 'boolean', 'discussion', 'Comments require moderation', 'When enabled, new comments require admin approval', NULL, FALSE, TRUE, 20, NOW()),
-    (10011, 'default', 'comment_order', '"asc"', 'select', 'discussion', 'Comment order', NULL, '{"values":["asc","desc"]}', TRUE, TRUE, 21, NOW()),
-    (10012, 'default', 'default_role', '"reader"', 'select', 'discussion', 'Default role for new users', NULL, '{"values":["reader","author"]}', FALSE, TRUE, 22, NOW()),
-    (10013, 'default', 'theme', '"default"', 'select', 'appearance', 'Current theme', NULL, '{"values":["default","corporate","minimal","warm"]}', TRUE, TRUE, 30, NOW()),
-    (10014, 'default', 'maintenance_mode', 'false', 'boolean', 'appearance', 'Maintenance mode', 'When enabled, a maintenance page is shown to visitors', NULL, TRUE, TRUE, 31, NOW())
+INSERT INTO options (id, option_key, value, type, group_name, label, description, validation, is_public, autoload, sort_order, updated_at) VALUES
+    (10001, 'site_title', '"My Blog"', 'text', 'general', 'Site title', 'Displayed in browser title bar and page header', '{"max_length":100}', TRUE, TRUE, 1, NOW()),
+    (10002, 'site_description', '""', 'text', 'general', 'Site description', 'Brief description of the site purpose', '{"max_length":500}', TRUE, TRUE, 2, NOW()),
+    (10003, 'site_url', '""', 'url', 'general', 'Site URL', 'e.g. https://example.com', NULL, TRUE, TRUE, 3, NOW()),
+    (10004, 'admin_email', '""', 'email', 'general', 'Admin email', NULL, NULL, FALSE, TRUE, 4, NOW()),
+    (10005, 'timezone', '"UTC"', 'select', 'general', 'Timezone', NULL, '{"values":["UTC","Asia/Shanghai","Asia/Tokyo","US/Eastern","US/Pacific","Europe/London","Europe/Berlin"]}', TRUE, TRUE, 5, NOW()),
+    (10006, 'date_format', '"%Y-%m-%d"', 'select', 'general', 'Date format', NULL, '{"values":["%Y-%m-%d","%d/%m/%Y","%m/%d/%Y","%Y年%m月%d日"]}', TRUE, TRUE, 6, NOW()),
+    (10007, 'posts_per_page', '10', 'integer', 'reading', 'Posts per page', NULL, '{"min":1,"max":100}', TRUE, TRUE, 10, NOW()),
+    (10008, 'rss_items', '20', 'integer', 'reading', 'RSS item count', NULL, '{"min":1,"max":100}', TRUE, TRUE, 11, NOW()),
+    (10009, 'permalink_structure', '"/:year/:month/:slug"', 'select', 'reading', 'URL structure', NULL, '{"values":["/:year/:month/:slug","/:slug","/posts/:slug"]}', TRUE, TRUE, 12, NOW()),
+    (10010, 'comment_moderation', 'true', 'boolean', 'discussion', 'Comments require moderation', 'When enabled, new comments require admin approval', NULL, FALSE, TRUE, 20, NOW()),
+    (10011, 'comment_order', '"asc"', 'select', 'discussion', 'Comment order', NULL, '{"values":["asc","desc"]}', TRUE, TRUE, 21, NOW()),
+    (10012, 'default_role', '"reader"', 'select', 'discussion', 'Default role for new users', NULL, '{"values":["reader","author"]}', FALSE, TRUE, 22, NOW()),
+    (10013, 'theme', '"default"', 'select', 'appearance', 'Current theme', NULL, '{"values":["default","corporate","minimal","warm"]}', TRUE, TRUE, 30, NOW()),
+    (10014, 'maintenance_mode', 'false', 'boolean', 'appearance', 'Maintenance mode', 'When enabled, a maintenance page is shown to visitors', NULL, TRUE, TRUE, 31, NOW())
 ON CONFLICT (option_key) DO NOTHING;

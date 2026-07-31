@@ -8,7 +8,6 @@ use crate::AppState;
 use crate::dto::{UpdateOptionRequest, UpdateOptionsRequest};
 use crate::errors::app_error::{AppError, AppResult};
 use crate::errors::response::ApiResponse;
-use crate::middleware::auth::AuthUser;
 
 pub fn routes(
     registry: &mut crate::server::RouteRegistry,
@@ -82,14 +81,9 @@ pub fn routes(
     responses((status = 200, description = "Public options"))
 )]
 pub async fn get_public_options(
-    auth: AuthUser,
     State(state): State<AppState>,
 ) -> AppResult<ApiResponse<HashMap<String, Value>>> {
-    let mut options = state.options.get_public(auth.tenant_id()).await;
-    options.insert(
-        "builtin_tenantable".into(),
-        Value::Bool(state.config.builtin_tenantable),
-    );
+    let options = state.options.get_public().await;
     Ok(ApiResponse::success(options))
 }
 
@@ -98,10 +92,9 @@ pub async fn get_public_options(
     responses((status = 200, description = "All options grouped"))
 )]
 pub async fn list_options(
-    auth: AuthUser,
     State(state): State<AppState>,
 ) -> AppResult<ApiResponse<Vec<crate::services::options::OptionGroup>>> {
-    let groups = state.options.get_grouped(auth.tenant_id()).await?;
+    let groups = state.options.get_grouped().await?;
     Ok(ApiResponse::success(groups))
 }
 
@@ -111,13 +104,12 @@ pub async fn list_options(
     responses((status = 200, description = "Option value"))
 )]
 pub async fn get_option(
-    auth: AuthUser,
     State(state): State<AppState>,
     Path(key): Path<String>,
 ) -> AppResult<ApiResponse<serde_json::Value>> {
     let entry = state
         .options
-        .get_entry(auth.tenant_id(), &key)
+        .get_entry(&key)
         .await
         .ok_or_else(|| AppError::not_found(&format!("option/{key}")))?;
     Ok(ApiResponse::success(
@@ -130,15 +122,11 @@ pub async fn get_option(
     responses((status = 200, description = "Options updated"))
 )]
 pub async fn update_options(
-    auth: AuthUser,
     State(state): State<AppState>,
     Json(body): Json<UpdateOptionsRequest>,
 ) -> AppResult<ApiResponse<Vec<crate::services::options::OptionGroup>>> {
-    state
-        .options
-        .set_batch(auth.tenant_id(), body.options)
-        .await?;
-    let groups = state.options.get_grouped(auth.tenant_id()).await?;
+    state.options.set_batch(body.options).await?;
+    let groups = state.options.get_grouped().await?;
     Ok(ApiResponse::success(groups))
 }
 
@@ -148,15 +136,11 @@ pub async fn update_options(
     responses((status = 200, description = "Option set"))
 )]
 pub async fn set_option(
-    auth: AuthUser,
     State(state): State<AppState>,
     Path(key): Path<String>,
     Json(body): Json<UpdateOptionRequest>,
 ) -> AppResult<ApiResponse<serde_json::Value>> {
-    state
-        .options
-        .set(auth.tenant_id(), &key, body.value)
-        .await?;
+    state.options.set(&key, body.value).await?;
     Ok(ApiResponse::success(serde_json::json!({
         "option_key": key,
         "updated": true,
@@ -169,11 +153,10 @@ pub async fn set_option(
     responses((status = 200, description = "Option deleted"))
 )]
 pub async fn delete_option(
-    auth: AuthUser,
     State(state): State<AppState>,
     Path(key): Path<String>,
 ) -> AppResult<ApiResponse<serde_json::Value>> {
-    state.options.delete(auth.tenant_id(), &key).await?;
+    state.options.delete(&key).await?;
     Ok(ApiResponse::success(serde_json::json!({
         "option_key": key,
         "deleted": true,

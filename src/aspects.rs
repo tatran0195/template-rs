@@ -152,7 +152,6 @@ pub struct BaseContext {
     pub user_id: Option<String>,
     pub user_int_id: Option<i64>,
     pub user_role: Option<String>,
-    pub tenant_id: String,
     pub now: String,
     pub request_id: String,
     pub extensions: Extensions,
@@ -160,12 +159,11 @@ pub struct BaseContext {
 }
 
 impl BaseContext {
-    pub fn new(user_id: Option<String>, tenant_id: String, now: String) -> Self {
+    pub fn new(user_id: Option<String>, now: String) -> Self {
         Self {
             user_id,
             user_int_id: None,
             user_role: None,
-            tenant_id,
             now,
             request_id: String::new(),
             extensions: Extensions::new(),
@@ -483,13 +481,8 @@ mod tests {
 
     #[test]
     fn base_context_construction() {
-        let ctx = BaseContext::new(
-            Some("user-1".into()),
-            "tenant-1".into(),
-            "2026-01-01T00:00:00Z".into(),
-        );
+        let ctx = BaseContext::new(Some("user-1".into()), "2026-01-01T00:00:00Z".into());
         assert_eq!(ctx.user_id.as_deref(), Some("user-1"));
-        assert_eq!(ctx.tenant_id, "tenant-1");
         assert_eq!(ctx.now, "2026-01-01T00:00:00Z");
         assert!(ctx.user_role.is_none());
         assert!(ctx.request_id.is_empty());
@@ -497,7 +490,7 @@ mod tests {
 
     #[test]
     fn base_context_with_extensions() {
-        let mut ctx = BaseContext::new(None, "default".into(), "now".into());
+        let mut ctx = BaseContext::new(None, "now".into());
         ctx.extensions.insert::<String>("test-value".into());
         assert_eq!(ctx.extensions.get::<String>().unwrap(), "test-value");
     }

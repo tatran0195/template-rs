@@ -36,7 +36,6 @@ use crate::utils::auth::extract_claims;
 pub struct PermissionGuard {
     pub user_id: String,
     pub role: crate::models::user::UserRole,
-    pub tenant_id: String,
 }
 
 impl PermissionGuard {
@@ -90,7 +89,6 @@ impl FromRequestParts<AppState> for PermissionGuard {
             Ok(PermissionGuard {
                 user_id: claims.sub,
                 role: claims.role,
-                tenant_id: claims.tenant_id,
             })
         }
     }
@@ -106,11 +104,9 @@ mod tests {
         let guard = PermissionGuard {
             user_id: "user-123".to_string(),
             role: UserRole::Author,
-            tenant_id: "tenant-1".to_string(),
         };
         assert_eq!(guard.user_id, "user-123");
         assert_eq!(guard.role, UserRole::Author);
-        assert_eq!(guard.tenant_id, "tenant-1");
     }
 
     #[test]
@@ -118,7 +114,6 @@ mod tests {
         let guard = PermissionGuard {
             user_id: "admin-1".to_string(),
             role: UserRole::Admin,
-            tenant_id: "t1".to_string(),
         };
         assert_eq!(guard.role, UserRole::Admin);
         assert_eq!(guard.role.as_str(), "admin");
@@ -129,12 +124,10 @@ mod tests {
         let guard = PermissionGuard {
             user_id: "u1".to_string(),
             role: UserRole::Reader,
-            tenant_id: "t1".to_string(),
         };
         let cloned = guard.clone();
         assert_eq!(cloned.user_id, guard.user_id);
         assert_eq!(cloned.role.as_str(), guard.role.as_str());
-        assert_eq!(cloned.tenant_id, guard.tenant_id);
         let debug_str = format!("{guard:?}");
         assert!(debug_str.contains("u1"));
     }

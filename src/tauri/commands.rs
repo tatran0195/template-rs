@@ -309,7 +309,7 @@ pub async fn stats_overview(
     state: TauriState<'_, AppManagedState>,
 ) -> Result<serde_json::Value, String> {
     let svc = crate::services::stats::StatsService::new(state.0.pool.clone());
-    svc.overview(None).await.map_err(|e| e.to_string())
+    svc.overview().await.map_err(|e| e.to_string())
 }
 
 // ── Options ───────────────────────────────────────────────────────

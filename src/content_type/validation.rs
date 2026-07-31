@@ -574,7 +574,6 @@ immutable = true
         reg.register(crate::protocols::sortable::SortableProtocol);
         reg.register(crate::protocols::expirable::ExpirableProtocol);
         reg.register(crate::protocols::nestable::NestableProtocol);
-        reg.register(crate::protocols::tenantable::TenantableProtocol);
         reg
     }
 
@@ -654,7 +653,6 @@ immutable = true
         repo.create(
             &ct,
             json!({"name": "A", "code": "ABC", "created_at": now, "updated_at": now}),
-            None,
             &Default::default(),
         )
         .await
@@ -682,7 +680,6 @@ immutable = true
             .create(
                 &ct,
                 json!({"name": "Test", "secret": "sauce", "created_at": now, "updated_at": now}),
-                None,
                 &Default::default(),
             )
             .await
@@ -710,7 +707,6 @@ immutable = true
             .create(
                 &ct,
                 json!({"name": "Test", "code": "XYZ", "created_at": now, "updated_at": now}),
-                None,
                 &Default::default(),
             )
             .await

@@ -13,7 +13,6 @@ implements = [
   "lockable",
   { name = "sortable", field = "created_at", direction = "desc" },
   { name = "statusable", values = "draft,published,archived", default = "draft" },
-  "tenantable",
 ]
 
 [fields.title]

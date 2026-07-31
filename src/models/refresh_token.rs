@@ -37,7 +37,7 @@ pub async fn create_token(
         crate::utils::id::new_snowflake_id(),
         crate::utils::tz::now_utc(),
     );
-    axe_derive::crud_insert!(pool, "refresh_tokens", [
+    mcms_derive::crud_insert!(pool, "refresh_tokens", [
         "id" => id,
         "user_id" => user_id,
         "token" => token,
@@ -52,7 +52,7 @@ pub async fn create_token(
 /// Returns `Ok(Some(token))` or `Ok(None)` when not found.
 pub async fn find_by_token(pool: &crate::db::Pool, token: &str) -> AppResult<Option<RefreshToken>> {
     let result: Option<RefreshToken> =
-        axe_derive::crud_find!(pool, "refresh_tokens", RefreshToken, where: ("token", token))?;
+        mcms_derive::crud_find!(pool, "refresh_tokens", RefreshToken, where: ("token", token))?;
     Ok(result)
 }
 
@@ -60,7 +60,7 @@ pub async fn find_by_token(pool: &crate::db::Pool, token: &str) -> AppResult<Opt
 ///
 /// Used to revoke a specific refresh token on logout.
 pub async fn delete_by_token(pool: &crate::db::Pool, token: &str) -> AppResult<()> {
-    axe_derive::crud_delete!(pool, "refresh_tokens", where: ("token", token))?;
+    mcms_derive::crud_delete!(pool, "refresh_tokens", where: ("token", token))?;
     Ok(())
 }
 
@@ -68,7 +68,7 @@ pub async fn delete_by_token(pool: &crate::db::Pool, token: &str) -> AppResult<(
 ///
 /// Used for logging out all devices or forcing re-login after a password change.
 pub async fn delete_by_user(pool: &crate::db::Pool, user_id: SnowflakeId) -> AppResult<()> {
-    axe_derive::crud_delete!(pool, "refresh_tokens", where: ("user_id", user_id))?;
+    mcms_derive::crud_delete!(pool, "refresh_tokens", where: ("user_id", user_id))?;
     Ok(())
 }
 
@@ -76,7 +76,7 @@ pub async fn tx_delete_by_token(
     tx: &mut crate::db::pool::DbConnection,
     token: &str,
 ) -> AppResult<()> {
-    axe_derive::crud_delete!(&mut *tx, "refresh_tokens", where: ("token", token))?;
+    mcms_derive::crud_delete!(&mut *tx, "refresh_tokens", where: ("token", token))?;
     Ok(())
 }
 
@@ -90,7 +90,7 @@ pub async fn tx_create_token(
         crate::utils::id::new_snowflake_id(),
         crate::utils::tz::now_utc(),
     );
-    axe_derive::crud_insert!(&mut *tx, "refresh_tokens", [
+    mcms_derive::crud_insert!(&mut *tx, "refresh_tokens", [
         "id" => id,
         "user_id" => user_id,
         "token" => token,
@@ -104,7 +104,7 @@ pub async fn tx_delete_by_user(
     tx: &mut crate::db::pool::DbConnection,
     user_id: SnowflakeId,
 ) -> AppResult<()> {
-    axe_derive::crud_delete!(&mut *tx, "refresh_tokens", where: ("user_id", user_id))?;
+    mcms_derive::crud_delete!(&mut *tx, "refresh_tokens", where: ("user_id", user_id))?;
     Ok(())
 }
 
@@ -123,7 +123,7 @@ mod tests {
             registered_via: crate::models::user::RegisteredVia::Email,
             role: None,
         };
-        let user = crate::models::user::create(pool, &cmd, None).await.unwrap();
+        let user = crate::models::user::create(pool, &cmd).await.unwrap();
         *user.id
     }
 

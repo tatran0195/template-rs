@@ -154,7 +154,7 @@ async fn resolve_page_parent_id(
         return Ok(None);
     };
     let parsed_id = crate::types::snowflake_id::parse_id(&raw_id)?;
-    axe_derive::crud_resolve_id!(pool, "pages", *parsed_id).map_err(Into::into)
+    mcms_derive::crud_resolve_id!(pool, "pages", *parsed_id).map_err(Into::into)
 }
 
 // ── Public API ──
@@ -163,7 +163,6 @@ async fn resolve_page_parent_id(
     responses((status = 200, description = "Published page list"))
 )]
 pub async fn list(
-    auth: AuthUser,
     State(state): State<crate::AppState>,
     Query(query): Query<PageListQuery>,
 ) -> AppResult<ApiResponse<PaginatedData<PageResponse>>> {
@@ -171,7 +170,7 @@ pub async fn list(
 
     let (items, total) = state
         .page_service
-        .list_published(pagination.page, pagination.page_size, &auth)
+        .list_published(pagination.page, pagination.page_size)
         .await?;
 
     let items: Vec<PageResponse> = items.into_iter().map(PageResponse::from_page).collect();
@@ -183,11 +182,10 @@ pub async fn list(
     responses((status = 200, description = "Page details"))
 )]
 pub async fn get_by_slug(
-    auth: AuthUser,
     State(state): State<crate::AppState>,
     Path(slug): Path<String>,
 ) -> AppResult<ApiResponse<PageResponse>> {
-    let page = state.page_service.get_by_slug(&slug, &auth).await?;
+    let page = state.page_service.get_by_slug(&slug).await?;
     Ok(ApiResponse::success(PageResponse::from_page(page)))
 }
 
@@ -224,7 +222,7 @@ pub async fn admin_list(
 
     let (items, total) = state
         .page_service
-        .list_all(pagination.page, pagination.page_size, query.status, &auth)
+        .list_all(pagination.page, pagination.page_size, query.status)
         .await?;
 
     let items: Vec<PageResponse> = items.into_iter().map(PageResponse::from_page).collect();
@@ -243,7 +241,7 @@ pub async fn admin_get(
 ) -> AppResult<ApiResponse<PageResponse>> {
     auth.ensure_author()?;
     let id = crate::types::snowflake_id::parse_id(&id)?;
-    let page = state.page_service.get_by_id(id, &auth).await?;
+    let page = state.page_service.get_by_id(id).await?;
     Ok(ApiResponse::success(PageResponse::from_page(page)))
 }
 
@@ -375,7 +373,7 @@ pub async fn reorder(
         .into_iter()
         .map(|i| (i.id, i.sort_order))
         .collect();
-    state.page_service.reorder(items, &auth).await?;
+    state.page_service.reorder(items).await?;
     Ok(ApiResponse::success(()))
 }
 

@@ -168,8 +168,6 @@ pub struct AppConfig {
     pub require_email_verification: bool,
     #[serde(default)]
     pub builtins: BuiltinsConfig,
-    #[serde(default)]
-    pub builtin_tenantable: bool,
     pub base_domain: Option<String>,
     #[serde(default = "default_email_provider")]
     pub email_provider: String,
@@ -642,7 +640,7 @@ impl AppConfig {
         let database_url: String = env::var("DATABASE_URL").unwrap_or_else(|_| {
             #[cfg(feature = "db-sqlite")]
             {
-                format!("sqlite:{}/db/axe.db?mode=rwc", storage_root_dir)
+                format!("sqlite:{}/db/mcms.db?mode=rwc", storage_root_dir)
             }
             #[cfg(feature = "db-postgres")]
             {
@@ -880,10 +878,6 @@ impl AppConfig {
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(false),
             builtins: BuiltinsConfig::from_env(),
-            builtin_tenantable: env::var("BUILTIN_TENANTABLE")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(false),
             base_domain: env::var("BASE_DOMAIN").ok().filter(|v| !v.is_empty()),
             email_provider: env::var("EMAIL_PROVIDER")
                 .ok()
@@ -1004,7 +998,6 @@ impl AppConfig {
             sms_rate_limit_secs: default_sms_rate_limit_secs(),
             require_email_verification: false,
             builtins: BuiltinsConfig::default(),
-            builtin_tenantable: true,
             base_domain: Some("app.com".to_string()),
             email_provider: default_email_provider(),
             email_smtp_host: None,

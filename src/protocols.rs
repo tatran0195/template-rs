@@ -30,7 +30,6 @@ pub mod ownable;
 pub mod soft_deletable;
 pub mod sortable;
 pub mod statusable;
-pub mod tenantable;
 pub mod timestampable;
 pub mod versionable;
 

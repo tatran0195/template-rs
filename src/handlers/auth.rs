@@ -186,7 +186,6 @@ pub fn routes(
     responses((status = 200, description = "Registration successful"))
 )]
 pub async fn register(
-    auth: AuthUser,
     State(state): State<crate::AppState>,
     Json(req): Json<RegisterRequest>,
 ) -> AppResult<ApiResponse<crate::dto::UserResponse>> {
@@ -199,7 +198,6 @@ pub async fn register(
     let user = auth::register(
         &state.aspect_engine,
         req,
-        auth.tenant_id(),
         state.config.require_email_verification,
         &state.pool,
     )
@@ -213,7 +211,6 @@ pub async fn register(
     responses((status = 200, description = "Login successful"))
 )]
 pub async fn login(
-    auth: AuthUser,
     State(state): State<crate::AppState>,
     Json(req): Json<LoginRequest>,
 ) -> AppResult<ApiResponse<crate::dto::LoginResponse>> {
@@ -225,7 +222,6 @@ pub async fn login(
         &state.config.jwt_secret,
         state.config.jwt_access_expires,
         state.config.jwt_refresh_expires,
-        auth.tenant_id(),
         state.config.require_email_verification,
     )
     .await?;
@@ -268,7 +264,6 @@ pub async fn refresh(
         &state.config.jwt_secret,
         state.config.jwt_access_expires,
         state.config.jwt_refresh_expires,
-        None,
     )
     .await?;
     Ok(ApiResponse::success(resp))
@@ -293,18 +288,11 @@ pub async fn logout(
     responses((status = 200, description = "Reset email sent"))
 )]
 pub async fn forgot_password(
-    auth: AuthUser,
     State(state): State<crate::AppState>,
     Json(req): Json<ForgotPasswordRequest>,
 ) -> AppResult<ApiResponse<()>> {
     validation::validate(&req)?;
-    password_reset::forgot_password(
-        &state.pool,
-        &state.aspect_engine,
-        &req.email,
-        auth.tenant_id(),
-    )
-    .await?;
+    password_reset::forgot_password(&state.pool, &state.aspect_engine, &req.email).await?;
     Ok(ApiResponse::success(()))
 }
 
@@ -318,7 +306,7 @@ pub async fn reset_password(
     Json(req): Json<ResetPasswordRequest>,
 ) -> AppResult<ApiResponse<()>> {
     validation::validate(&req)?;
-    password_reset::reset_password(&state.pool, &req.token, &req.new_password, None).await?;
+    password_reset::reset_password(&state.pool, &req.token, &req.new_password).await?;
     Ok(ApiResponse::success(()))
 }
 

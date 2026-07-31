@@ -1,12 +1,6 @@
 //! Site options service.
 //!
-//! Multi-tenant aware option store backed by an LRU cache (moka).
-//!
-//! - Global options (`tenant_id = None`) are preloaded at startup.
-//! - Per-tenant options are loaded lazily: on first cache miss, **all** options
-//!   for that tenant are fetched in one query and cached. Subsequent reads hit cache.
-//! - Cold entries are evicted automatically by moka's TTL + size policy.
-//! - Writes invalidate the cache entry; next read reloads from DB.
+//! Option store backed by an LRU cache (moka).
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -26,11 +20,8 @@ fn parse_value(value_str: &str) -> Value {
     serde_json::from_str::<Value>(value_str).unwrap_or(Value::String(value_str.to_string()))
 }
 
-fn cache_key(tenant_id: Option<&str>, option_key: &str) -> String {
-    match tenant_id {
-        Some(tid) => format!("{tid}:{option_key}"),
-        None => format!("GLOBAL:{option_key}"),
-    }
+fn cache_key(option_key: &str) -> String {
+    option_key.to_string()
 }
 
 #[cfg_attr(feature = "export-types", derive(TS))]
@@ -55,7 +46,6 @@ pub struct OptionEntry {
     #[cfg_attr(feature = "export-types", ts(type = "unknown"))]
     pub validation: Option<Value>,
     pub is_public: bool,
-    tenant_id: Option<String>,
 }
 
 impl From<&OptionRow> for OptionEntry {
@@ -71,83 +61,49 @@ impl From<&OptionRow> for OptionEntry {
                 .as_ref()
                 .and_then(|v| serde_json::from_str::<Value>(v).ok()),
             is_public: row.is_public,
-            tenant_id: row.tenant_id.clone(),
         }
     }
 }
 
 pub struct OptionsService {
     cache: moka::sync::Cache<String, OptionEntry>,
-    warmed: dashmap::DashSet<String>,
     pool: Arc<crate::db::Pool>,
 }
 
 impl OptionsService {
-    pub async fn new(pool: Arc<crate::db::Pool>, _builtin_tenantable: bool) -> Self {
+    pub async fn new(pool: Arc<crate::db::Pool>) -> Self {
         let cache = moka::sync::Cache::builder()
             .max_capacity(CACHE_MAX_ENTRIES as u64)
             .time_to_idle(std::time::Duration::from_secs(CACHE_IDLE_SECS))
             .time_to_live(std::time::Duration::from_secs(CACHE_TTL_SECS))
             .build();
 
-        let service = Self {
-            cache,
-            warmed: dashmap::DashSet::new(),
-            pool,
-        };
-        if let Err(e) = service.load_default_tenant_autoload().await {
-            tracing::error!("failed to autoload global options: {}", e);
+        let service = Self { cache, pool };
+        if let Err(e) = service.load_autoload().await {
+            tracing::error!("failed to autoload options: {}", e);
         }
         service
     }
 
-    async fn load_default_tenant_autoload(&self) -> Result<(), AppError> {
+    async fn load_autoload(&self) -> Result<(), AppError> {
         let rows = crate::models::options::find_autoload(&self.pool).await?;
-        let default_tenant = crate::constants::DEFAULT_TENANT;
         let mut count = 0usize;
         for row in &rows {
-            if row.tenant_id.as_deref() != Some(default_tenant) {
-                continue;
-            }
             let entry = OptionEntry::from(row);
-            let key = cache_key(Some(default_tenant), &row.option_key);
+            let key = cache_key(&row.option_key);
             self.cache.insert(key, entry);
-            self.warmed.insert(format!("__warmed__{default_tenant}"));
             count += 1;
         }
-        tracing::info!("loaded {count} autoload option(s) for default tenant");
+        tracing::info!("loaded {count} autoload option(s)");
         Ok(())
     }
 
-    /// On first miss for a tenant, load ALL their options in one query.
-    async fn warm_tenant(&self, tenant_id: &str) {
-        let warm_key = format!("__warmed__{tenant_id}");
-        if self.warmed.contains(&warm_key) {
-            return;
-        }
-        let Ok(rows) = crate::models::options::find_all(&self.pool, Some(tenant_id)).await else {
-            return;
-        };
-        for row in &rows {
-            let entry = OptionEntry::from(row);
-            let key = cache_key(Some(tenant_id), &row.option_key);
-            self.cache.insert(key, entry);
-        }
-        self.warmed.insert(warm_key);
-    }
-
-    pub async fn get(&self, tenant_id: Option<&str>, key: &str) -> Option<Value> {
-        let ck = cache_key(tenant_id, key);
+    pub async fn get(&self, key: &str) -> Option<Value> {
+        let ck = cache_key(key);
         if let Some(entry) = self.cache.get(&ck) {
             return Some(entry.value.clone());
         }
-        if let Some(tid) = tenant_id {
-            self.warm_tenant(tid).await;
-            if let Some(entry) = self.cache.get(&ck) {
-                return Some(entry.value.clone());
-            }
-        }
-        let row = crate::models::options::find_by_key(&self.pool, key, tenant_id)
+        let row = crate::models::options::find_by_key(&self.pool, key)
             .await
             .ok()
             .flatten()?;
@@ -157,18 +113,12 @@ impl OptionsService {
         Some(value)
     }
 
-    pub async fn get_entry(&self, tenant_id: Option<&str>, key: &str) -> Option<OptionEntry> {
-        let ck = cache_key(tenant_id, key);
+    pub async fn get_entry(&self, key: &str) -> Option<OptionEntry> {
+        let ck = cache_key(key);
         if let Some(entry) = self.cache.get(&ck) {
             return Some(entry.clone());
         }
-        if let Some(tid) = tenant_id {
-            self.warm_tenant(tid).await;
-            if let Some(entry) = self.cache.get(&ck) {
-                return Some(entry.clone());
-            }
-        }
-        let row = crate::models::options::find_by_key(&self.pool, key, tenant_id)
+        let row = crate::models::options::find_by_key(&self.pool, key)
             .await
             .ok()
             .flatten()?;
@@ -177,45 +127,36 @@ impl OptionsService {
         Some(entry)
     }
 
-    pub async fn set(
-        &self,
-        tenant_id: Option<&str>,
-        key: &str,
-        value: Value,
-    ) -> Result<(), AppError> {
+    pub async fn set(&self, key: &str, value: Value) -> Result<(), AppError> {
         let value_str = serde_json::to_string(&value).map_err(|e| AppError::Internal(e.into()))?;
-        crate::models::options::upsert_value(&self.pool, key, &value_str, tenant_id).await?;
-        let ck = cache_key(tenant_id, key);
+        crate::models::options::upsert_value(&self.pool, key, &value_str).await?;
+        let ck = cache_key(key);
         self.cache.invalidate(&ck);
         Ok(())
     }
 
-    pub async fn set_batch(
-        &self,
-        tenant_id: Option<&str>,
-        pairs: HashMap<String, Value>,
-    ) -> Result<(), AppError> {
+    pub async fn set_batch(&self, pairs: HashMap<String, Value>) -> Result<(), AppError> {
         for (key, value) in &pairs {
             let value_str =
                 serde_json::to_string(value).map_err(|e| AppError::Internal(e.into()))?;
-            crate::models::options::upsert_value(&self.pool, key, &value_str, tenant_id).await?;
+            crate::models::options::upsert_value(&self.pool, key, &value_str).await?;
         }
         for key in pairs.keys() {
-            let ck = cache_key(tenant_id, key);
+            let ck = cache_key(key);
             self.cache.invalidate(&ck);
         }
         Ok(())
     }
 
-    pub async fn delete(&self, tenant_id: Option<&str>, key: &str) -> Result<(), AppError> {
-        crate::models::options::delete_by_key(&self.pool, key, tenant_id).await?;
-        let ck = cache_key(tenant_id, key);
+    pub async fn delete(&self, key: &str) -> Result<(), AppError> {
+        crate::models::options::delete_by_key(&self.pool, key).await?;
+        let ck = cache_key(key);
         self.cache.invalidate(&ck);
         Ok(())
     }
 
-    pub async fn get_grouped(&self, tenant_id: Option<&str>) -> Result<Vec<OptionGroup>, AppError> {
-        let rows = crate::models::options::find_all(&self.pool, tenant_id).await?;
+    pub async fn get_grouped(&self) -> Result<Vec<OptionGroup>, AppError> {
+        let rows = crate::models::options::find_all(&self.pool).await?;
         let mut group_map: HashMap<String, Vec<OptionEntry>> = HashMap::new();
         let mut group_order: Vec<String> = Vec::new();
 
@@ -240,8 +181,8 @@ impl OptionsService {
             .collect())
     }
 
-    pub async fn get_public(&self, tenant_id: Option<&str>) -> HashMap<String, Value> {
-        let rows = crate::models::options::find_all(&self.pool, tenant_id)
+    pub async fn get_public(&self) -> HashMap<String, Value> {
+        let rows = crate::models::options::find_all(&self.pool)
             .await
             .unwrap_or_default();
         rows.iter()
@@ -256,13 +197,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn cache_key_global() {
-        assert_eq!(cache_key(None, "foo"), "GLOBAL:foo");
-    }
-
-    #[test]
-    fn cache_key_tenant() {
-        assert_eq!(cache_key(Some("t1"), "foo"), "t1:foo");
+    fn cache_key_basic() {
+        assert_eq!(cache_key("foo"), "foo");
     }
 
     #[test]

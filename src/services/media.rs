@@ -120,7 +120,6 @@ pub async fn save_file(
     data: &[u8],
 ) -> AppResult<media::Media> {
     let user_id = auth.ensure_snowflake_user_id()?;
-    let tenant_id = auth.tenant_id();
     if !ALLOWED_TYPES.contains(&content_type) {
         tracing::warn!(content_type = %content_type, "file type not allowed");
         return Err(AppError::BadRequest("file_type_not_allowed".into()));
@@ -160,7 +159,7 @@ pub async fn save_file(
         (None, None)
     };
 
-    let user = crate::models::user::find_by_id(pool, user_id, tenant_id)
+    let user = crate::models::user::find_by_id(pool, user_id)
         .await?
         .ok_or(AppError::Unauthorized)?;
 
@@ -175,7 +174,6 @@ pub async fn save_file(
             width,
             height,
         },
-        tenant_id,
     )
     .await?;
 
@@ -210,36 +208,34 @@ pub async fn list(
     page_size: i64,
 ) -> AppResult<(Vec<media::Media>, i64)> {
     let user_id = auth.ensure_snowflake_user_id()?;
-    let user = crate::models::user::find_by_id(pool, user_id, auth.tenant_id())
+    let user = crate::models::user::find_by_id(pool, user_id)
         .await?
         .ok_or(AppError::Unauthorized)?;
-    media::find_all(pool, user.id, page, page_size, auth.tenant_id()).await
+    media::find_all(pool, user.id, page, page_size).await
 }
 
 pub async fn admin_list(
     pool: &crate::db::Pool,
     page: i64,
     page_size: i64,
-    auth: &AuthUser,
 ) -> AppResult<(Vec<media::Media>, i64)> {
-    media::find_all_admin(pool, page, page_size, auth.tenant_id()).await
+    media::find_all_admin(pool, page, page_size).await
 }
 
 pub async fn admin_delete_media(
     storage: &dyn Storage,
     pool: &crate::db::Pool,
     media_id: &str,
-    auth: &AuthUser,
 ) -> AppResult<()> {
-    let media_pk: i64 = crate::models::media::resolve_id(pool, media_id, auth.tenant_id())
+    let media_pk: i64 = crate::models::media::resolve_id(pool, media_id)
         .await?
         .ok_or_else(|| AppError::not_found("media"))?;
 
-    let m = crate::models::media::find_by_id(pool, SnowflakeId(media_pk), auth.tenant_id())
+    let m = crate::models::media::find_by_id(pool, SnowflakeId(media_pk))
         .await?
         .ok_or_else(|| AppError::not_found("media"))?;
 
-    media::delete(pool, SnowflakeId(media_pk), auth.tenant_id()).await?;
+    media::delete(pool, SnowflakeId(media_pk)).await?;
 
     if let Err(e) = storage.delete(&m.filepath).await {
         tracing::warn!(key = %m.filepath, error = %e, "failed to delete file from storage");
@@ -259,15 +255,15 @@ pub async fn delete_media(
     auth: &AuthUser,
 ) -> AppResult<()> {
     let user_id = auth.ensure_snowflake_user_id()?;
-    let user = crate::models::user::find_by_id(pool, user_id, auth.tenant_id())
+    let user = crate::models::user::find_by_id(pool, user_id)
         .await?
         .ok_or(AppError::Unauthorized)?;
 
-    let media_pk: i64 = crate::models::media::resolve_id(pool, media_id, auth.tenant_id())
+    let media_pk: i64 = crate::models::media::resolve_id(pool, media_id)
         .await?
         .ok_or_else(|| AppError::not_found("media"))?;
 
-    let m = crate::models::media::find_by_id(pool, SnowflakeId(media_pk), auth.tenant_id())
+    let m = crate::models::media::find_by_id(pool, SnowflakeId(media_pk))
         .await?
         .ok_or_else(|| AppError::not_found("media"))?;
 
@@ -275,7 +271,7 @@ pub async fn delete_media(
         return Err(AppError::Forbidden);
     }
 
-    media::delete(pool, SnowflakeId(media_pk), auth.tenant_id()).await?;
+    media::delete(pool, SnowflakeId(media_pk)).await?;
 
     if let Err(e) = storage.delete(&m.filepath).await {
         tracing::warn!(key = %m.filepath, error = %e, "failed to delete file from storage");
@@ -287,10 +283,10 @@ pub async fn delete_media(
 /// Get storage statistics
 pub async fn stats(pool: &crate::db::Pool, auth: &AuthUser) -> AppResult<media::MediaStats> {
     let user_id = auth.ensure_snowflake_user_id()?;
-    let user = crate::models::user::find_by_id(pool, user_id, auth.tenant_id())
+    let user = crate::models::user::find_by_id(pool, user_id)
         .await?
         .ok_or(AppError::Unauthorized)?;
-    media::stats(pool, user.id, auth.tenant_id()).await
+    media::stats(pool, user.id).await
 }
 
 /// Validate whether the file's actual content magic bytes match the declared Content-Type.

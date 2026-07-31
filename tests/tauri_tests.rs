@@ -6,16 +6,15 @@
 
 use std::sync::Arc;
 
-use axe::config::app::AppConfig;
-use axe::content_type::repository::{ContentQuery, ContentRepository, SaveContext};
-use axe::content_type::schema::ContentTypeSchema;
-use axe::db::tenant;
-use axe::services::post::{PostService, PostServiceImpl};
-use axe::services::{auth, options, stats, user};
+use mcms::config::app::AppConfig;
+use mcms::content_type::ContentTypeSchema;
+use mcms::content_type::repository::{ContentQuery, ContentRepository, SaveContext};
+use mcms::services::post::{PostService, PostServiceImpl};
+use mcms::services::{auth, options, stats, user};
 
 fn build_post_service(pool: Arc<sqlx::SqlitePool>) -> Arc<dyn PostService> {
-    let engine = Arc::new(axe::aspects::engine::AspectEngine::new());
-    let search: Arc<dyn axe::search::SearchEngine> = Arc::new(axe::search::NoopSearchEngine);
+    let engine = Arc::new(mcms::aspects::engine::AspectEngine::new());
+    let search: Arc<dyn mcms::search::SearchEngine> = Arc::new(mcms::search::NoopSearchEngine);
     Arc::new(PostServiceImpl::new(pool, engine, search))
 }
 
@@ -36,41 +35,39 @@ fn test_config() -> AppConfig {
     config
 }
 
-fn test_protocol_registry() -> axe::protocols::ProtocolRegistry {
-    let mut reg = axe::protocols::ProtocolRegistry::new();
-    reg.register(axe::protocols::ownable::OwnableProtocol);
-    reg.register(axe::protocols::timestampable::TimestampableProtocol);
-    reg.register(axe::protocols::soft_deletable::SoftDeletableProtocol);
-    reg.register(axe::protocols::versionable::VersionableProtocol);
-    reg.register(axe::protocols::lockable::LockableProtocol);
-    reg.register(axe::protocols::sortable::SortableProtocol);
-    reg.register(axe::protocols::expirable::ExpirableProtocol);
-    reg.register(axe::protocols::nestable::NestableProtocol);
-    reg.register(axe::protocols::tenantable::TenantableProtocol);
+fn test_protocol_registry() -> mcms::protocols::ProtocolRegistry {
+    let mut reg = mcms::protocols::ProtocolRegistry::new();
+    reg.register(mcms::protocols::ownable::OwnableProtocol);
+    reg.register(mcms::protocols::timestampable::TimestampableProtocol);
+    reg.register(mcms::protocols::soft_deletable::SoftDeletableProtocol);
+    reg.register(mcms::protocols::versionable::VersionableProtocol);
+    reg.register(mcms::protocols::lockable::LockableProtocol);
+    reg.register(mcms::protocols::sortable::SortableProtocol);
+    reg.register(mcms::protocols::expirable::ExpirableProtocol);
+    reg.register(mcms::protocols::nestable::NestableProtocol);
     reg
 }
 
-fn cache_ct(ct: &mut axe::content_type::schema::ContentTypeSchema) {
+fn cache_ct(ct: &mut mcms::content_type::schema::ContentTypeSchema) {
     ct.cache_protocol_columns(&test_protocol_registry());
 }
 
 async fn setup_pool() -> sqlx::SqlitePool {
-    let pool = axe::db::Pool::connect("sqlite::memory:").await.unwrap();
-    sqlx::query(axe::db::schema::SCHEMA_SQL)
+    let pool = mcms::db::Pool::connect("sqlite::memory:").await.unwrap();
+    sqlx::query(mcms::db::schema::SCHEMA_SQL)
         .execute(&pool)
         .await
         .unwrap();
-    tenant::invalidate_cache().await;
     pool
 }
 async fn create_test_user(pool: &sqlx::SqlitePool, label: &str) -> (i64, String) {
-    let aspect_engine = axe::aspects::engine::AspectEngine::new();
-    let req = axe::dto::RegisterRequest {
+    let aspect_engine = mcms::aspects::engine::AspectEngine::new();
+    let req = mcms::dto::RegisterRequest {
         username: format!("user_{label}"),
         email: format!("{label}@test.com"),
         password: "Password123".into(),
     };
-    let user = auth::register(&aspect_engine, req, None, false, pool)
+    let user = auth::register(&aspect_engine, req, false, pool)
         .await
         .unwrap();
     let row: (i64,) = sqlx::query_as("SELECT id FROM users WHERE id = ?")
@@ -119,15 +116,15 @@ label = "priority"
 #[tokio::test]
 async fn tauri_auth_register_service() {
     let pool = setup_pool().await;
-    let aspect_engine = axe::aspects::engine::AspectEngine::new();
+    let aspect_engine = mcms::aspects::engine::AspectEngine::new();
 
-    let req = axe::dto::RegisterRequest {
+    let req = mcms::dto::RegisterRequest {
         username: "testuser".into(),
         email: "test@example.com".into(),
         password: "Password123".into(),
     };
 
-    let result = auth::register(&aspect_engine, req, None, false, &pool).await;
+    let result = auth::register(&aspect_engine, req, false, &pool).await;
 
     assert!(
         result.is_ok(),
@@ -141,24 +138,24 @@ async fn tauri_auth_register_service() {
 #[tokio::test]
 async fn tauri_auth_register_duplicate_email() {
     let pool = setup_pool().await;
-    let aspect_engine = axe::aspects::engine::AspectEngine::new();
+    let aspect_engine = mcms::aspects::engine::AspectEngine::new();
 
-    let req = axe::dto::RegisterRequest {
+    let req = mcms::dto::RegisterRequest {
         username: "user1".into(),
         email: "dup@example.com".into(),
         password: "Password123".into(),
     };
-    auth::register(&aspect_engine, req, None, false, &pool)
+    auth::register(&aspect_engine, req, false, &pool)
         .await
         .unwrap();
 
-    let req2 = axe::dto::RegisterRequest {
+    let req2 = mcms::dto::RegisterRequest {
         username: "user2".into(),
         email: "dup@example.com".into(),
         password: "Password456".into(),
     };
-    let aspect_engine2 = axe::aspects::engine::AspectEngine::new();
-    let result = auth::register(&aspect_engine2, req2, None, false, &pool).await;
+    let aspect_engine2 = mcms::aspects::engine::AspectEngine::new();
+    let result = auth::register(&aspect_engine2, req2, false, &pool).await;
     assert!(result.is_err(), "duplicate email should fail");
 }
 
@@ -166,22 +163,22 @@ async fn tauri_auth_register_duplicate_email() {
 async fn tauri_auth_login_service() {
     let pool = setup_pool().await;
     let config = test_config();
-    let aspect_engine = axe::aspects::engine::AspectEngine::new();
+    let aspect_engine = mcms::aspects::engine::AspectEngine::new();
 
-    let reg_req = axe::dto::RegisterRequest {
+    let reg_req = mcms::dto::RegisterRequest {
         username: "loginuser".into(),
         email: "login@example.com".into(),
         password: "Password123".into(),
     };
-    auth::register(&aspect_engine, reg_req, None, false, &pool)
+    auth::register(&aspect_engine, reg_req, false, &pool)
         .await
         .unwrap();
 
-    let login_req = axe::dto::LoginRequest {
+    let login_req = mcms::dto::LoginRequest {
         email: "login@example.com".into(),
         password: "Password123".into(),
     };
-    let aspect_engine2 = axe::aspects::engine::AspectEngine::new();
+    let aspect_engine2 = mcms::aspects::engine::AspectEngine::new();
     let result = auth::login(
         &aspect_engine2,
         &pool,
@@ -189,7 +186,6 @@ async fn tauri_auth_login_service() {
         &config.jwt_secret,
         config.jwt_access_expires,
         config.jwt_refresh_expires,
-        None,
         false,
     )
     .await;
@@ -204,22 +200,22 @@ async fn tauri_auth_login_service() {
 async fn tauri_auth_login_wrong_password() {
     let pool = setup_pool().await;
     let config = test_config();
-    let aspect_engine = axe::aspects::engine::AspectEngine::new();
+    let aspect_engine = mcms::aspects::engine::AspectEngine::new();
 
-    let reg_req = axe::dto::RegisterRequest {
+    let reg_req = mcms::dto::RegisterRequest {
         username: "wrongpw".into(),
         email: "wrong@example.com".into(),
         password: "Password123".into(),
     };
-    auth::register(&aspect_engine, reg_req, None, false, &pool)
+    auth::register(&aspect_engine, reg_req, false, &pool)
         .await
         .unwrap();
 
-    let login_req = axe::dto::LoginRequest {
+    let login_req = mcms::dto::LoginRequest {
         email: "wrong@example.com".into(),
         password: "WrongPassword".into(),
     };
-    let aspect_engine2 = axe::aspects::engine::AspectEngine::new();
+    let aspect_engine2 = mcms::aspects::engine::AspectEngine::new();
     let result = auth::login(
         &aspect_engine2,
         &pool,
@@ -227,7 +223,6 @@ async fn tauri_auth_login_wrong_password() {
         &config.jwt_secret,
         config.jwt_access_expires,
         config.jwt_refresh_expires,
-        None,
         false,
     )
     .await;
@@ -238,22 +233,18 @@ async fn tauri_auth_login_wrong_password() {
 #[tokio::test]
 async fn tauri_auth_get_me_service() {
     let pool = setup_pool().await;
-    let aspect_engine = axe::aspects::engine::AspectEngine::new();
+    let aspect_engine = mcms::aspects::engine::AspectEngine::new();
 
-    let reg_req = axe::dto::RegisterRequest {
+    let reg_req = mcms::dto::RegisterRequest {
         username: "getme".into(),
         email: "getme@example.com".into(),
         password: "Password123".into(),
     };
-    let user = auth::register(&aspect_engine, reg_req, None, false, &pool)
+    let user = auth::register(&aspect_engine, reg_req, false, &pool)
         .await
         .unwrap();
 
-    let auth = axe::middleware::auth::AuthUser::from_parts(
-        Some(user.id.parse().unwrap()),
-        axe::models::user::UserRole::Author,
-        None,
-    );
+    let auth = mcms::middleware::auth::AuthUser::for_test_user(user.id.parse().unwrap());
     let result = user::get_me(&pool, &auth).await;
     assert!(result.is_ok());
     assert_eq!(result.unwrap().id, user.id);
@@ -269,13 +260,13 @@ async fn tauri_post_create_and_list() {
     let (author_int_id, _author_id) = create_test_user(&pool, "author-001").await;
     let svc = build_post_service(Arc::new(pool.clone()));
 
-    let req = axe::dto::CreatePostRequest {
+    let req = mcms::dto::CreatePostRequest {
         title: "Test Post".into(),
         content: "Hello world".into(),
         excerpt: None,
         cover_image: None,
         image_ids: None,
-        status: Some(axe::models::post::PostStatus::Published),
+        status: Some(mcms::models::post::PostStatus::Published),
         category_id: None,
         tag_ids: None,
         slug: None,
@@ -287,11 +278,7 @@ async fn tauri_post_create_and_list() {
         canonical_url: None,
     };
 
-    let auth = axe::middleware::auth::AuthUser::from_parts(
-        Some(author_int_id),
-        axe::models::user::UserRole::Author,
-        None,
-    );
+    let auth = mcms::middleware::auth::AuthUser::for_test_user(author_int_id);
     let created = svc.create(&auth, req).await.unwrap();
 
     assert_eq!(created.title, "Test Post");
@@ -309,13 +296,13 @@ async fn tauri_post_get_by_slug() {
     let (author_int_id, _author_id) = create_test_user(&pool, "author-002").await;
     let svc = build_post_service(Arc::new(pool.clone()));
 
-    let req = axe::dto::CreatePostRequest {
+    let req = mcms::dto::CreatePostRequest {
         title: "Slug Test".into(),
         content: "content".into(),
         excerpt: None,
         cover_image: None,
         image_ids: None,
-        status: Some(axe::models::post::PostStatus::Published),
+        status: Some(mcms::models::post::PostStatus::Published),
         category_id: None,
         tag_ids: None,
         slug: None,
@@ -327,11 +314,7 @@ async fn tauri_post_get_by_slug() {
         canonical_url: None,
     };
 
-    let auth = axe::middleware::auth::AuthUser::from_parts(
-        Some(author_int_id),
-        axe::models::user::UserRole::Author,
-        None,
-    );
+    let auth = mcms::middleware::auth::AuthUser::for_test_user(author_int_id);
     let created = svc.create(&auth, req).await.unwrap();
 
     let found = svc.get(&auth, &created.slug).await.unwrap();
@@ -348,7 +331,7 @@ async fn tauri_post_get_by_slug() {
 async fn tauri_cms_create_and_list() {
     let pool = setup_pool().await;
     let ct = parse_todo_ct();
-    let registry = axe::content_type::ContentTypeRegistry::new();
+    let registry = mcms::content_type::ContentTypeRegistry::new();
     let config = test_config();
     let protocol_reg = test_protocol_registry();
     let protocol_names: Vec<&str> = protocol_reg.names();
@@ -371,7 +354,7 @@ async fn tauri_cms_create_and_list() {
         "priority": "high"
     }));
 
-    let created = repo.create(&ct, data, None, &save_ctx).await.unwrap();
+    let created = repo.create(&ct, data, &save_ctx).await.unwrap();
     assert_eq!(created["title"], "Buy milk");
 
     let query = ContentQuery {
@@ -396,15 +379,14 @@ async fn tauri_cms_get_by_id() {
 
     let save_ctx = SaveContext::default();
     let data = with_timestamps(serde_json::json!({"title": "Read book", "done": false}));
-    let created = repo.create(&ct, data, None, &save_ctx).await.unwrap();
+    let created = repo.create(&ct, data, &save_ctx).await.unwrap();
 
     let id = created["id"].as_str().unwrap().to_string();
     let int_id: i64 = id.parse().unwrap();
     let found = repo
         .find_by_id(
             &ct,
-            axe::types::snowflake_id::SnowflakeId(int_id),
-            None,
+            mcms::types::snowflake_id::SnowflakeId(int_id),
             true,
         )
         .await
@@ -422,16 +404,15 @@ async fn tauri_cms_update() {
 
     let save_ctx = SaveContext::default();
     let data = with_timestamps(serde_json::json!({"title": "Original", "done": false}));
-    let created = repo.create(&ct, data, None, &save_ctx).await.unwrap();
+    let created = repo.create(&ct, data, &save_ctx).await.unwrap();
 
     let id = created["id"].as_str().unwrap().to_string();
     let int_id: i64 = id.parse().unwrap();
     let update_data = serde_json::json!({"title": "Updated", "done": true});
     repo.update(
         &ct,
-        axe::types::snowflake_id::SnowflakeId(int_id),
+        mcms::types::snowflake_id::SnowflakeId(int_id),
         update_data,
-        None,
         &save_ctx,
     )
     .await
@@ -440,8 +421,7 @@ async fn tauri_cms_update() {
     let found = repo
         .find_by_id(
             &ct,
-            axe::types::snowflake_id::SnowflakeId(int_id),
-            None,
+            mcms::types::snowflake_id::SnowflakeId(int_id),
             true,
         )
         .await
@@ -459,16 +439,15 @@ async fn tauri_cms_delete() {
 
     let save_ctx = SaveContext::default();
     let data = with_timestamps(serde_json::json!({"title": "To delete", "done": false}));
-    let created = repo.create(&ct, data, None, &save_ctx).await.unwrap();
+    let created = repo.create(&ct, data, &save_ctx).await.unwrap();
 
     let id = created["id"].as_str().unwrap().to_string();
     let int_id: i64 = id.parse().unwrap();
     repo.delete(
         &ct,
-        axe::types::snowflake_id::SnowflakeId(int_id),
-        None,
+        mcms::types::snowflake_id::SnowflakeId(int_id),
         &test_protocol_registry(),
-        &axe::content_type::ContentTypeRegistry::new(),
+        &mcms::content_type::ContentTypeRegistry::new(),
     )
     .await
     .unwrap();
@@ -476,8 +455,7 @@ async fn tauri_cms_delete() {
     let found = repo
         .find_by_id(
             &ct,
-            axe::types::snowflake_id::SnowflakeId(int_id),
-            None,
+            mcms::types::snowflake_id::SnowflakeId(int_id),
             true,
         )
         .await
@@ -494,7 +472,7 @@ async fn tauri_cms_boolean_field_stored_as_integer() {
 
     let save_ctx = SaveContext::default();
     let data = with_timestamps(serde_json::json!({"title": "Boolean test", "done": true}));
-    let created = repo.create(&ct, data, None, &save_ctx).await.unwrap();
+    let created = repo.create(&ct, data, &save_ctx).await.unwrap();
 
     assert_eq!(created["done"], 1);
 }
@@ -508,7 +486,7 @@ async fn tauri_cms_enum_field_validation() {
 
     let save_ctx = SaveContext::default();
     let data = with_timestamps(serde_json::json!({"title": "Enum test", "priority": "low"}));
-    let created = repo.create(&ct, data, None, &save_ctx).await.unwrap();
+    let created = repo.create(&ct, data, &save_ctx).await.unwrap();
 
     assert_eq!(created["priority"], "low");
 }
@@ -519,7 +497,7 @@ async fn tauri_cms_enum_field_validation() {
 
 #[tokio::test]
 async fn tauri_registry_register_and_query() {
-    let registry = axe::content_type::ContentTypeRegistry::new();
+    let registry = mcms::content_type::ContentTypeRegistry::new();
     let config = test_config();
     let ct = parse_todo_ct();
     let protocol_reg = test_protocol_registry();
@@ -543,7 +521,7 @@ async fn tauri_registry_register_and_query() {
 
 #[tokio::test]
 async fn tauri_registry_unregister() {
-    let registry = axe::content_type::ContentTypeRegistry::new();
+    let registry = mcms::content_type::ContentTypeRegistry::new();
     let config = test_config();
     let ct = parse_todo_ct();
     let protocol_reg = test_protocol_registry();
@@ -567,7 +545,7 @@ async fn tauri_registry_unregister() {
 
 #[tokio::test]
 async fn tauri_registry_list_all() {
-    let registry = axe::content_type::ContentTypeRegistry::new();
+    let registry = mcms::content_type::ContentTypeRegistry::new();
     let config = test_config();
     let ct1 = parse_todo_ct();
 
@@ -617,38 +595,38 @@ label = "content"
 #[tokio::test]
 async fn tauri_options_set_and_get() {
     let pool = setup_pool().await;
-    let svc = options::OptionsService::new(Arc::new(pool), false).await;
+    let svc = options::OptionsService::new(Arc::new(pool)).await;
 
-    svc.set(None, "site.title", serde_json::json!("My Blog"))
+    svc.set("site.title", serde_json::json!("My Blog"))
         .await
         .unwrap();
 
-    let val = svc.get(None, "site.title").await;
+    let val = svc.get("site.title").await;
     assert_eq!(val, Some(serde_json::json!("My Blog")));
 }
 
 #[tokio::test]
 async fn tauri_options_get_nonexistent() {
     let pool = setup_pool().await;
-    let svc = options::OptionsService::new(Arc::new(pool), false).await;
+    let svc = options::OptionsService::new(Arc::new(pool)).await;
 
-    let val = svc.get(None, "nonexistent.key").await;
+    let val = svc.get("nonexistent.key").await;
     assert!(val.is_none());
 }
 
 #[tokio::test]
 async fn tauri_options_overwrite() {
     let pool = setup_pool().await;
-    let svc = options::OptionsService::new(Arc::new(pool), false).await;
+    let svc = options::OptionsService::new(Arc::new(pool)).await;
 
-    svc.set(None, "key1", serde_json::json!("value1"))
+    svc.set("key1", serde_json::json!("value1"))
         .await
         .unwrap();
-    svc.set(None, "key1", serde_json::json!("value2"))
+    svc.set("key1", serde_json::json!("value2"))
         .await
         .unwrap();
 
-    let val = svc.get(None, "key1").await;
+    let val = svc.get("key1").await;
     assert_eq!(val, Some(serde_json::json!("value2")));
 }
 
@@ -661,7 +639,7 @@ async fn tauri_stats_overview() {
     let pool = setup_pool().await;
     let svc = stats::StatsService::new(pool);
 
-    let result = svc.overview(None).await;
+    let result = svc.overview().await;
     assert!(result.is_ok());
 
     let overview = result.unwrap();
@@ -683,7 +661,7 @@ async fn tauri_cms_list_with_pagination() {
     for i in 0..5 {
         let data =
             with_timestamps(serde_json::json!({"title": format!("Todo {}", i), "done": false}));
-        repo.create(&ct, data, None, &save_ctx).await.unwrap();
+        repo.create(&ct, data, &save_ctx).await.unwrap();
     }
 
     let query = ContentQuery {
@@ -753,14 +731,13 @@ type = "text"
         user_id: Some("user-123".into()),
         user_int_id: Some(1),
         user_role: Some("member".into()),
-        tenant_id: None,
     };
 
     let data = with_timestamps(serde_json::json!({
         "title": "Auto fill test",
         "author_id": save_ctx.user_id.clone().unwrap()
     }));
-    let created = repo.create(&ct, data, None, &save_ctx).await.unwrap();
+    let created = repo.create(&ct, data, &save_ctx).await.unwrap();
 
     assert_eq!(created["author_id"], "user-123");
 }
@@ -782,7 +759,7 @@ async fn tauri_build_app_state_succeeds() {
     std::fs::create_dir_all(&config.content_type_dir).unwrap();
 
     let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
-    let result = axe::build_app_state(&config, shutdown_rx).await;
+    let result = mcms::build_app_state(&config, shutdown_rx).await;
     assert!(
         result.is_ok(),
         "build_app_state should succeed: {:?}",

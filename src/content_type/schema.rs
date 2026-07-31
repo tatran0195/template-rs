@@ -1519,7 +1519,6 @@ type = "text"
         let auth = crate::middleware::auth::AuthUser::from_parts(
             Some(1),
             crate::models::user::UserRole::Admin,
-            None,
         );
         assert!(check_api_access(ApiAccess::None, &auth).is_err());
     }
@@ -1529,7 +1528,6 @@ type = "text"
         let anon = crate::middleware::auth::AuthUser::from_parts(
             None,
             crate::models::user::UserRole::Reader,
-            None,
         );
         assert!(check_api_access(ApiAccess::Public, &anon).is_ok());
     }
@@ -1539,13 +1537,11 @@ type = "text"
         let anon = crate::middleware::auth::AuthUser::from_parts(
             None,
             crate::models::user::UserRole::Reader,
-            None,
         );
         assert!(check_api_access(ApiAccess::Member, &anon).is_err());
         let user = crate::middleware::auth::AuthUser::from_parts(
             Some(1),
             crate::models::user::UserRole::Reader,
-            None,
         );
         assert!(check_api_access(ApiAccess::Member, &user).is_ok());
     }
@@ -1555,20 +1551,17 @@ type = "text"
         let anon = crate::middleware::auth::AuthUser::from_parts(
             None,
             crate::models::user::UserRole::Reader,
-            None,
         );
         assert!(check_api_access(ApiAccess::Admin, &anon).is_err());
         let user = crate::middleware::auth::AuthUser::from_parts(
             Some(1),
             crate::models::user::UserRole::Reader,
-            None,
         );
         let err = check_api_access(ApiAccess::Admin, &user).unwrap_err();
         assert!(matches!(err, AppError::Forbidden));
         let admin = crate::middleware::auth::AuthUser::from_parts(
             Some(1),
             crate::models::user::UserRole::Admin,
-            None,
         );
         assert!(check_api_access(ApiAccess::Admin, &admin).is_ok());
     }

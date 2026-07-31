@@ -107,7 +107,7 @@ pub async fn handle_callback(
         oauth::find_by_provider_user(pool, provider_name, &user_info.provider_user_id).await?;
 
     if let Some(account) = existing {
-        let user = crate::models::user::find_by_id(pool, account.user_id, None)
+        let user = crate::models::user::find_by_id(pool, account.user_id)
             .await?
             .ok_or_else(|| AppError::not_found("user"))?;
 
@@ -128,7 +128,7 @@ pub async fn handle_callback(
     if let Some(bind_user_id) = oauth_state.user_id {
         do_bind_oauth(pool, bind_user_id, provider_name, &token_resp, &user_info).await?;
 
-        let user = crate::models::user::find_by_id(pool, bind_user_id, None)
+        let user = crate::models::user::find_by_id(pool, bind_user_id)
             .await?
             .ok_or_else(|| AppError::not_found("user"))?;
 
@@ -152,7 +152,7 @@ pub async fn handle_callback(
         )
         .await?;
         if let Some(cred) = cred {
-            let user = crate::models::user::find_by_id(pool, cred.user_id, None)
+            let user = crate::models::user::find_by_id(pool, cred.user_id)
                 .await?
                 .ok_or_else(|| AppError::not_found("user"))?;
             do_bind_oauth(pool, user.id, provider_name, &token_resp, &user_info).await?;
@@ -198,7 +198,7 @@ pub async fn unbind_oauth(
     provider_name: &str,
 ) -> AppResult<()> {
     let user_id = auth.ensure_snowflake_user_id()?;
-    let user = crate::models::user::find_by_id(pool, user_id, None)
+    let user = crate::models::user::find_by_id(pool, user_id)
         .await?
         .ok_or_else(|| AppError::not_found("user"))?;
 
@@ -231,7 +231,7 @@ pub async fn list_bindings(
     auth: &AuthUser,
 ) -> AppResult<Vec<OAuthBindingInfo>> {
     let user_id = auth.ensure_snowflake_user_id()?;
-    let user = crate::models::user::find_by_id(pool, user_id, None)
+    let user = crate::models::user::find_by_id(pool, user_id)
         .await?
         .ok_or(AppError::Unauthorized)?;
     let accounts = oauth::find_by_user_id(pool, user.id).await?;
@@ -270,9 +270,6 @@ async fn create_login_response_for_user(
     let access_token = crate::services::auth::generate_access_token_internal(
         user.id,
         user_role,
-        user.tenant_id
-            .as_deref()
-            .unwrap_or(crate::constants::DEFAULT_TENANT),
         jwt_secret,
         jwt_access_expires,
     )?;
@@ -320,7 +317,6 @@ async fn auto_register_user(
             registered_via: crate::models::user::RegisteredVia::Oauth,
             role: None,
         },
-        None,
     )
     .await?;
 
@@ -340,7 +336,7 @@ async fn auto_register_user(
         .await?;
     }
 
-    let user = crate::models::user::find_by_id(pool, user.id, None)
+    let user = crate::models::user::find_by_id(pool, user.id)
         .await?
         .ok_or_else(|| AppError::not_found("user"))?;
 
@@ -523,7 +519,7 @@ mod tests {
 
     #[test]
     fn sanitize_username_unicode_stripped() {
-        let result = sanitize_username("username");
+        let result = sanitize_username("user\u{1F600}");
         assert_eq!(result, "user");
     }
 

@@ -1,10 +1,10 @@
 use super::*;
-use axe::DbDriver;
+use mcms::DbDriver;
 
-async fn setup() -> (axum::Router, String, axe::db::Pool) {
+async fn setup() -> (axum::Router, String, mcms::db::Pool) {
     let (app, state) = test_app().await;
     let (int_id, id) = create_admin(&state.pool).await;
-    let tok = make_token(&id, int_id, axe::models::user::UserRole::Admin);
+    let tok = make_token(&id, int_id, mcms::models::user::UserRole::Admin);
     (app, tok, state.pool)
 }
 
@@ -181,20 +181,20 @@ async fn delete_token_non_owner_forbidden() {
     .await;
     let id = create_body["data"]["id"].as_str().unwrap();
 
-    let reader_hash = axe::services::auth::hash_password("ReaderPass123!").unwrap();
+    let reader_hash = mcms::services::auth::hash_password("ReaderPass123!").unwrap();
     let sql = "INSERT INTO users (username, role, status, registered_via) VALUES ('tokenreader', 'reader', 'active', 'email') RETURNING id";
     let reader_int_id: i64 = sqlx::query_scalar(sql).fetch_one(&pool).await.unwrap();
     let cred_data = serde_json::json!({"password_hash": reader_hash}).to_string();
-    let cred_id = axe::utils::id::new_id();
-    let cred_now = axe::utils::tz::now_utc();
+    let cred_id = mcms::utils::id::new_id();
+    let cred_now = mcms::utils::tz::now_utc();
     let cred_sql = format!(
         "INSERT INTO user_credentials (id, user_id, auth_type, identifier, credential_data, verified, created_at, updated_at) VALUES ({}, {}, 'email', {}, {}, 1, {}, {})",
-        axe::db::Driver::ph(1),
-        axe::db::Driver::ph(2),
-        axe::db::Driver::ph(3),
-        axe::db::Driver::ph(4),
-        axe::db::Driver::ph(5),
-        axe::db::Driver::ph(6)
+        mcms::db::Driver::ph(1),
+        mcms::db::Driver::ph(2),
+        mcms::db::Driver::ph(3),
+        mcms::db::Driver::ph(4),
+        mcms::db::Driver::ph(5),
+        mcms::db::Driver::ph(6)
     );
     sqlx::query(&cred_sql)
         .bind(cred_id)
@@ -209,7 +209,7 @@ async fn delete_token_non_owner_forbidden() {
     let reader_tok = make_token(
         &reader_int_id.to_string(),
         reader_int_id,
-        axe::models::user::UserRole::Reader,
+        mcms::models::user::UserRole::Reader,
     );
 
     let (status, _) = send(
@@ -223,20 +223,20 @@ async fn delete_token_non_owner_forbidden() {
 #[tokio::test]
 async fn admin_can_delete_other_users_token() {
     let (mut app, tok, pool) = setup().await;
-    let reader_hash = axe::services::auth::hash_password("ReaderPass123!").unwrap();
+    let reader_hash = mcms::services::auth::hash_password("ReaderPass123!").unwrap();
     let sql = "INSERT INTO users (username, role, status, registered_via) VALUES ('readeradmindel', 'reader', 'active', 'email') RETURNING id";
     let reader_int_id: i64 = sqlx::query_scalar(sql).fetch_one(&pool).await.unwrap();
     let cred_data = serde_json::json!({"password_hash": reader_hash}).to_string();
-    let cred_id = axe::utils::id::new_id();
-    let cred_now = axe::utils::tz::now_utc();
+    let cred_id = mcms::utils::id::new_id();
+    let cred_now = mcms::utils::tz::now_utc();
     let cred_sql = format!(
         "INSERT INTO user_credentials (id, user_id, auth_type, identifier, credential_data, verified, created_at, updated_at) VALUES ({}, {}, 'email', {}, {}, 1, {}, {})",
-        axe::db::Driver::ph(1),
-        axe::db::Driver::ph(2),
-        axe::db::Driver::ph(3),
-        axe::db::Driver::ph(4),
-        axe::db::Driver::ph(5),
-        axe::db::Driver::ph(6)
+        mcms::db::Driver::ph(1),
+        mcms::db::Driver::ph(2),
+        mcms::db::Driver::ph(3),
+        mcms::db::Driver::ph(4),
+        mcms::db::Driver::ph(5),
+        mcms::db::Driver::ph(6)
     );
     sqlx::query(&cred_sql)
         .bind(cred_id)
@@ -251,7 +251,7 @@ async fn admin_can_delete_other_users_token() {
     let reader_tok = make_token(
         &reader_int_id.to_string(),
         reader_int_id,
-        axe::models::user::UserRole::Reader,
+        mcms::models::user::UserRole::Reader,
     );
 
     let (_, create_body) = send(
@@ -489,20 +489,20 @@ async fn delete_requires_auth() {
 async fn each_user_sees_only_own_tokens() {
     let (mut app, tok, pool) = setup().await;
 
-    let reader_hash = axe::services::auth::hash_password("ReaderPass123!").unwrap();
+    let reader_hash = mcms::services::auth::hash_password("ReaderPass123!").unwrap();
     let sql = "INSERT INTO users (username, role, status, registered_via) VALUES ('isolationreader', 'reader', 'active', 'email') RETURNING id";
     let reader_int_id: i64 = sqlx::query_scalar(sql).fetch_one(&pool).await.unwrap();
     let cred_data = serde_json::json!({"password_hash": reader_hash}).to_string();
-    let cred_id = axe::utils::id::new_id();
-    let cred_now = axe::utils::tz::now_utc();
+    let cred_id = mcms::utils::id::new_id();
+    let cred_now = mcms::utils::tz::now_utc();
     let cred_sql = format!(
         "INSERT INTO user_credentials (id, user_id, auth_type, identifier, credential_data, verified, created_at, updated_at) VALUES ({}, {}, 'email', {}, {}, 1, {}, {})",
-        axe::db::Driver::ph(1),
-        axe::db::Driver::ph(2),
-        axe::db::Driver::ph(3),
-        axe::db::Driver::ph(4),
-        axe::db::Driver::ph(5),
-        axe::db::Driver::ph(6)
+        mcms::db::Driver::ph(1),
+        mcms::db::Driver::ph(2),
+        mcms::db::Driver::ph(3),
+        mcms::db::Driver::ph(4),
+        mcms::db::Driver::ph(5),
+        mcms::db::Driver::ph(6)
     );
     sqlx::query(&cred_sql)
         .bind(cred_id)
@@ -517,7 +517,7 @@ async fn each_user_sees_only_own_tokens() {
     let reader_tok = make_token(
         &reader_int_id.to_string(),
         reader_int_id,
-        axe::models::user::UserRole::Reader,
+        mcms::models::user::UserRole::Reader,
     );
 
     send(

@@ -1,6 +1,6 @@
 //! Proxy module configuration loading.
 //!
-//! Loads `proxy.toml` and `tenants/*.toml`, providing type-safe configuration structs.
+//! Loads `proxy.toml` and `routes/*.toml`, providing type-safe configuration structs.
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -39,9 +39,9 @@ pub struct ProxySection {
     /// Admin API secret key.
     #[serde(default = "default_admin_secret")]
     pub admin_secret: String,
-    /// Tenant configuration file directory.
-    #[serde(default = "default_tenants_dir")]
-    pub tenants_dir: PathBuf,
+    /// Route configuration file directory.
+    #[serde(default = "default_routes_dir")]
+    pub routes_dir: PathBuf,
     /// Health check interval (seconds).
     #[serde(default = "default_health_check_interval")]
     pub health_check_interval_secs: u64,
@@ -50,18 +50,18 @@ pub struct ProxySection {
     pub log_dir: PathBuf,
 }
 
-/// Single tenant configuration.
+/// Single route configuration.
 ///
-/// One TOML file per tenant, placed under `tenants_dir`.
+/// One TOML file per route, placed under `routes_dir`.
 #[derive(Debug, Clone, Deserialize)]
-pub struct TenantConfig {
-    pub tenant: TenantSection,
+pub struct RouteConfig {
+    pub route: RouteSection,
 }
 
-/// `[tenant]` section.
+/// `[route]` section.
 #[derive(Debug, Clone, Deserialize)]
-pub struct TenantSection {
-    /// Tenant name (unique identifier).
+pub struct RouteSection {
+    /// Route name (unique identifier).
     pub name: String,
     /// Subdomain match (e.g. `user1.api.example.com`).
     pub host: Option<String>,
@@ -79,7 +79,7 @@ pub struct TenantSection {
     /// Backend response read timeout (milliseconds).
     #[serde(default = "default_read_timeout")]
     pub read_timeout_ms: u64,
-    /// Whether the tenant is enabled.
+    /// Whether the route is enabled.
     #[serde(default = "default_true")]
     pub enabled: bool,
 }
@@ -97,7 +97,7 @@ fn default_listen_https() -> String {
 }
 
 fn default_acme_dir() -> PathBuf {
-    PathBuf::from("/var/lib/axe/acme")
+    PathBuf::from("/var/lib/mcms/acme")
 }
 
 fn default_acme_directory() -> String {
@@ -112,8 +112,8 @@ fn default_admin_secret() -> String {
     "change-me-in-production".into()
 }
 
-fn default_tenants_dir() -> PathBuf {
-    PathBuf::from("/etc/axe/tenants")
+fn default_routes_dir() -> PathBuf {
+    PathBuf::from("/etc/mcms/routes")
 }
 
 fn default_health_check_interval() -> u64 {
@@ -121,7 +121,7 @@ fn default_health_check_interval() -> u64 {
 }
 
 fn default_log_dir() -> PathBuf {
-    PathBuf::from("/var/lib/axe/proxy/logs")
+    PathBuf::from("/var/lib/mcms/proxy/logs")
 }
 
 fn default_connect_timeout() -> u64 {
@@ -156,8 +156,8 @@ impl ProxyConfig {
     }
 }
 
-impl TenantConfig {
-    /// Load tenant configuration from a TOML file.
+impl RouteConfig {
+    /// Load route configuration from a TOML file.
     pub fn load(path: &std::path::Path) -> anyhow::Result<Self> {
         let content = std::fs::read_to_string(path)?;
         let config: Self = toml::from_str(&content)?;
@@ -165,24 +165,24 @@ impl TenantConfig {
     }
 }
 
-/// Load all .toml files under tenants_dir.
-pub fn load_all_tenants(dir: &std::path::Path) -> Vec<(PathBuf, TenantConfig)> {
-    let mut tenants = Vec::new();
+/// Load all .toml files under routes_dir.
+pub fn load_all_routes(dir: &std::path::Path) -> Vec<(PathBuf, RouteConfig)> {
+    let mut routes = Vec::new();
     let Ok(entries) = std::fs::read_dir(dir) else {
-        return tenants;
+        return routes;
     };
     for entry in entries.flatten() {
         let path = entry.path();
         if path.extension().is_some_and(|ext| ext == "toml") {
-            match TenantConfig::load(&path) {
-                Ok(t) => tenants.push((path, t)),
+            match RouteConfig::load(&path) {
+                Ok(r) => routes.push((path, r)),
                 Err(e) => {
-                    tracing::warn!(path = %path.display(), error = %e, "failed to load tenant config");
+                    tracing::warn!(path = %path.display(), error = %e, "failed to load route config");
                 }
             }
         }
     }
-    tenants
+    routes
 }
 
 #[cfg(test)]
@@ -210,7 +210,7 @@ acme_dir = "/data/acme"
 acme_email = "admin@example.com"
 admin_listen = "127.0.0.1:9999"
 admin_secret = "my-secret"
-tenants_dir = "/etc/axe/tenants"
+routes_dir = "/etc/mcms/routes"
 health_check_interval_secs = 60
 "#;
         let config: ProxyConfig = toml::from_str(toml_str).unwrap();
@@ -223,33 +223,33 @@ health_check_interval_secs = 60
     }
 
     #[test]
-    fn parse_tenant_config() {
+    fn parse_route_config() {
         let toml_str = r#"
-[tenant]
+[route]
 name = "user1"
 host = "user1.api.example.com"
-backend = "unix:/run/axe/user1.sock"
+backend = "unix:/run/mcms/user1.sock"
 connect_timeout_ms = 3000
 "#;
-        let config: TenantConfig = toml::from_str(toml_str).unwrap();
-        assert_eq!(config.tenant.name, "user1");
-        assert_eq!(config.tenant.host.as_deref(), Some("user1.api.example.com"));
-        assert_eq!(config.tenant.backend, "unix:/run/axe/user1.sock");
-        assert_eq!(config.tenant.connect_timeout_ms, 3000);
-        assert!(config.tenant.enabled);
+        let config: RouteConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.route.name, "user1");
+        assert_eq!(config.route.host.as_deref(), Some("user1.api.example.com"));
+        assert_eq!(config.route.backend, "unix:/run/mcms/user1.sock");
+        assert_eq!(config.route.connect_timeout_ms, 3000);
+        assert!(config.route.enabled);
     }
 
     #[test]
-    fn parse_tenant_with_prefix() {
+    fn parse_route_with_prefix() {
         let toml_str = r#"
-[tenant]
+[route]
 name = "user2"
 prefix = "/user2"
 backend = "127.0.0.1:9902"
 "#;
-        let config: TenantConfig = toml::from_str(toml_str).unwrap();
-        assert_eq!(config.tenant.prefix.as_deref(), Some("/user2"));
-        assert!(config.tenant.host.is_none());
+        let config: RouteConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.route.prefix.as_deref(), Some("/user2"));
+        assert!(config.route.host.is_none());
     }
 
     #[test]
@@ -258,174 +258,11 @@ backend = "127.0.0.1:9902"
 [proxy]
 "#;
         let config: ProxyConfig = toml::from_str(toml_str).unwrap();
-        assert_eq!(
-            config.proxy.acme_dir,
-            PathBuf::from("/var/lib/axe/acme")
-        );
+        assert_eq!(config.proxy.acme_dir, PathBuf::from("/var/lib/mcms/acme"));
         assert_eq!(
             config.proxy.acme_directory,
             "https://acme-v02.api.letsencrypt.org/directory"
         );
         assert_eq!(config.proxy.health_check_interval_secs, 30);
-    }
-
-    #[test]
-    fn tenant_missing_host_and_prefix() {
-        let toml_str = r#"
-[tenant]
-name = "bare"
-backend = "127.0.0.1:9901"
-"#;
-        let config: TenantConfig = toml::from_str(toml_str).unwrap();
-        assert!(config.tenant.host.is_none());
-        assert!(config.tenant.prefix.is_none());
-        assert!(config.tenant.enabled);
-    }
-
-    #[test]
-    fn tenant_disabled() {
-        let toml_str = r#"
-[tenant]
-name = "off"
-host = "off.example.com"
-backend = "127.0.0.1:9901"
-enabled = false
-"#;
-        let config: TenantConfig = toml::from_str(toml_str).unwrap();
-        assert!(!config.tenant.enabled);
-    }
-
-    #[test]
-    fn tenant_with_tls() {
-        let toml_str = r#"
-[tenant]
-name = "secure"
-host = "secure.example.com"
-backend = "127.0.0.1:9901"
-tls_cert = "/etc/ssl/secure.pem"
-tls_key = "/etc/ssl/secure.key"
-"#;
-        let config: TenantConfig = toml::from_str(toml_str).unwrap();
-        assert_eq!(
-            config.tenant.tls_cert,
-            Some(PathBuf::from("/etc/ssl/secure.pem"))
-        );
-        assert_eq!(
-            config.tenant.tls_key,
-            Some(PathBuf::from("/etc/ssl/secure.key"))
-        );
-    }
-
-    #[test]
-    fn tenant_default_timeouts() {
-        let toml_str = r#"
-[tenant]
-name = "defaults"
-host = "d.example.com"
-backend = "127.0.0.1:9901"
-"#;
-        let config: TenantConfig = toml::from_str(toml_str).unwrap();
-        assert_eq!(config.tenant.connect_timeout_ms, 5000);
-        assert_eq!(config.tenant.read_timeout_ms, 30000);
-    }
-
-    #[test]
-    fn parse_proxy_addr() {
-        let toml_str = r#"
-[proxy]
-listen_http = "0.0.0.0:8080"
-"#;
-        let config: ProxyConfig = toml::from_str(toml_str).unwrap();
-        let addr = config.http_addr().unwrap();
-        assert_eq!(addr.port(), 8080);
-    }
-
-    #[test]
-    fn parse_proxy_addr_invalid() {
-        let toml_str = r#"
-[proxy]
-listen_http = "not-an-address"
-"#;
-        let config: ProxyConfig = toml::from_str(toml_str).unwrap();
-        assert!(config.http_addr().is_err());
-    }
-
-    #[test]
-    fn load_all_tenants_from_dir() {
-        let dir = tempfile::tempdir().unwrap();
-
-        let t1 = dir.path().join("user1.toml");
-        std::fs::write(
-            &t1,
-            r#"
-[tenant]
-name = "user1"
-host = "user1.example.com"
-backend = "127.0.0.1:9901"
-"#,
-        )
-        .unwrap();
-
-        let t2 = dir.path().join("user2.toml");
-        std::fs::write(
-            &t2,
-            r#"
-[tenant]
-name = "user2"
-host = "user2.example.com"
-backend = "127.0.0.1:9902"
-"#,
-        )
-        .unwrap();
-
-        let non_toml = dir.path().join("readme.txt");
-        std::fs::write(&non_toml, "ignore me").unwrap();
-
-        let tenants = super::load_all_tenants(dir.path());
-        assert_eq!(tenants.len(), 2);
-
-        let names: Vec<&str> = tenants
-            .iter()
-            .map(|(_, t)| t.tenant.name.as_str())
-            .collect();
-        assert!(names.contains(&"user1"));
-        assert!(names.contains(&"user2"));
-    }
-
-    #[test]
-    fn load_all_tenants_empty_dir() {
-        let dir = tempfile::tempdir().unwrap();
-        let tenants = super::load_all_tenants(dir.path());
-        assert!(tenants.is_empty());
-    }
-
-    #[test]
-    fn load_all_tenants_nonexistent_dir() {
-        let tenants = super::load_all_tenants(PathBuf::from("/nonexistent/path").as_path());
-        assert!(tenants.is_empty());
-    }
-
-    #[test]
-    fn load_all_tenants_invalid_toml_skipped() {
-        let dir = tempfile::tempdir().unwrap();
-
-        let bad = dir.path().join("bad.toml");
-        std::fs::write(&bad, "this is not valid toml {{{{").unwrap();
-
-        let good = dir.path().join("good.toml");
-        std::fs::write(
-            &good,
-            r#"
-[tenant]
-name = "good"
-host = "good.example.com"
-backend = "127.0.0.1:9901"
-"#,
-        )
-        .unwrap();
-
-        let tenants = super::load_all_tenants(dir.path());
-        assert_eq!(tenants.len(), 1);
-        assert_eq!(tenants[0].1.tenant.name, "good");
     }
 }

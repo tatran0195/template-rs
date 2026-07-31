@@ -118,7 +118,6 @@ mod tests {
         let mut ctx = DataBeforeDeleteContext {
             base: BaseContext::new(
                 Some("user-1".into()),
-                "default".into(),
                 "2026-01-01T00:00:00Z".into(),
             )
             .with_user_int_id(Some(1)),
@@ -147,7 +146,7 @@ mod tests {
         engine.register(SoftDeletableAspect);
 
         let mut ctx = DataBeforeDeleteContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "articles".into(),
             record: Record::new(),
             soft_delete: false,

@@ -4,7 +4,7 @@ singular = "tag"
 plural = "tags"
 table = "tags"
 description = "Article tags"
-implements = ["ownable", "timestampable", "tenantable"]
+implements = ["ownable", "timestampable"]
 
 [fields.name]
 type = "text"

@@ -137,7 +137,7 @@ mod tests {
         engine.register(TimestampableAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "2026-01-01T00:00:00Z".into()),
+            base: BaseContext::new(None, "2026-01-01T00:00:00Z".into()),
             table: "articles".into(),
             record: Record::new(),
             schema: None,
@@ -163,7 +163,7 @@ mod tests {
         engine.register(TimestampableAspect);
 
         let mut ctx = DataBeforeUpdateContext {
-            base: BaseContext::new(None, "default".into(), "2026-06-01T00:00:00Z".into()),
+            base: BaseContext::new(None, "2026-06-01T00:00:00Z".into()),
             table: "articles".into(),
             old_record: {
                 let mut r = Record::new();
@@ -202,7 +202,7 @@ mod tests {
         new_record.insert("title".into(), json!("updated"));
 
         let mut ctx = DataBeforeUpdateContext {
-            base: BaseContext::new(None, "default".into(), "2026-06-01T00:00:00Z".into()),
+            base: BaseContext::new(None, "2026-06-01T00:00:00Z".into()),
             table: "articles".into(),
             old_record: {
                 let mut r = Record::new();
@@ -231,7 +231,7 @@ mod tests {
         record.insert("updated_at".into(), json!("old-time"));
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "2026-01-01T00:00:00Z".into()),
+            base: BaseContext::new(None, "2026-01-01T00:00:00Z".into()),
             table: "articles".into(),
             record,
             schema: None,
@@ -257,7 +257,7 @@ mod tests {
         engine.register(TimestampableAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "2026-01-01T00:00:00Z".into()),
+            base: BaseContext::new(None, "2026-01-01T00:00:00Z".into()),
             table: "articles".into(),
             record: Record::new(),
             schema: None,

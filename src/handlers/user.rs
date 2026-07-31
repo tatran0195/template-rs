@@ -206,7 +206,7 @@ pub async fn get_user(
 ) -> AppResult<ApiResponse<UserResponse>> {
     auth.ensure_authenticated()?;
     let id = crate::types::snowflake_id::parse_id(&id)?;
-    let u = user::get_public_user(&state.pool, id, auth.tenant_id()).await?;
+    let u = user::get_public_user(&state.pool, id).await?;
     Ok(ApiResponse::success(u))
 }
 
@@ -223,7 +223,7 @@ pub async fn list_users(
     auth.ensure_admin()?;
     params.sanitize();
     let (users, total) =
-        user::list_users(&state.pool, params.page, params.page_size, auth.tenant_id()).await?;
+        user::list_users(&state.pool, params.page, params.page_size).await?;
     Ok(params.paginate(users, total))
 }
 
@@ -244,7 +244,7 @@ pub async fn update_role(
 
     let u = state
         .user_service
-        .update_role(&id, req.role, auth.tenant_id())
+        .update_role(&id, req.role)
         .await?;
     Ok(ApiResponse::success(
         UserResponse::from_user_with_contacts(&state.pool, u).await?,
@@ -263,7 +263,6 @@ pub async fn admin_create_user(
     let user = crate::services::auth::admin_create_user(
         &state.aspect_engine,
         req,
-        auth.tenant_id(),
         &state.pool,
     )
     .await?;
@@ -278,7 +277,7 @@ pub async fn admin_list_users(
     auth.ensure_admin()?;
     params.sanitize();
     let (users, total) =
-        user::list_users(&state.pool, params.page, params.page_size, auth.tenant_id()).await?;
+        user::list_users(&state.pool, params.page, params.page_size).await?;
     Ok(params.paginate(users, total))
 }
 
@@ -289,7 +288,7 @@ pub async fn admin_get_user(
 ) -> AppResult<ApiResponse<UserResponse>> {
     auth.ensure_admin()?;
     let id = crate::types::snowflake_id::parse_id(&id)?;
-    let u = user::get_public_user(&state.pool, id, auth.tenant_id()).await?;
+    let u = user::get_public_user(&state.pool, id).await?;
     Ok(ApiResponse::success(u))
 }
 
@@ -303,7 +302,7 @@ pub async fn admin_update_user(
     validation::validate(&req)?;
     let u = state
         .user_service
-        .admin_update_user(&id, &req, auth.tenant_id())
+        .admin_update_user(&id, &req)
         .await?;
     Ok(ApiResponse::success(
         UserResponse::from_user_with_contacts(&state.pool, u).await?,
@@ -318,7 +317,7 @@ pub async fn admin_delete_user(
     auth.ensure_admin()?;
     state
         .user_service
-        .delete_user(&id, auth.tenant_id())
+        .delete_user(&id)
         .await?;
     Ok(ApiResponse::success(()))
 }
@@ -336,7 +335,7 @@ pub async fn admin_batch_users(
             "delete"
                 if state
                     .user_service
-                    .delete_user(uid, auth.tenant_id())
+                    .delete_user(uid)
                     .await
                     .is_ok() =>
             {
@@ -345,7 +344,7 @@ pub async fn admin_batch_users(
             "disable" | "enable"
                 if state
                     .user_service
-                    .update_role(uid, UserRole::Reader, auth.tenant_id())
+                    .update_role(uid, UserRole::Reader)
                     .await
                     .is_ok() =>
             {
@@ -357,7 +356,7 @@ pub async fn admin_batch_users(
                 };
                 if state
                     .user_service
-                    .update_role(uid, role, auth.tenant_id())
+                    .update_role(uid, role)
                     .await
                     .is_ok()
                 {

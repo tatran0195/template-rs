@@ -134,7 +134,7 @@ pub async fn create_definition(
     initial_step: &str,
 ) -> anyhow::Result<WorkflowDefinition> {
     let now = crate::utils::tz::now_utc();
-    axe_derive::crud_insert!(
+    mcms_derive::crud_insert!(
         pool, "workflow_definitions",
         ["id" => id, "name" => name, "description" => description, "steps" => steps, "initial_step" => initial_step, "created_at" => now, "updated_at" => now]
     )?;
@@ -149,20 +149,20 @@ pub async fn get_definition(
     id: SnowflakeId,
 ) -> anyhow::Result<Option<WorkflowDefinition>> {
     Ok(
-        axe_derive::crud_find!(pool, "workflow_definitions", WorkflowDefinition, where: ("id", id))?,
+        mcms_derive::crud_find!(pool, "workflow_definitions", WorkflowDefinition, where: ("id", id))?,
     )
 }
 
 /// List all workflow definitions
 pub async fn list_definitions(pool: &Pool) -> anyhow::Result<Vec<WorkflowDefinition>> {
     Ok(
-        axe_derive::crud_list!(pool, "workflow_definitions", WorkflowDefinition, order_by: "created_at DESC")?,
+        mcms_derive::crud_list!(pool, "workflow_definitions", WorkflowDefinition, order_by: "created_at DESC")?,
     )
 }
 
 /// Delete workflow definition
 pub async fn delete_definition(pool: &Pool, id: SnowflakeId) -> anyhow::Result<()> {
-    axe_derive::crud_delete!(pool, "workflow_definitions", where: ("id", id))?;
+    mcms_derive::crud_delete!(pool, "workflow_definitions", where: ("id", id))?;
     Ok(())
 }
 
@@ -176,7 +176,7 @@ pub async fn create_instance(
 ) -> anyhow::Result<WorkflowInstance> {
     let now = crate::utils::tz::now_utc();
     let ctx_str = serde_json::to_string(context)?;
-    axe_derive::crud_insert!(
+    mcms_derive::crud_insert!(
         pool, "workflow_instances",
         ["id" => id, "definition_id" => definition_id, "status" => WorkflowInstanceStatus::Running, "context" => ctx_str, "triggered_by" => triggered_by, "started_at" => now, "updated_at" => now]
     )?;
@@ -191,7 +191,7 @@ pub async fn get_instance(
     id: SnowflakeId,
 ) -> anyhow::Result<Option<WorkflowInstance>> {
     Ok(
-        axe_derive::crud_find!(pool, "workflow_instances", WorkflowInstance, where: ("id", id))?,
+        mcms_derive::crud_find!(pool, "workflow_instances", WorkflowInstance, where: ("id", id))?,
     )
 }
 
@@ -291,12 +291,12 @@ pub async fn create_step_log(
 ) -> anyhow::Result<StepLog> {
     let now = crate::utils::tz::now_utc();
     let input_str = input.map(|v| serde_json::to_string(v).unwrap_or_default());
-    axe_derive::crud_insert!(
+    mcms_derive::crud_insert!(
         pool, "workflow_step_logs",
         ["id" => id, "instance_id" => instance_id, "step_id" => step_id, "step_name" => step_name, "status" => WorkflowStepStatus::Running, "input" => input_str, "started_at" => now]
     )?;
     let result: StepLog =
-        axe_derive::crud_find_one!(pool, "workflow_step_logs", StepLog, where: ("id", id))
+        mcms_derive::crud_find_one!(pool, "workflow_step_logs", StepLog, where: ("id", id))
             .map_err(|e: sqlx::Error| anyhow::anyhow!("failed to fetch created step log: {e}"))?;
     Ok(result)
 }
@@ -309,7 +309,7 @@ pub async fn complete_step_log(
 ) -> anyhow::Result<()> {
     let now = crate::utils::tz::now_utc();
     let output_str = output.map(|v| serde_json::to_string(v).unwrap_or_default());
-    axe_derive::crud_update!(
+    mcms_derive::crud_update!(
         pool, "workflow_step_logs",
         bind: ["status" => WorkflowStepStatus::Completed, "output" => output_str, "completed_at" => now],
         where: ("id", id)
@@ -320,7 +320,7 @@ pub async fn complete_step_log(
 /// Mark step execution as failed
 pub async fn fail_step_log(pool: &Pool, id: SnowflakeId, error: &str) -> anyhow::Result<()> {
     let now = crate::utils::tz::now_utc();
-    axe_derive::crud_update!(
+    mcms_derive::crud_update!(
         pool, "workflow_step_logs",
         bind: ["status" => WorkflowStepStatus::Failed, "error" => error, "completed_at" => now],
         where: ("id", id)
@@ -331,7 +331,7 @@ pub async fn fail_step_log(pool: &Pool, id: SnowflakeId, error: &str) -> anyhow:
 /// List step logs for an instance
 pub async fn list_step_logs(pool: &Pool, instance_id: SnowflakeId) -> anyhow::Result<Vec<StepLog>> {
     Ok(
-        axe_derive::crud_find_all!(pool, "workflow_step_logs", StepLog, where: ("instance_id", instance_id), order_by: "started_at ASC")?,
+        mcms_derive::crud_find_all!(pool, "workflow_step_logs", StepLog, where: ("instance_id", instance_id), order_by: "started_at ASC")?,
     )
 }
 

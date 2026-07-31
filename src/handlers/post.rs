@@ -24,7 +24,6 @@ fn post_list_cache_key(
     cat_id: Option<i64>,
     tg_id: Option<i64>,
     q: Option<&str>,
-    tenant_id: Option<&str>,
 ) -> String {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
@@ -34,7 +33,6 @@ fn post_list_cache_key(
     cat_id.hash(&mut h);
     tg_id.hash(&mut h);
     q.hash(&mut h);
-    tenant_id.hash(&mut h);
     format!("posts:list:{:x}", h.finish())
 }
 
@@ -191,13 +189,13 @@ pub async fn list(
 
     let cat_id = if let Some(ref cid) = query.category_id {
         let parsed = crate::types::snowflake_id::parse_id(cid)?;
-        axe_derive::crud_resolve_id!(&state.pool, "categories", *parsed)?
+        mcms_derive::crud_resolve_id!(&state.pool, "categories", *parsed)?
     } else {
         None
     };
     let tg_id = if let Some(ref tid) = query.tag_id {
         let parsed = crate::types::snowflake_id::parse_id(tid)?;
-        axe_derive::crud_resolve_id!(&state.pool, "tags", *parsed)?
+        mcms_derive::crud_resolve_id!(&state.pool, "tags", *parsed)?
     } else {
         None
     };
@@ -208,7 +206,6 @@ pub async fn list(
         cat_id,
         tg_id,
         query.q.as_deref(),
-        auth.tenant_id(),
     );
     let cache_ttl = std::time::Duration::from_secs(state.config.rule_engine.cms_cache_ttl_secs);
     if let Some(entry) = state.cms_cache.get(&cache_key)

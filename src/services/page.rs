@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use axe_derive::aspect_service;
+use mcms_derive::aspect_service;
 
 use crate::aspects::engine::AspectEngine;
 use crate::commands::{CreatePageCmd, UpdatePageCmd};
@@ -17,20 +17,14 @@ use crate::types::snowflake_id::SnowflakeId;
 /// Page business logic trait.
 #[async_trait]
 pub trait PageService: Send + Sync {
-    async fn list_published(
-        &self,
-        page_num: i64,
-        page_size: i64,
-        auth: &AuthUser,
-    ) -> AppResult<(Vec<Page>, i64)>;
-    async fn get_by_slug(&self, slug: &str, auth: &AuthUser) -> AppResult<Page>;
-    async fn get_by_id(&self, id: SnowflakeId, auth: &AuthUser) -> AppResult<Page>;
+    async fn list_published(&self, page_num: i64, page_size: i64) -> AppResult<(Vec<Page>, i64)>;
+    async fn get_by_slug(&self, slug: &str) -> AppResult<Page>;
+    async fn get_by_id(&self, id: SnowflakeId) -> AppResult<Page>;
     async fn list_all(
         &self,
         page_num: i64,
         page_size: i64,
         status: Option<PageStatus>,
-        auth: &AuthUser,
     ) -> AppResult<(Vec<Page>, i64)>;
     async fn create_page(&self, auth: &AuthUser, cmd: CreatePageCmd) -> AppResult<Page>;
     async fn update_page(
@@ -46,7 +40,7 @@ pub trait PageService: Send + Sync {
         status: PageStatus,
         auth: &AuthUser,
     ) -> AppResult<Page>;
-    async fn reorder(&self, items: Vec<(String, i64)>, auth: &AuthUser) -> AppResult<()>;
+    async fn reorder(&self, items: Vec<(String, i64)>) -> AppResult<()>;
     async fn sitemap(&self, auth: &AuthUser) -> AppResult<Vec<(String, Option<String>)>>;
 }
 
@@ -66,23 +60,18 @@ impl PageServiceImpl {
 
 #[async_trait]
 impl PageService for PageServiceImpl {
-    async fn list_published(
-        &self,
-        page_num: i64,
-        page_size: i64,
-        auth: &AuthUser,
-    ) -> AppResult<(Vec<Page>, i64)> {
-        page::list_published(&self.pool, page_num, page_size, auth.tenant_id()).await
+    async fn list_published(&self, page_num: i64, page_size: i64) -> AppResult<(Vec<Page>, i64)> {
+        page::list_published(&self.pool, page_num, page_size).await
     }
 
-    async fn get_by_slug(&self, slug: &str, auth: &AuthUser) -> AppResult<Page> {
-        page::find_by_slug(&self.pool, slug, auth.tenant_id())
+    async fn get_by_slug(&self, slug: &str) -> AppResult<Page> {
+        page::find_by_slug(&self.pool, slug)
             .await?
             .ok_or_else(|| AppError::not_found("page"))
     }
 
-    async fn get_by_id(&self, id: SnowflakeId, auth: &AuthUser) -> AppResult<Page> {
-        page::find_by_id(&self.pool, id, auth.tenant_id())
+    async fn get_by_id(&self, id: SnowflakeId) -> AppResult<Page> {
+        page::find_by_id(&self.pool, id)
             .await?
             .ok_or_else(|| AppError::not_found("page"))
     }
@@ -92,9 +81,8 @@ impl PageService for PageServiceImpl {
         page_num: i64,
         page_size: i64,
         status: Option<PageStatus>,
-        auth: &AuthUser,
     ) -> AppResult<(Vec<Page>, i64)> {
-        page::list_all(&self.pool, page_num, page_size, status, auth.tenant_id()).await
+        page::list_all(&self.pool, page_num, page_size, status).await
     }
 
     async fn create_page(&self, auth: &AuthUser, cmd: CreatePageCmd) -> AppResult<Page> {
@@ -102,7 +90,7 @@ impl PageService for PageServiceImpl {
         if let Some(ref blocks) = cmd.blocks {
             Self::validate_blocks_json(blocks)?;
         }
-        let p = page::create(&self.pool, &cmd, auth.tenant_id()).await?;
+        let p = page::create(&self.pool, &cmd).await?;
         self.after_created(&p);
         Ok(p)
     }
@@ -113,7 +101,7 @@ impl PageService for PageServiceImpl {
         id: SnowflakeId,
         mut cmd: UpdatePageCmd,
     ) -> AppResult<Page> {
-        let existing = page::find_by_id(&self.pool, id, auth.tenant_id())
+        let existing = page::find_by_id(&self.pool, id)
             .await?
             .ok_or_else(|| AppError::not_found("page"))?;
 
@@ -122,17 +110,17 @@ impl PageService for PageServiceImpl {
         if let Some(ref blocks) = cmd.blocks {
             Self::validate_blocks_json(blocks)?;
         }
-        let updated = page::update(&self.pool, &cmd, auth.tenant_id()).await?;
+        let updated = page::update(&self.pool, &cmd).await?;
         self.after_updated(&updated);
         Ok(updated)
     }
 
     async fn delete_page(&self, id: SnowflakeId, auth: &AuthUser) -> AppResult<()> {
-        let p = page::find_by_id(&self.pool, id, auth.tenant_id())
+        let p = page::find_by_id(&self.pool, id)
             .await?
             .ok_or_else(|| AppError::not_found("page"))?;
         self.before_delete(auth, &p).await?;
-        page::delete(&self.pool, p.id, auth.tenant_id()).await?;
+        page::delete(&self.pool, p.id).await?;
         self.after_deleted(&p);
         Ok(())
     }
@@ -143,32 +131,31 @@ impl PageService for PageServiceImpl {
         status: PageStatus,
         auth: &AuthUser,
     ) -> AppResult<Page> {
-        let p = page::find_by_id(&self.pool, id, auth.tenant_id())
+        let p = page::find_by_id(&self.pool, id)
             .await?
             .ok_or_else(|| AppError::not_found("page"))?;
         self.aspect_engine
             .before_update("pages", auth, &p, status)
             .await?;
-        let updated =
-            page::update_status(&self.pool, p.id, status, auth.user_id(), auth.tenant_id()).await?;
+        let updated = page::update_status(&self.pool, p.id, status, auth.user_id()).await?;
         self.after_updated(&updated);
         Ok(updated)
     }
 
-    async fn reorder(&self, items: Vec<(String, i64)>, auth: &AuthUser) -> AppResult<()> {
+    async fn reorder(&self, items: Vec<(String, i64)>) -> AppResult<()> {
         let mut resolved = Vec::new();
         for (raw_id, sort_order) in items {
             let id = crate::types::snowflake_id::parse_id(&raw_id)?;
-            let p = page::find_by_id(&self.pool, id, auth.tenant_id())
+            let p = page::find_by_id(&self.pool, id)
                 .await?
                 .ok_or_else(|| AppError::not_found("page"))?;
             resolved.push((*p.id, sort_order));
         }
-        page::reorder(&self.pool, &resolved, auth.tenant_id()).await
+        page::reorder(&self.pool, &resolved).await
     }
 
-    async fn sitemap(&self, auth: &AuthUser) -> AppResult<Vec<(String, Option<String>)>> {
-        page::list_sitemap(&self.pool, auth.tenant_id()).await
+    async fn sitemap(&self, _auth: &AuthUser) -> AppResult<Vec<(String, Option<String>)>> {
+        page::list_sitemap(&self.pool).await
     }
 }
 

@@ -11,7 +11,6 @@ pub async fn forgot_password(
     pool: &crate::db::Pool,
     aspect_engine: &AspectEngine,
     email: &str,
-    _tenant_id: Option<&str>,
 ) -> AppResult<()> {
     let cred = crate::models::user_credential::find_by_auth_type_and_identifier(
         pool,
@@ -20,7 +19,7 @@ pub async fn forgot_password(
     )
     .await?;
     let user = match cred {
-        Some(c) => crate::models::user::find_by_id(pool, c.user_id, None).await?,
+        Some(c) => crate::models::user::find_by_id(pool, c.user_id).await?,
         None => None,
     };
 
@@ -49,7 +48,6 @@ pub async fn reset_password(
     pool: &crate::db::Pool,
     token: &str,
     new_password: &str,
-    _tenant_id: Option<&str>,
 ) -> AppResult<()> {
     let reset_token = crate::models::password_reset::find_by_token(pool, token)
         .await?
@@ -95,8 +93,7 @@ pub async fn set_password(
     new_password: &str,
 ) -> AppResult<()> {
     let user_id = auth.ensure_snowflake_user_id()?;
-    let tenant_id = auth.tenant_id();
-    let user = crate::models::user::find_by_id(pool, user_id, tenant_id)
+    let user = crate::models::user::find_by_id(pool, user_id)
         .await?
         .ok_or_else(|| AppError::not_found("user"))?;
 
@@ -161,7 +158,6 @@ mod tests {
                 registered_via: crate::models::user::RegisteredVia::Email,
                 role: None,
             },
-            None,
         )
         .await
         .unwrap();
@@ -185,7 +181,7 @@ mod tests {
         let pool = setup_pool().await;
         let user = insert_user(&pool, "reset@test.com").await;
         let ae = aspect_engine();
-        super::forgot_password(&pool, &ae, "reset@test.com", None)
+        super::forgot_password(&pool, &ae, "reset@test.com")
             .await
             .unwrap();
         let sql = format!(
@@ -204,7 +200,7 @@ mod tests {
     async fn forgot_password_nonexistent_user_ok() {
         let pool = setup_pool().await;
         let ae = aspect_engine();
-        super::forgot_password(&pool, &ae, "noone@test.com", None)
+        super::forgot_password(&pool, &ae, "noone@test.com")
             .await
             .unwrap();
     }
@@ -212,7 +208,7 @@ mod tests {
     #[tokio::test]
     async fn reset_password_invalid_token() {
         let pool = setup_pool().await;
-        let err = super::reset_password(&pool, "bad-token", "NewPass1", None)
+        let err = super::reset_password(&pool, "bad-token", "NewPass1")
             .await
             .unwrap_err();
         let msg = err.to_string();
@@ -224,7 +220,7 @@ mod tests {
         let pool = setup_pool().await;
         let user = insert_user(&pool, "weak@test.com").await;
         let ae = aspect_engine();
-        super::forgot_password(&pool, &ae, "weak@test.com", None)
+        super::forgot_password(&pool, &ae, "weak@test.com")
             .await
             .unwrap();
         let sql = format!(
@@ -236,7 +232,7 @@ mod tests {
             .fetch_one(&pool)
             .await
             .unwrap();
-        let err = super::reset_password(&pool, &token_str, "short", None)
+        let err = super::reset_password(&pool, &token_str, "short")
             .await
             .unwrap_err();
         let msg = err.to_string();
@@ -253,7 +249,6 @@ mod tests {
                 registered_via: crate::models::user::RegisteredVia::Oauth,
                 role: None,
             },
-            None,
         )
         .await
         .unwrap();
@@ -267,7 +262,7 @@ mod tests {
         )
         .await
         .unwrap();
-        let a = AuthUser::from_parts(Some(*user.id), crate::models::user::UserRole::Author, None);
+        let a = AuthUser::from_parts(Some(*user.id), crate::models::user::UserRole::Author);
         super::set_password(&pool, &a, "oauth@test.com", "StrongPass1")
             .await
             .unwrap();
@@ -277,7 +272,7 @@ mod tests {
     async fn set_password_already_set_rejected() {
         let pool = setup_pool().await;
         let user = insert_user(&pool, "already@test.com").await;
-        let a = AuthUser::from_parts(Some(*user.id), crate::models::user::UserRole::Author, None);
+        let a = AuthUser::for_test_user(*user.id);
         let err = super::set_password(&pool, &a, "already@test.com", "NewPass1")
             .await
             .unwrap_err();

@@ -55,7 +55,7 @@ pub async fn create(
         crate::utils::id::new_snowflake_id(),
         crate::utils::tz::now_utc(),
     );
-    axe_derive::crud_insert!(pool, "api_tokens", [
+    mcms_derive::crud_insert!(pool, "api_tokens", [
         "id" => id,
         "user_id" => user_id,
         "name" => name,
@@ -74,7 +74,7 @@ pub async fn create(
 
 /// Find API Token by token_hash
 pub async fn find_by_hash(pool: &crate::db::Pool, token_hash: &str) -> AppResult<Option<ApiToken>> {
-    axe_derive::crud_find!(pool, "api_tokens", ApiToken, where: ("token_hash", token_hash))
+    mcms_derive::crud_find!(pool, "api_tokens", ApiToken, where: ("token_hash", token_hash))
         .map_err(Into::into)
 }
 
@@ -83,7 +83,7 @@ pub async fn list_by_user(
     pool: &crate::db::Pool,
     user_id: SnowflakeId,
 ) -> AppResult<Vec<ApiTokenListItem>> {
-    axe_derive::check_schema!(
+    mcms_derive::check_schema!(
         "api_tokens",
         "id",
         "name",
@@ -107,19 +107,19 @@ pub async fn list_by_user(
 
 /// Find API Token by id
 pub async fn find_by_id(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<Option<ApiToken>> {
-    axe_derive::crud_find!(pool, "api_tokens", ApiToken, where: ("id", id)).map_err(Into::into)
+    mcms_derive::crud_find!(pool, "api_tokens", ApiToken, where: ("id", id)).map_err(Into::into)
 }
 
 /// Delete API Token by id
 pub async fn delete_by_id(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<()> {
-    axe_derive::crud_delete!(pool, "api_tokens", where: ("id", id))?;
+    mcms_derive::crud_delete!(pool, "api_tokens", where: ("id", id))?;
     Ok(())
 }
 
 /// Update last_used_at (by integer primary key)
 pub async fn touch_last_used(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<()> {
     let now = crate::utils::tz::now_utc();
-    axe_derive::crud_update!(pool, "api_tokens",
+    mcms_derive::crud_update!(pool, "api_tokens",
         bind: ["last_used_at" => now],
         where: ("id", id)
     )?;
@@ -143,7 +143,6 @@ mod tests {
                 registered_via: crate::models::user::RegisteredVia::Email,
                 role: None,
             },
-            None,
         )
         .await
         .unwrap();

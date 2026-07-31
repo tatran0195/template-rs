@@ -1,7 +1,7 @@
 //! `db` subcommand: database migration, backup.
 
-use axe::config::app::AppConfig;
-use axe::db::connection::init_pool;
+use mcms::config::app::AppConfig;
+use mcms::db::connection::init_pool;
 
 // ── migrate ──────────────────────────────────────────────────────
 
@@ -13,8 +13,8 @@ pub async fn migrate(config: &AppConfig) -> anyhow::Result<()> {
     println!("running migrations...");
     let pool = init_pool(&config.database_url, 1).await?;
 
-    axe::db::connection::ensure_schema(&pool).await?;
-    axe::db::connection::run_pending_migrations(&pool).await?;
+    mcms::db::connection::ensure_schema(&pool).await?;
+    mcms::db::connection::run_pending_migrations(&pool).await?;
 
     Ok(())
 }
@@ -33,7 +33,7 @@ pub async fn rollback(config: &AppConfig, step: &Option<u32>) -> anyhow::Result<
     println!("rolling back ({step_desc})...");
     let pool = init_pool(&config.database_url, 1).await?;
 
-    axe::db::connection::rollback_migrations(&pool, *step).await?;
+    mcms::db::connection::rollback_migrations(&pool, *step).await?;
 
     Ok(())
 }
@@ -42,7 +42,7 @@ pub async fn rollback(config: &AppConfig, step: &Option<u32>) -> anyhow::Result<
 
 /// `db backup` — backup the database.
 ///
-/// Delegates to `axe::db::backup::backup_database` which flushes WAL and copies the file.
+/// Delegates to `mcms::db::backup::backup_database` which flushes WAL and copies the file.
 pub async fn backup(config: &AppConfig, output_dir: &str, retention: usize) -> anyhow::Result<()> {
-    axe::db::backup::backup_database(config, output_dir, retention).await
+    mcms::db::backup::backup_database(config, output_dir, retention).await
 }

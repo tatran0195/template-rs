@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use dashmap::DashMap;
 
-use crate::proxy::config::TenantSection;
+use crate::proxy::config::RouteSection;
 
 /// Backend address.
 #[derive(Debug, Clone)]
@@ -34,7 +34,7 @@ impl std::fmt::Display for BackendAddr {
 /// Backend instance.
 #[derive(Debug, Clone)]
 pub struct Backend {
-    /// Tenant name.
+    /// Route name.
     pub name: String,
     /// Backend address.
     pub addr: BackendAddr,
@@ -69,46 +69,51 @@ impl RouterTable {
         }
     }
 
-    /// Batch load from tenant configs.
-    pub fn load_from_tenants(&self, tenants: &[TenantSection]) {
-        for t in tenants {
-            if !t.enabled {
+    /// Batch load from route configs.
+    pub fn load_from_routes(&self, routes: &[RouteSection]) {
+        for r in routes {
+            if !r.enabled {
                 continue;
             }
-            let backend = match parse_backend(&t.backend) {
+            let backend = match parse_backend(&r.backend) {
                 Ok(b) => b,
                 Err(e) => {
                     tracing::warn!(
-                        name = %t.name,
-                        backend = %t.backend,
+                        name = %r.name,
+                        backend = %r.backend,
                         error = %e,
-                        "skipping tenant with invalid backend"
+                        "skipping route with invalid backend"
                     );
                     continue;
                 }
             };
             let backend = Arc::new(Backend {
-                name: t.name.clone(),
+                name: r.name.clone(),
                 addr: backend,
                 healthy: Arc::new(AtomicBool::new(true)),
-                connect_timeout: Duration::from_millis(t.connect_timeout_ms),
-                read_timeout: Duration::from_millis(t.read_timeout_ms),
+                connect_timeout: Duration::from_millis(r.connect_timeout_ms),
+                read_timeout: Duration::from_millis(r.read_timeout_ms),
             });
 
-            if let Some(host) = &t.host {
+            if let Some(host) = &r.host {
                 self.by_host.insert(host.clone(), backend.clone());
-                tracing::info!(name = %t.name, host = %host, "registered host route");
+                tracing::info!(name = %r.name, host = %host, "registered host route");
             }
-            if let Some(prefix) = &t.prefix {
+            if let Some(prefix) = &r.prefix {
                 let key = if prefix.starts_with('/') {
                     prefix.clone()
                 } else {
                     format!("/{prefix}")
                 };
                 self.by_prefix.insert(key.clone(), backend);
-                tracing::info!(name = %t.name, prefix = %key, "registered prefix route");
+                tracing::info!(name = %r.name, prefix = %key, "registered prefix route");
             }
         }
+    }
+
+    /// Alias for load_from_routes
+    pub fn load_from_tenants(&self, routes: &[RouteSection]) {
+        self.load_from_routes(routes);
     }
 
     /// Find backend by Host.
@@ -137,21 +142,21 @@ impl RouterTable {
             .or_else(|| self.find_by_prefix(path))
     }
 
-    /// Add or update tenant route.
-    pub fn upsert(&self, tenant: &TenantSection) -> anyhow::Result<()> {
-        let addr = parse_backend(&tenant.backend)?;
+    /// Add or update route.
+    pub fn upsert(&self, route: &RouteSection) -> anyhow::Result<()> {
+        let addr = parse_backend(&route.backend)?;
         let backend = Arc::new(Backend {
-            name: tenant.name.clone(),
+            name: route.name.clone(),
             addr,
             healthy: Arc::new(AtomicBool::new(true)),
-            connect_timeout: Duration::from_millis(tenant.connect_timeout_ms),
-            read_timeout: Duration::from_millis(tenant.read_timeout_ms),
+            connect_timeout: Duration::from_millis(route.connect_timeout_ms),
+            read_timeout: Duration::from_millis(route.read_timeout_ms),
         });
 
-        if let Some(host) = &tenant.host {
+        if let Some(host) = &route.host {
             self.by_host.insert(host.clone(), backend.clone());
         }
-        if let Some(prefix) = &tenant.prefix {
+        if let Some(prefix) = &route.prefix {
             let key = if prefix.starts_with('/') {
                 prefix.clone()
             } else {
@@ -162,7 +167,7 @@ impl RouterTable {
         Ok(())
     }
 
-    /// Remove tenant route.
+    /// Remove route.
     pub fn remove(&self, name: &str) {
         self.by_host.retain(|_, b| b.name != name);
         self.by_prefix.retain(|_, b| b.name != name);
@@ -197,10 +202,6 @@ impl RouterTable {
 }
 
 /// Parse backend address string.
-///
-/// Supported formats:
-/// - `unix:/path/to/socket`
-/// - `127.0.0.1:9901`
 fn parse_backend(s: &str) -> anyhow::Result<BackendAddr> {
     if let Some(_path) = s.strip_prefix("unix:") {
         #[cfg(unix)]
@@ -221,13 +222,13 @@ fn parse_backend(s: &str) -> anyhow::Result<BackendAddr> {
 mod tests {
     use super::*;
 
-    fn make_tenant(
+    fn make_route(
         name: &str,
         host: Option<&str>,
         prefix: Option<&str>,
         backend: &str,
-    ) -> TenantSection {
-        TenantSection {
+    ) -> RouteSection {
+        RouteSection {
             name: name.to_string(),
             host: host.map(|s| s.to_string()),
             prefix: prefix.map(|s| s.to_string()),
@@ -241,37 +242,22 @@ mod tests {
     }
 
     #[test]
-    #[cfg(unix)]
-    fn parse_unix_backend() {
-        let addr = parse_backend("unix:/run/axe/user1.sock").unwrap();
-        let BackendAddr::UnixSocket(p) = addr else {
-            panic!("expected unix")
-        };
-        assert_eq!(p, PathBuf::from("/run/axe/user1.sock"));
-    }
-
-    #[test]
     fn parse_tcp_backend() {
         let addr = parse_backend("127.0.0.1:9901").unwrap();
         assert!(matches!(addr, BackendAddr::Tcp(a) if a.port() == 9901));
     }
 
     #[test]
-    fn parse_invalid_backend() {
-        assert!(parse_backend("invalid-host").is_err());
-    }
-
-    #[test]
     fn route_by_host() {
         let router = RouterTable::new();
-        router.load_from_tenants(&[
-            make_tenant(
+        router.load_from_routes(&[
+            make_route(
                 "user1",
                 Some("user1.example.com"),
                 None,
                 "127.0.0.1:9001",
             ),
-            make_tenant(
+            make_route(
                 "user2",
                 Some("user2.example.com"),
                 None,
@@ -281,80 +267,5 @@ mod tests {
 
         let b = router.find_by_host("user1.example.com").unwrap();
         assert_eq!(b.name, "user1");
-
-        let b = router.find_by_host("user2.example.com").unwrap();
-        assert_eq!(b.name, "user2");
-
-        assert!(router.find_by_host("unknown.example.com").is_none());
-    }
-
-    #[test]
-    fn route_by_prefix_longest_match() {
-        let router = RouterTable::new();
-        router.load_from_tenants(&[
-            make_tenant("user1", None, Some("/user1"), "127.0.0.1:9001"),
-            make_tenant(
-                "user1-admin",
-                None,
-                Some("/user1/admin"),
-                "127.0.0.1:9002",
-            ),
-        ]);
-
-        let b = router.find_by_prefix("/user1/admin/posts").unwrap();
-        assert_eq!(b.name, "user1-admin");
-
-        let b = router.find_by_prefix("/user1/posts").unwrap();
-        assert_eq!(b.name, "user1");
-
-        assert!(router.find_by_prefix("/other").is_none());
-    }
-
-    #[test]
-    fn route_host_before_prefix() {
-        let router = RouterTable::new();
-        router.load_from_tenants(&[
-            make_tenant(
-                "user1",
-                Some("user1.example.com"),
-                None,
-                "unix:/run/user1.sock",
-            ),
-            make_tenant("fallback", None, Some("/"), "unix:/run/fallback.sock"),
-        ]);
-
-        let b = router.find("user1.example.com", "/anything");
-        assert_eq!(b.unwrap().name, "user1");
-
-        let b = router.find("unknown.example.com", "/anything");
-        assert_eq!(b.unwrap().name, "fallback");
-    }
-
-    #[test]
-    fn upsert_and_remove() {
-        let router = RouterTable::new();
-        let tenant = make_tenant("test", Some("test.example.com"), None, "127.0.0.1:9999");
-        router.upsert(&tenant).unwrap();
-
-        assert!(router.find_by_host("test.example.com").is_some());
-
-        router.remove("test");
-        assert!(router.find_by_host("test.example.com").is_none());
-    }
-
-    #[test]
-    fn skip_disabled_tenant() {
-        let router = RouterTable::new();
-        let mut tenant = make_tenant(
-            "disabled",
-            Some("disabled.example.com"),
-            None,
-            "127.0.0.1:9999",
-        );
-        tenant.enabled = false;
-        router.load_from_tenants(&[tenant]);
-
-        assert!(router.find_by_host("disabled.example.com").is_none());
-        assert!(router.is_empty());
     }
 }

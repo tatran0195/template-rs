@@ -191,7 +191,6 @@ pub async fn setup_init(
             username: req.username,
             password: req.password,
         },
-        None,
         false,
         &state.pool,
     )
@@ -199,13 +198,12 @@ pub async fn setup_init(
 
     let uid = parse_user_id(&user.id)?;
 
-    crate::models::user::update_role(&state.pool, uid, crate::models::user::UserRole::Admin, None)
+    crate::models::user::update_role(&state.pool, uid, crate::models::user::UserRole::Admin)
         .await?;
 
     let access_token = crate::services::auth::generate_access_token_internal(
         uid,
         crate::models::user::UserRole::Admin,
-        crate::constants::DEFAULT_TENANT,
         &state.config.jwt_secret,
         state.config.jwt_access_expires,
     )?;
@@ -221,7 +219,7 @@ pub async fn setup_init(
     )
     .await?;
 
-    let admin_user = crate::models::user::find_by_id(&state.pool, uid, None)
+    let admin_user = crate::models::user::find_by_id(&state.pool, uid)
         .await?
         .ok_or_else(|| {
             AppError::Internal(anyhow::anyhow!("admin user not found after creation"))
@@ -419,8 +417,8 @@ mod tests {
     #[test]
     fn mask_db_url_sqlite() {
         assert_eq!(
-            mask_db_url("sqlite:./storage/db/axe.db?mode=rwc"),
-            "sqlite:./storage/db/axe.db?mode=rwc"
+            mask_db_url("sqlite:./storage/db/mcms.db?mode=rwc"),
+            "sqlite:./storage/db/mcms.db?mode=rwc"
         );
     }
 
@@ -488,7 +486,7 @@ mod tests {
         };
         assert_eq!(
             req.build_url("sqlite").unwrap(),
-            "sqlite:./storage/db/axe.db?mode=rwc"
+            "sqlite:./storage/db/mcms.db?mode=rwc"
         );
     }
 

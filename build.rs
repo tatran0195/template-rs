@@ -19,7 +19,6 @@ fn parse_schema() -> HashMap<String, Vec<String>> {
 
     for path in &[
         "migrations/sqlite/schema.sqlite.sql",
-        "migrations/sqlite/tenantable.sqlite.sql",
     ] {
         if let Ok(content) = fs::read_to_string(path) {
             parse_sql(&content, &mut tables);
@@ -122,7 +121,7 @@ fn generate_code(tables: &HashMap<String, Vec<String>>) -> String {
     let mut entries: Vec<String> = Vec::new();
     for (table, columns) in tables {
         for col in columns {
-            if col == "id" || col == "rowid" || col == "tenant_id" {
+            if col == "id" || col == "rowid" {
                 continue;
             }
             entries.push(format!("    (\"{table}\", \"{col}\"),"));
@@ -166,9 +165,9 @@ const fn str_eq(a: &str, b: &str) -> bool {{
 }}
 
 /// Returns `true` if the given table has the given column.
-/// `tenant_id`, `id`, and `rowid` are always accepted.
+/// `id` and `rowid` are always accepted.
 pub const fn column_exists(table: &str, column: &str) -> bool {{
-    if str_eq(column, "tenant_id") || str_eq(column, "id") || str_eq(column, "rowid") {{
+    if str_eq(column, "id") || str_eq(column, "rowid") {{
         return true;
     }}
     let mut i = 0;

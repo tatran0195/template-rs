@@ -19,7 +19,6 @@ pub mod setup;
 pub mod sse;
 pub mod stats;
 pub mod tag;
-pub mod tenant;
 pub mod user;
 
 
@@ -45,7 +44,6 @@ pub use setup::*;
 pub use sse::*;
 pub use stats::*;
 pub use tag::*;
-pub use tenant::*;
 pub use user::*;
 
 

@@ -1,6 +1,6 @@
 //! Service layer (business logic).
 //!
-//! This module contains the core business logic of axe. The service layer sits between handlers and models:
+//! This module contains the core business logic of mcms. The service layer sits between handlers and models:
 //!
 //! - Called by **handlers** with parsed request parameters.
 //! - Calls the **models** layer to perform database operations.
@@ -30,7 +30,6 @@ pub mod reusable_block;
 pub mod sms;
 pub mod stats;
 pub mod tag;
-pub mod tenant;
 pub mod user;
 
 

@@ -5,8 +5,8 @@
 
 use std::sync::Arc;
 
-use crate::plugins::bindings::axe::plugin_wit::host_api::Host;
-use crate::plugins::bindings::axe::plugin_wit::types::Host as TypesHost;
+use crate::plugins::bindings::mcms::plugin_wit::host_api::Host;
+use crate::plugins::bindings::mcms::plugin_wit::types::Host as TypesHost;
 use crate::plugins::host_common::HostContext;
 
 impl TypesHost for Arc<HostContext> {}

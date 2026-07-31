@@ -2,7 +2,7 @@ use super::*;
 
 fn admin_token() -> String {
     let id = uuid::Uuid::now_v7().to_string();
-    make_token(&id, 1, axe::models::user::UserRole::Admin)
+    make_token(&id, 1, mcms::models::user::UserRole::Admin)
 }
 
 #[tokio::test]

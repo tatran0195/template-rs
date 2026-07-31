@@ -85,7 +85,6 @@ use search::SearchEngine;
 use services::audit::AuditService;
 use services::options::OptionsService;
 use services::rbac::RbacService;
-use services::tenant::TenantService;
 use std::sync::Arc;
 use storage::Storage;
 use webhook::WebhookService;
@@ -112,15 +111,12 @@ pub struct AppState {
     pub comment_service: Arc<dyn crate::services::comment::CommentService>,
     pub user_service: Arc<dyn crate::services::user::UserService>,
 
-
-
     pub search: Arc<dyn SearchEngine>,
     pub content_type_registry: Arc<ContentTypeRegistry>,
     pub aspect_engine: Arc<crate::aspects::engine::AspectEngine>,
     pub protocol_registry: Arc<crate::protocols::ProtocolRegistry>,
     pub options: Arc<OptionsService>,
     pub rbac: Arc<RbacService>,
-    pub tenant: Arc<TenantService>,
     pub audit: Arc<AuditService>,
     pub webhook: Arc<WebhookService>,
     pub workflow: Arc<WorkflowService>,
@@ -160,10 +156,7 @@ pub async fn build_app_state(
         crate::services::user::UserServiceImpl::new(Arc::new(pool.clone())),
     );
 
-    let options_service =
-        Arc::new(OptionsService::new(Arc::new(pool.clone()), config.builtin_tenantable).await);
-
-
+    let options_service = Arc::new(OptionsService::new(Arc::new(pool.clone())).await);
 
     let reserved = config.builtins.reserved_route_segments();
     let protocol_names: Vec<&str> = protocol_registry.names();
@@ -235,7 +228,6 @@ pub async fn build_app_state(
 
     let rbac_service = Arc::new(RbacService::new(Arc::new(pool.clone())));
 
-    let tenant_service = Arc::new(TenantService::new(Arc::new(pool.clone())));
     let audit_service = Arc::new(crate::services::audit::AuditService::new(pool.clone()));
     let webhook_service = Arc::new(crate::webhook::WebhookService::new(pool.clone()));
 
@@ -248,7 +240,6 @@ pub async fn build_app_state(
     svc_builder.register(ct_registry.clone());
     svc_builder.register(options_service.clone());
     svc_builder.register(rbac_service.clone());
-    svc_builder.register(tenant_service.clone());
     svc_builder.register(audit_service.clone());
     svc_builder.register(webhook_service.clone());
     svc_builder.register(cache.clone());
@@ -268,14 +259,12 @@ pub async fn build_app_state(
         comment_service,
         user_service,
 
-
         search,
         content_type_registry: ct_registry,
         aspect_engine,
         protocol_registry,
         options: options_service,
         rbac: rbac_service,
-        tenant: tenant_service,
         audit: audit_service,
         webhook: webhook_service.clone(),
         workflow: Arc::new(WorkflowService::new(pool.clone())),
@@ -292,7 +281,6 @@ pub async fn build_app_state(
     crate::server::spawn_audit_subscriber(
         eventbus.clone(),
         state.audit.clone(),
-        state.tenant.clone(),
         shutdown_rx.clone(),
     );
     crate::server::spawn_webhook_subscriber(eventbus.clone(), state.webhook.clone(), shutdown_rx);

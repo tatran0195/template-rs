@@ -100,7 +100,7 @@ mod tests {
         engine.register(LockableAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "posts".into(),
             record: Record::new(),
             schema: None,

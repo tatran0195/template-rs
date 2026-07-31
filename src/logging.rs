@@ -1,7 +1,7 @@
 //! Logging initialization: outputs to both terminal and rolling files.
 //!
 //! Terminal uses a human-readable format (with colors), file uses JSON format
-//! (for log analysis tools). Files roll daily (format `axe_YYYY-MM-DD.log`),
+//! (for log analysis tools). Files roll daily (format `MCMS_YYYY-MM-DD.log`),
 //! with expired files cleaned up periodically via a background task.
 //!
 //! # Environment variables
@@ -85,7 +85,7 @@ impl Write for DailyRollingWriter {
 /// Initialize the logging system.
 ///
 /// - Terminal: colored, human-readable format
-/// - File: JSON format, daily rolling (`axe_YYYY-MM-DD.log`)
+/// - File: JSON format, daily rolling (`MCMS_YYYY-MM-DD.log`)
 ///
 /// Returns the file appender guard. **The caller must hold it until program exit**,
 /// otherwise file logging will stop prematurely.
@@ -133,7 +133,7 @@ pub fn init(log_dir: &str) -> Option<tracing_appender::non_blocking::WorkerGuard
 
 /// Clean up expired log files, keeping only the latest `max_files`.
 ///
-/// Sorts by filename (format `axe_YYYY-MM-DD.log`) and deletes the oldest.
+/// Sorts by filename (format `MCMS_YYYY-MM-DD.log`) and deletes the oldest.
 /// Called once at startup, and can be called periodically thereafter.
 pub fn cleanup_old_logs(log_dir: &str, max_files: usize) {
     let Ok(entries) = std::fs::read_dir(log_dir) else {
@@ -144,7 +144,7 @@ pub fn cleanup_old_logs(log_dir: &str, max_files: usize) {
         .filter_map(|e| {
             let entry = e.ok()?;
             let name = entry.file_name().to_string_lossy().into_owned();
-            if name.starts_with("axe_") && name.ends_with(".log") {
+            if name.starts_with("MCMS_") && name.ends_with(".log") {
                 Some(name)
             } else {
                 None

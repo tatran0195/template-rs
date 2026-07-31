@@ -27,7 +27,6 @@ pub struct SaveContext {
     pub user_id: Option<String>,
     pub user_int_id: Option<i64>,
     pub user_role: Option<String>,
-    pub tenant_id: Option<String>,
 }
 
 impl SaveContext {
@@ -36,7 +35,6 @@ impl SaveContext {
             user_id: auth.user_id().map(|id| id.to_string()),
             user_int_id: auth.user_id(),
             user_role: auth.is_authenticated().then(|| auth.role().to_string()),
-            tenant_id: auth.tenant_id().map(|s| s.to_string()),
         }
     }
 }
@@ -51,7 +49,6 @@ pub struct ContentQuery {
     pub status: Option<String>,
     pub search: Option<String>,
     pub fields: Option<Vec<String>>,
-    pub tenant_id: Option<String>,
     pub include: Option<Vec<String>>,
     pub skip_total: bool,
     /// Additional WHERE clause compiled from API Rules
@@ -77,14 +74,6 @@ impl ContentRepository {
         Self { pool }
     }
 
-    fn resolve_tenant(&self, ct: &ContentTypeSchema, tenant_id: Option<&str>) -> Option<String> {
-        if ct.implements_protocol("tenantable") {
-            Some(crate::db::tenant::resolve_tenant(tenant_id).to_string())
-        } else {
-            None
-        }
-    }
-
     /// Paginated query
     pub async fn find(
         &self,
@@ -104,15 +93,6 @@ impl ContentRepository {
         }
         if ct.query_filters().is_empty() && ct.is_soft_delete() {
             where_clauses.push(format!("{} IS NULL", COL_DELETED_AT));
-        }
-        let tid = self.resolve_tenant(ct, query.tenant_id.as_deref());
-        if let Some(ref tid) = tid {
-            where_clauses.push(format!(
-                "{COL_TENANT_ID} = {}",
-                crate::db::Driver::ph(param_idx)
-            ));
-            params.push(json!(tid));
-            param_idx += 1;
         }
 
         for (key, val) in &query.filters {
@@ -215,31 +195,19 @@ impl ContentRepository {
         &self,
         ct: &ContentTypeSchema,
         id: SnowflakeId,
-        tenant_id: Option<&str>,
         include_private: bool,
     ) -> Result<Option<Value>, AppError> {
         let columns = ct.column_names(None, include_private);
         let select_cols = columns.join(", ");
-        let tid = self.resolve_tenant(ct, tenant_id);
 
-        let mut where_parts = vec![format!("{COL_ID} = {}", crate::db::Driver::ph(1))];
-        let mut idx = 2;
-        if tid.is_some() {
-            where_parts.push(format!("{COL_TENANT_ID} = {}", crate::db::Driver::ph(idx)));
-            idx += 1;
-        }
-
-        let _ = idx;
+        let where_parts = vec![format!("{COL_ID} = {}", crate::db::Driver::ph(1))];
         let sql = format!(
             "SELECT {select_cols} FROM {} WHERE {}",
             ct.table,
             where_parts.join(" AND ")
         );
 
-        let mut q = sqlx::query(&sql).bind(id);
-        if let Some(ref tid) = tid {
-            q = q.bind(tid);
-        }
+        let q = sqlx::query(&sql).bind(id);
 
         let row = q.fetch_optional(&self.pool).await?;
 
@@ -257,17 +225,8 @@ impl ContentRepository {
     }
 
     /// Ensure the Single Type's unique record exists (auto-create if missing), returns the record
-    pub async fn ensure_single(
-        &self,
-        ct: &ContentTypeSchema,
-        tenant_id: Option<&str>,
-    ) -> Result<Value, AppError> {
-        let tid = self.resolve_tenant(ct, tenant_id);
-
-        let mut where_parts = Vec::new();
-        if tid.is_some() {
-            where_parts.push(format!("{COL_TENANT_ID} = {}", crate::db::Driver::ph(1)));
-        }
+    pub async fn ensure_single(&self, ct: &ContentTypeSchema) -> Result<Value, AppError> {
+        let where_parts: Vec<String> = Vec::new();
 
         let columns = ct.column_names(None, true);
         let select_cols = columns.join(", ");
@@ -282,10 +241,7 @@ impl ContentRepository {
             )
         };
 
-        let mut q = sqlx::query(&sql);
-        if let Some(ref tid) = tid {
-            q = q.bind(tid);
-        }
+        let q = sqlx::query(&sql);
 
         let row = q.fetch_optional(&self.pool).await?;
 
@@ -310,7 +266,6 @@ impl ContentRepository {
             json!({
                 "__single": true
             }),
-            tenant_id,
             &save_ctx,
         )
         .await
@@ -323,12 +278,10 @@ impl ContentRepository {
         ct: &ContentTypeSchema,
         slug: &str,
         _status: Option<&str>,
-        tenant_id: Option<&str>,
         include_private: bool,
     ) -> Result<Option<Value>, AppError> {
         let columns = ct.column_names(None, include_private);
         let select_cols = columns.join(", ");
-        let tid = self.resolve_tenant(ct, tenant_id);
 
         let mut where_parts = vec![format!("slug = {}", crate::db::Driver::ph(1))];
 
@@ -339,22 +292,16 @@ impl ContentRepository {
             where_parts.push(format!("{} IS NULL", COL_DELETED_AT));
         }
 
-        if tid.is_some() {
-            where_parts.push(format!("{COL_TENANT_ID} = {}", crate::db::Driver::ph(2)));
-        }
-
         let sql = format!(
             "SELECT {select_cols} FROM {} WHERE {}",
             ct.table,
             where_parts.join(" AND ")
         );
 
-        let mut q = sqlx::query(&sql).bind(slug);
-        if let Some(ref tid) = tid {
-            q = q.bind(tid);
-        }
-
-        let row = q.fetch_optional(&self.pool).await?;
+        let row = sqlx::query(&sql)
+            .bind(slug)
+            .fetch_optional(&self.pool)
+            .await?;
 
         let id_cols = ct.id_column_set();
         let mut result = row.map(|r| row_to_value(&r, &columns, &id_cols));
@@ -374,7 +321,6 @@ impl ContentRepository {
         &self,
         ct: &ContentTypeSchema,
         mut data: Value,
-        tenant_id: Option<&str>,
         _save_ctx: &SaveContext,
     ) -> Result<Value, AppError> {
         let _guard = crate::db::connection::acquire_write().await;
@@ -389,8 +335,6 @@ impl ContentRepository {
 
         obj.remove(COL_ID);
 
-        let tid = self.resolve_tenant(ct, tenant_id);
-
         let mut cols = Vec::new();
         let mut placeholders = Vec::new();
         let mut values: Vec<String> = Vec::new();
@@ -400,13 +344,6 @@ impl ContentRepository {
         placeholders.push(crate::db::Driver::ph(idx));
         idx += 1;
         values.push(new_id.to_string());
-
-        if let Some(ref tid) = tid {
-            cols.push(COL_TENANT_ID.to_string());
-            placeholders.push(crate::db::Driver::ph(idx));
-            idx += 1;
-            values.push(tid.clone());
-        }
 
         let mut fk_relation_map: std::collections::HashMap<String, (String, String)> =
             std::collections::HashMap::new();
@@ -458,8 +395,7 @@ impl ContentRepository {
         let otm_field_names: Vec<&str> = otm_fields.iter().map(|(n, ..)| n.as_str()).collect();
 
         for (key, val) in obj.iter() {
-            if key == COL_TENANT_ID
-                || junction_field_names.contains(&key.as_str())
+            if junction_field_names.contains(&key.as_str())
                 || otm_field_names.contains(&key.as_str())
             {
                 continue;
@@ -532,8 +468,7 @@ impl ContentRepository {
                 continue;
             }
             let parsed_ids: Vec<i64> = ids.iter().filter_map(|s| s.parse().ok()).collect();
-            let int_ids =
-                axe_derive::crud_resolve_ids!(&self.pool, target_table, &parsed_ids)?;
+            let int_ids = mcms_derive::crud_resolve_ids!(&self.pool, target_table, &parsed_ids)?;
             for target_int_id in int_ids {
                 let jsql = crate::db::Driver::insert_ignore_sql(
                     through_table,
@@ -565,8 +500,7 @@ impl ContentRepository {
                 continue;
             }
             let parsed_ids: Vec<i64> = ids.iter().filter_map(|s| s.parse().ok()).collect();
-            let int_ids =
-                axe_derive::crud_resolve_ids!(&self.pool, target_table, &parsed_ids)?;
+            let int_ids = mcms_derive::crud_resolve_ids!(&self.pool, target_table, &parsed_ids)?;
             let usql = format!(
                 "UPDATE {target_table} SET {fk_col} = {} WHERE {COL_ID} = {}",
                 crate::db::Driver::ph(1),
@@ -611,11 +545,10 @@ impl ContentRepository {
         ct: &ContentTypeSchema,
         id: SnowflakeId,
         mut data: Value,
-        tenant_id: Option<&str>,
         _save_ctx: &SaveContext,
     ) -> Result<Value, AppError> {
         if ct.declaration().snapshot_before_update
-            && let Some(current) = self.find_by_id(ct, id, tenant_id, true).await?
+            && let Some(current) = self.find_by_id(ct, id, true).await?
             && let Err(e) = crate::models::content_revision::create_revision(
                 &self.pool,
                 &ct.singular,
@@ -638,8 +571,6 @@ impl ContentRepository {
             .ok_or_else(|| AppError::BadRequest("request body must be a JSON object".into()))?;
 
         obj.remove(COL_ID);
-
-        let tid = self.resolve_tenant(ct, tenant_id);
 
         let mut set_clauses = Vec::new();
         let mut values: Vec<String> = Vec::new();
@@ -750,12 +681,6 @@ impl ContentRepository {
             let mut where_parts = vec![format!("{COL_ID} = {}", crate::db::Driver::ph(idx))];
             idx += 1;
 
-            if let Some(ref tid) = tid {
-                where_parts.push(format!("{COL_TENANT_ID} = {}", crate::db::Driver::ph(idx)));
-                idx += 1;
-                values.push(tid.clone());
-            }
-
             if let Some(ref lock_col) = decl.lock_column
                 && let Some(current_version) = obj.get(lock_col).and_then(|v| v.as_i64())
             {
@@ -823,8 +748,7 @@ impl ContentRepository {
                 continue;
             }
             let parsed_ids: Vec<i64> = ids.iter().filter_map(|s| s.parse().ok()).collect();
-            let int_ids =
-                axe_derive::crud_resolve_ids!(&self.pool, target_table, &parsed_ids)?;
+            let int_ids = mcms_derive::crud_resolve_ids!(&self.pool, target_table, &parsed_ids)?;
             for target_int_id in int_ids {
                 let jsql = crate::db::Driver::insert_ignore_sql(
                     through_table,
@@ -868,8 +792,7 @@ impl ContentRepository {
                 continue;
             }
             let parsed_ids: Vec<i64> = ids.iter().filter_map(|s| s.parse().ok()).collect();
-            let int_ids =
-                axe_derive::crud_resolve_ids!(&self.pool, target_table, &parsed_ids)?;
+            let int_ids = mcms_derive::crud_resolve_ids!(&self.pool, target_table, &parsed_ids)?;
             let usql = format!(
                 "UPDATE {target_table} SET {fk_col} = {} WHERE {COL_ID} = {}",
                 crate::db::Driver::ph(1),
@@ -888,7 +811,7 @@ impl ContentRepository {
             .await
             .map_err(|e| AppError::Internal(anyhow::Error::from(e).context("commit failed")))?;
 
-        self.find_by_id(ct, id, tenant_id, true)
+        self.find_by_id(ct, id, true)
             .await
             .transpose()
             .ok_or_else(|| AppError::Internal(anyhow::anyhow!("updated record not found")))?
@@ -902,12 +825,9 @@ impl ContentRepository {
         &self,
         ct: &ContentTypeSchema,
         id: SnowflakeId,
-        tenant_id: Option<&str>,
         protocol_registry: &crate::protocols::ProtocolRegistry,
         ct_registry: &crate::content_type::ContentTypeRegistry,
     ) -> Result<(), AppError> {
-        let tid = self.resolve_tenant(ct, tenant_id);
-
         let mut source_junctions: Vec<(String, String)> = Vec::new();
         for field in &ct.fields {
             if field.field_type != FieldType::Relation {
@@ -959,15 +879,9 @@ impl ContentRepository {
         let has_cleanup = !source_junctions.is_empty() || !reverse_junctions.is_empty();
 
         let mut idx = 1;
-        let mut where_parts = vec![format!("{COL_ID} = {}", crate::db::Driver::ph(idx))];
+        let where_parts = vec![format!("{COL_ID} = {}", crate::db::Driver::ph(idx))];
         idx += 1;
-        let mut values: Vec<String> = Vec::new();
-        if let Some(ref tid) = tid {
-            where_parts.push(format!("{COL_TENANT_ID} = {}", crate::db::Driver::ph(idx)));
-            idx += 1;
-            values.push(tid.clone());
-        }
-
+        let values: Vec<String> = Vec::new();
         if has_cleanup {
             let _guard = crate::db::connection::acquire_write().await;
             let mut tx = self.pool.begin().await?;
@@ -1128,10 +1042,7 @@ impl ContentRepository {
         id: SnowflakeId,
         deleted_at: &str,
         deleted_by: Option<i64>,
-        tenant_id: Option<&str>,
     ) -> Result<(), AppError> {
-        let tid = self.resolve_tenant(ct, tenant_id);
-
         let mut idx = 1;
         let mut set_parts = vec![format!(
             "{} = {}",
@@ -1149,12 +1060,7 @@ impl ContentRepository {
             idx += 1;
         }
 
-        let mut where_parts = vec![format!("{COL_ID} = {}", crate::db::Driver::ph(idx))];
-        idx += 1;
-
-        if tid.is_some() {
-            where_parts.push(format!("{COL_TENANT_ID} = {}", crate::db::Driver::ph(idx)));
-        }
+        let where_parts = vec![format!("{COL_ID} = {}", crate::db::Driver::ph(idx))];
 
         let sql = format!(
             "UPDATE {} SET {} WHERE {}",
@@ -1167,9 +1073,6 @@ impl ContentRepository {
         query = query.bind(deleted_at);
         bind_optional!(query, deleted_by);
         query = query.bind(id);
-        if let Some(ref tid) = tid {
-            query = query.bind(tid.as_str());
-        }
 
         query.execute(&self.pool).await.map_err(|e| {
             AppError::Internal(anyhow::Error::from(e).context("soft_delete failed"))
@@ -1512,7 +1415,7 @@ pub(crate) async fn find_existing_id(
     target_table: &str,
     id: SnowflakeId,
 ) -> Result<Option<i64>, AppError> {
-    Ok(axe_derive::crud_resolve_id!(pool, target_table, *id)?)
+    Ok(mcms_derive::crud_resolve_id!(pool, target_table, *id)?)
 }
 
 /// Generate SQL and column index for querying table column names
@@ -1541,7 +1444,6 @@ mod tests {
         reg.register(crate::protocols::sortable::SortableProtocol);
         reg.register(crate::protocols::expirable::ExpirableProtocol);
         reg.register(crate::protocols::nestable::NestableProtocol);
-        reg.register(crate::protocols::tenantable::TenantableProtocol);
         reg
     }
 
@@ -1816,7 +1718,6 @@ type = "integer"
         let auth = crate::middleware::auth::AuthUser::from_parts(
             Some(42),
             crate::models::user::UserRole::Admin,
-            Some("t1".to_string()),
         );
         let ctx = SaveContext::from_auth(&auth);
         assert_eq!(ctx.user_id, Some("42".to_string()));
@@ -1825,6 +1726,5 @@ type = "integer"
             ctx.user_role,
             Some(crate::models::user::UserRole::Admin.to_string())
         );
-        assert_eq!(ctx.tenant_id, Some("t1".to_string()));
     }
 }

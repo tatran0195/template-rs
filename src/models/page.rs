@@ -6,7 +6,6 @@ use ts_rs::TS;
 
 use crate::commands::{CreatePageCmd, UpdatePageCmd};
 
-use crate::db::tenant::tenant_filter_ph;
 use crate::db::{DbDriver, Driver};
 use crate::errors::app_error::{AppError, AppResult};
 use crate::models::post::CommentOpenStatus;
@@ -24,7 +23,6 @@ define_enum!(
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct Page {
     pub id: SnowflakeId,
-    pub tenant_id: Option<String>,
     pub title: String,
     pub slug: String,
     pub content: Option<String>,
@@ -310,34 +308,24 @@ pub struct ColumnDef {
     pub blocks: Vec<PageBlock>,
 }
 
-pub async fn find_by_slug(
-    pool: &crate::db::Pool,
-    slug: &str,
-    tenant_id: Option<&str>,
-) -> AppResult<Option<Page>> {
-    Ok(axe_derive::crud_find!(pool, "pages", Page, where: ("slug", slug), tenant: tenant_id)?)
+pub async fn find_by_slug(pool: &crate::db::Pool, slug: &str) -> AppResult<Option<Page>> {
+    Ok(mcms_derive::crud_find!(pool, "pages", Page, where: ("slug", slug))?)
 }
 
-pub async fn find_by_id(
-    pool: &crate::db::Pool,
-    id: SnowflakeId,
-    tenant_id: Option<&str>,
-) -> AppResult<Option<Page>> {
-    Ok(axe_derive::crud_find!(pool, "pages", Page, where: ("id", id), tenant: tenant_id)?)
+pub async fn find_by_id(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<Option<Page>> {
+    Ok(mcms_derive::crud_find!(pool, "pages", Page, where: ("id", id))?)
 }
 
 pub async fn list_published(
     pool: &crate::db::Pool,
     page: i64,
     page_size: i64,
-    tenant_id: Option<&str>,
 ) -> AppResult<(Vec<Page>, i64)> {
-    let result = axe_derive::crud_query_paged!(
+    let result = mcms_derive::crud_query_paged!(
         pool, Page,
         table: "pages",
         where: ("status", PageStatus::Published),
         order_by: "sort_order ASC, created_at DESC",
-        tenant: tenant_id,
         page: page,
         page_size: page_size
     );
@@ -349,25 +337,19 @@ pub async fn list_all(
     page: i64,
     page_size: i64,
     status: Option<PageStatus>,
-    tenant_id: Option<&str>,
 ) -> AppResult<(Vec<Page>, i64)> {
-    let result = axe_derive::crud_query_paged!(
+    let result = mcms_derive::crud_query_paged!(
         pool, Page,
         table: "pages",
         where: ["status" => status],
         order_by: "sort_order ASC, created_at DESC",
-        tenant: tenant_id,
         page: page,
         page_size: page_size
     );
     Ok(result)
 }
 
-pub async fn create(
-    pool: &crate::db::Pool,
-    cmd: &CreatePageCmd,
-    tenant_id: Option<&str>,
-) -> AppResult<Page> {
+pub async fn create(pool: &crate::db::Pool, cmd: &CreatePageCmd) -> AppResult<Page> {
     let (id, now) = (
         crate::utils::id::new_snowflake_id(),
         crate::utils::tz::now_utc(),
@@ -378,7 +360,7 @@ pub async fn create(
         None
     };
 
-    axe_derive::crud_insert!(
+    mcms_derive::crud_insert!(
         pool,
         "pages",
         [
@@ -400,21 +382,16 @@ pub async fn create(
             "published_at" => published_at,
             "created_at" => now,
             "updated_at" => now
-        ],
-        tenant: tenant_id
+        ]
     )?;
 
-    find_by_id(pool, id, tenant_id)
+    find_by_id(pool, id)
         .await?
         .ok_or_else(|| AppError::not_found("page"))
 }
 
-pub async fn update(
-    pool: &crate::db::Pool,
-    cmd: &UpdatePageCmd,
-    tenant_id: Option<&str>,
-) -> AppResult<Page> {
-    axe_derive::check_schema!(
+pub async fn update(pool: &crate::db::Pool, cmd: &UpdatePageCmd) -> AppResult<Page> {
+    mcms_derive::check_schema!(
         "pages",
         "updated_by",
         "title",
@@ -502,7 +479,7 @@ pub async fn update(
 
     idx += 1;
     let id_ph = Driver::ph(idx);
-    let tf = tenant_filter_ph(tenant_id, idx + 1);
+    let tf = "";
     let sql = format!(
         "UPDATE pages SET {} WHERE id = {id_ph}{tf}",
         sets.join(", ")
@@ -552,25 +529,17 @@ pub async fn update(
     }
     q = q.bind(now);
     q = q.bind(cmd.id);
-    if let Some(tid) = tenant_id {
-        q = q.bind(tid);
-    }
 
     let result = q.execute(pool).await?;
     AppError::expect_affected(&result, "page")?;
 
-    find_by_id(pool, cmd.id, tenant_id)
+    find_by_id(pool, cmd.id)
         .await?
         .ok_or_else(|| AppError::not_found("page"))
 }
 
-pub async fn delete(
-    pool: &crate::db::Pool,
-    id: SnowflakeId,
-    tenant_id: Option<&str>,
-) -> AppResult<()> {
-    let result =
-        axe_derive::crud_delete!(pool, "pages", where: ("id", id), tenant: tenant_id)?;
+pub async fn delete(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<()> {
+    let result = mcms_derive::crud_delete!(pool, "pages", where: ("id", id))?;
     AppError::expect_affected(&result, "page")
 }
 
@@ -579,9 +548,8 @@ pub async fn update_status(
     id: SnowflakeId,
     status: PageStatus,
     updated_by: Option<i64>,
-    tenant_id: Option<&str>,
 ) -> AppResult<Page> {
-    axe_derive::check_schema!(
+    mcms_derive::check_schema!(
         "pages",
         "status",
         "updated_by",
@@ -615,7 +583,7 @@ pub async fn update_status(
 
     idx += 1;
     let id_ph = Driver::ph(idx);
-    let tf = tenant_filter_ph(tenant_id, idx + 1);
+    let tf = "";
 
     let sql = format!(
         "UPDATE pages SET status = {status_ph}{updated_by_clause}{published_at_clause}{updated_at_clause} WHERE id = {id_ph}{tf}"
@@ -629,51 +597,39 @@ pub async fn update_status(
     }
     q = q.bind(now);
     q = q.bind(id);
-    if let Some(tid) = tenant_id {
-        q = q.bind(tid);
-    }
     let result = q.execute(pool).await?;
     AppError::expect_affected(&result, "page")?;
 
-    find_by_id(pool, id, tenant_id)
+    find_by_id(pool, id)
         .await?
         .ok_or_else(|| AppError::not_found("page"))
 }
 
-pub async fn reorder(
-    pool: &crate::db::Pool,
-    items: &[(i64, i64)],
-    tenant_id: Option<&str>,
-) -> AppResult<()> {
+pub async fn reorder(pool: &crate::db::Pool, items: &[(i64, i64)]) -> AppResult<()> {
     let now = crate::utils::tz::now_utc();
 
     for (id, sort_order) in items {
-        axe_derive::crud_update!(
+        mcms_derive::crud_update!(
             pool, "pages",
             bind: ["sort_order" => sort_order, "updated_at" => now],
-            where: ("id", id),
-            tenant: tenant_id
+            where: ("id", id)
         )?;
     }
     Ok(())
 }
 
-pub async fn list_sitemap(
-    pool: &crate::db::Pool,
-    tenant_id: Option<&str>,
-) -> AppResult<Vec<(String, Option<String>)>> {
-    let filter = tenant_filter_ph(tenant_id, 2);
+pub async fn list_sitemap(pool: &crate::db::Pool) -> AppResult<Vec<(String, Option<String>)>> {
+    let filter = "";
     let sql = format!(
         "SELECT slug, updated_at FROM pages WHERE status = {}{filter} ORDER BY sort_order ASC",
         Driver::ph(1)
     );
-    Ok(axe_derive::crud_query!(
+    Ok(mcms_derive::crud_query!(
         pool,
         (String, Option<String>),
         &sql,
         [PageStatus::Published],
-        fetch_all,
-        tenant: tenant_id
+        fetch_all
     )?)
 }
 
@@ -722,7 +678,6 @@ mod tests {
                 updated_by: None,
                 cover_image: None,
             },
-            None,
         )
         .await
         .unwrap()
@@ -734,7 +689,7 @@ mod tests {
         let uid = create_user(&pool).await;
         let page = create_test_page(&pool, "About Us", "about", "published", uid).await;
 
-        let found = find_by_slug(&pool, "about", None).await.unwrap();
+        let found = find_by_slug(&pool, "about").await.unwrap();
         assert!(found.is_some());
         assert_eq!(found.unwrap().id, page.id);
     }
@@ -746,7 +701,7 @@ mod tests {
         create_test_page(&pool, "Published Page", "pub", "published", uid).await;
         create_test_page(&pool, "Draft Page", "draft", "draft", uid).await;
 
-        let (items, total) = list_published(&pool, 1, 10, None).await.unwrap();
+        let (items, total) = list_published(&pool, 1, 10).await.unwrap();
         assert_eq!(total, 1);
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].slug, "pub");
@@ -776,7 +731,6 @@ mod tests {
                 cover_image: None,
                 updated_by: None,
             },
-            None,
         )
         .await
         .unwrap();
@@ -790,8 +744,8 @@ mod tests {
         let uid = create_user(&pool).await;
         let page = create_test_page(&pool, "To Delete", "delete-me", "published", uid).await;
 
-        delete(&pool, page.id, None).await.unwrap();
-        let found = find_by_slug(&pool, "delete-me", None).await.unwrap();
+        delete(&pool, page.id).await.unwrap();
+        let found = find_by_slug(&pool, "delete-me").await.unwrap();
         assert!(found.is_none());
     }
 
@@ -803,7 +757,7 @@ mod tests {
 
         assert_eq!(page.status, PageStatus::Draft);
 
-        let updated = update_status(&pool, page.id, PageStatus::Published, None, None)
+        let updated = update_status(&pool, page.id, PageStatus::Published, None)
             .await
             .unwrap();
         assert_eq!(updated.status, PageStatus::Published);

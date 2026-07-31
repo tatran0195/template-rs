@@ -1,6 +1,6 @@
 //! Data model layer (models)
 //!
-//! This module defines all data structures for axe and the raw SQL queries executed via sqlx.
+//! This module defines all data structures for mcms and the raw SQL queries executed via sqlx.
 //!
 //! Each sub-module corresponds to a domain entity, containing:
 //! - Database row models (full fields, directly mapped to database tables)
@@ -41,7 +41,6 @@ pub mod reusable_block;
 pub mod sms_code;
 pub mod tag;
 pub mod tagging;
-pub mod tenant;
 pub mod user;
 
 pub mod user_credential;
@@ -74,8 +73,6 @@ export_types!(
     post::TagBrief,
     rbac::Role,
     rbac::Permission,
-    tenant::Tenant,
-    tenant::TenantStatus,
     api_token::ApiTokenListItem,
     audit_log::AuditEntry,
     content_revision::ContentRevision,

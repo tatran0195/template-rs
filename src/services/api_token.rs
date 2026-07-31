@@ -38,7 +38,6 @@ fn scope_to_role(scopes: &[String]) -> String {
 struct CachedTokenAuth {
     user_id: SnowflakeId,
     role: String,
-    tenant_id: Option<String>,
     expires_at: Option<Timestamp>,
 }
 
@@ -141,7 +140,7 @@ pub async fn list_tokens(
     auth: &AuthUser,
 ) -> AppResult<Vec<api_token::ApiTokenListItem>> {
     let user_id = auth.ensure_snowflake_user_id()?;
-    let user = crate::models::user::find_by_id(pool, user_id, None)
+    let user = crate::models::user::find_by_id(pool, user_id)
         .await?
         .ok_or(AppError::Unauthorized)?;
     api_token::list_by_user(pool, user.id).await
@@ -159,7 +158,7 @@ pub async fn delete_token(
     let token = api_token::find_by_id(pool, parse_id(token_id)?)
         .await?
         .ok_or_else(|| AppError::NotFound("api_token".into()))?;
-    let user = crate::models::user::find_by_id(pool, user_id, None)
+    let user = crate::models::user::find_by_id(pool, user_id)
         .await?
         .ok_or(AppError::Unauthorized)?;
     if !is_admin && token.user_id != user.id {
@@ -182,7 +181,7 @@ pub async fn verify_api_token(
     pool: &crate::db::Pool,
     cache: &dyn CacheStore,
     plain: &str,
-) -> AppResult<(i64, String, Option<String>)> {
+) -> AppResult<(i64, String)> {
     let hash = hash_token(plain);
     let cache_key = format!("{CACHE_PREFIX}{hash}");
 
@@ -195,7 +194,7 @@ pub async fn verify_api_token(
             let _ = cache.delete(&cache_key).await;
             return Err(AppError::Unauthorized);
         }
-        return Ok((*auth.user_id, auth.role, auth.tenant_id));
+        return Ok((*auth.user_id, auth.role));
     }
 
     let token = api_token::find_by_hash(pool, &hash)
@@ -214,7 +213,7 @@ pub async fn verify_api_token(
         return Err(AppError::Unauthorized);
     }
 
-    let user = crate::models::user::find_by_id(pool, token.user_id, None)
+    let user = crate::models::user::find_by_id(pool, token.user_id)
         .await?
         .ok_or(AppError::Unauthorized)?;
 
@@ -228,7 +227,6 @@ pub async fn verify_api_token(
     let cached_auth = CachedTokenAuth {
         user_id: user.id,
         role: role.clone(),
-        tenant_id: user.tenant_id.clone(),
         expires_at: token.expires_at,
     };
     if let Ok(json) = serde_json::to_string(&cached_auth)
@@ -237,7 +235,7 @@ pub async fn verify_api_token(
         tracing::debug!("api_token cache set: {e}");
     }
 
-    Ok((*user.id, role, user.tenant_id))
+    Ok((*user.id, role))
 }
 
 #[cfg(test)]
@@ -263,11 +261,10 @@ mod tests {
                 registered_via: crate::models::user::RegisteredVia::Email,
                 role: None,
             },
-            None,
         )
         .await
         .unwrap();
-        crate::models::user::update_role(pool, user.id, role, None)
+        crate::models::user::update_role(pool, user.id, role)
             .await
             .unwrap()
     }
@@ -337,11 +334,8 @@ mod tests {
     #[tokio::test]
     async fn create_token_rejects_empty_name() {
         let pool = crate::db::Pool::connect("sqlite::memory:").await.unwrap();
-        let auth = crate::middleware::auth::AuthUser::new_test(
-            1,
-            crate::models::user::UserRole::Author,
-            "default",
-        );
+        let auth =
+            crate::middleware::auth::AuthUser::new_test(1, crate::models::user::UserRole::Author);
         let msg = create_token(&pool, &auth, "   ", vec!["read".into()], None)
             .await
             .unwrap_err()
@@ -352,11 +346,8 @@ mod tests {
     #[tokio::test]
     async fn create_token_rejects_empty_scopes() {
         let pool = crate::db::Pool::connect("sqlite::memory:").await.unwrap();
-        let auth = crate::middleware::auth::AuthUser::new_test(
-            1,
-            crate::models::user::UserRole::Author,
-            "default",
-        );
+        let auth =
+            crate::middleware::auth::AuthUser::new_test(1, crate::models::user::UserRole::Author);
         let msg = create_token(&pool, &auth, "Test", vec![], None)
             .await
             .unwrap_err()
@@ -367,11 +358,8 @@ mod tests {
     #[tokio::test]
     async fn create_token_rejects_invalid_scope() {
         let pool = crate::db::Pool::connect("sqlite::memory:").await.unwrap();
-        let auth = crate::middleware::auth::AuthUser::new_test(
-            1,
-            crate::models::user::UserRole::Author,
-            "default",
-        );
+        let auth =
+            crate::middleware::auth::AuthUser::new_test(1, crate::models::user::UserRole::Author);
         let msg = create_token(&pool, &auth, "Test", vec!["superuser".into()], None)
             .await
             .unwrap_err()
@@ -382,11 +370,8 @@ mod tests {
     #[tokio::test]
     async fn create_token_rejects_mixed_valid_invalid_scope() {
         let pool = crate::db::Pool::connect("sqlite::memory:").await.unwrap();
-        let auth = crate::middleware::auth::AuthUser::new_test(
-            1,
-            crate::models::user::UserRole::Author,
-            "default",
-        );
+        let auth =
+            crate::middleware::auth::AuthUser::new_test(1, crate::models::user::UserRole::Author);
         let msg = create_token(
             &pool,
             &auth,
@@ -407,7 +392,6 @@ mod tests {
         let auth = crate::middleware::auth::AuthUser::from_parts(
             Some(*user.id),
             crate::models::user::UserRole::Author,
-            Some("default".to_string()),
         );
         let result = create_token(
             &pool,
@@ -472,11 +456,9 @@ mod tests {
         .await
         .unwrap();
         let cache = test_cache();
-        let (uid, role, tenant_id) = verify_api_token(&pool, &*cache, plain).await.unwrap();
+        let (uid, role) = verify_api_token(&pool, &*cache, plain).await.unwrap();
         assert_eq!(uid, *user.id);
         assert_eq!(role, "admin");
-        assert_eq!(tenant_id, Some("default".to_string()));
-        assert_eq!(tenant_id, Some("default".to_string()));
     }
 
     #[tokio::test]
@@ -534,7 +516,6 @@ mod tests {
         let auth = crate::middleware::auth::AuthUser::new_test(
             *user.id,
             crate::models::user::UserRole::Reader,
-            "default",
         );
         let cache = test_cache();
         delete_token(&pool, &*cache, &row.id.to_string(), &auth)
@@ -567,7 +548,6 @@ mod tests {
         let auth = crate::middleware::auth::AuthUser::new_test(
             *admin.id,
             crate::models::user::UserRole::Admin,
-            "default",
         );
         let cache = test_cache();
         delete_token(&pool, &*cache, &row.id.to_string(), &auth)
@@ -593,7 +573,6 @@ mod tests {
         let auth = crate::middleware::auth::AuthUser::new_test(
             99999,
             crate::models::user::UserRole::Reader,
-            "default",
         );
         let cache = test_cache();
         assert!(
@@ -606,11 +585,8 @@ mod tests {
     #[tokio::test]
     async fn delete_token_nonexistent_not_found() {
         let pool = crate::db::Pool::connect("sqlite::memory:").await.unwrap();
-        let auth = crate::middleware::auth::AuthUser::new_test(
-            0,
-            crate::models::user::UserRole::Reader,
-            "default",
-        );
+        let auth =
+            crate::middleware::auth::AuthUser::new_test(0, crate::models::user::UserRole::Reader);
         let cache = test_cache();
         assert!(
             delete_token(&pool, &*cache, "no-such-id", &auth)
@@ -638,7 +614,7 @@ mod tests {
         .unwrap();
 
         let cache = test_cache();
-        let (uid1, _, _) = verify_api_token(&pool, &*cache, plain).await.unwrap();
+        let (uid1, _) = verify_api_token(&pool, &*cache, plain).await.unwrap();
         assert_eq!(uid1, *user.id);
 
         let cache_key = format!("{CACHE_PREFIX}{token_hash}");
@@ -655,7 +631,7 @@ mod tests {
         .await
         .unwrap();
 
-        let (uid2, _, _) = verify_api_token(&pool, &*cache, plain).await.unwrap();
+        let (uid2, _) = verify_api_token(&pool, &*cache, plain).await.unwrap();
         assert_eq!(uid2, *user.id);
     }
 
@@ -683,7 +659,6 @@ mod tests {
         let cached = serde_json::to_string(&CachedTokenAuth {
             user_id: user.id,
             role: "reader".into(),
-            tenant_id: Some("default".to_string()),
             expires_at: Some(past.parse().unwrap()),
         })
         .unwrap();

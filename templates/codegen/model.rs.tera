@@ -21,7 +21,7 @@ pub async fn find_all(
     pool: &crate::db::Pool{% if has_tenant_id %},
     tenant_id: Option<&str>{% endif %}
 ) -> AppResult<Vec<{{ struct_name }}>> {
-    axe_derive::crud_list!(pool, "{{ name }}", {{ struct_name }}{% if has_tenant_id %}, tenant: tenant_id{% endif %})
+    mcms_derive::crud_list!(pool, "{{ name }}", {{ struct_name }}{% if has_tenant_id %}, tenant: tenant_id{% endif %})
         .map_err(Into::into)
 }
 
@@ -31,7 +31,7 @@ pub async fn find_paginated(
     page: i64,
     page_size: i64,
 ) -> AppResult<(Vec<{{ struct_name }}>, i64)> {
-    let result = axe_derive::crud_query_paged!(
+    let result = mcms_derive::crud_query_paged!(
         pool, {{ struct_name }},
         data_sql: "SELECT * FROM {{ name }} WHERE 1=1{tenant}",
         count_sql: "SELECT COUNT(*) FROM {{ name }} WHERE 1=1{tenant}",
@@ -50,7 +50,7 @@ pub async fn find_by_id(
     id: i64{% if has_tenant_id %},
     tenant_id: Option<&str>{% endif %}
 ) -> AppResult<{{ struct_name }}> {
-    axe_derive::crud_find_one!(pool, "{{ name }}", {{ struct_name }}, "id" => id{% if has_tenant_id %}, tenant: tenant_id{% endif %})
+    mcms_derive::crud_find_one!(pool, "{{ name }}", {{ struct_name }}, "id" => id{% if has_tenant_id %}, tenant: tenant_id{% endif %})
         .map_err(Into::into)
 }
 
@@ -59,7 +59,7 @@ pub async fn delete(
     id: i64{% if has_tenant_id %},
     tenant_id: Option<&str>{% endif %}
 ) -> AppResult<()> {
-    let result = axe_derive::crud_delete!(pool, "{{ name }}", "id" => id{% if has_tenant_id %}, tenant: tenant_id{% endif %})?;
+    let result = mcms_derive::crud_delete!(pool, "{{ name }}", "id" => id{% if has_tenant_id %}, tenant: tenant_id{% endif %})?;
     AppError::expect_affected(&result, "{{ singular }}")
 }
 

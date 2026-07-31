@@ -1,9 +1,9 @@
 //! `user` subcommand: user account management.
 
-use axe::config::app::AppConfig;
-use axe::db::connection::init_pool;
-use axe::models::user::{RegisteredVia, UserRole, UserStatus};
-use axe::models::user_credential;
+use mcms::config::app::AppConfig;
+use mcms::db::connection::init_pool;
+use mcms::models::user::{RegisteredVia, UserRole, UserStatus};
+use mcms::models::user_credential;
 
 pub async fn create(
     config: &AppConfig,
@@ -14,7 +14,7 @@ pub async fn create(
 ) -> anyhow::Result<()> {
     let pool = init_pool(&config.database_url, 1).await?;
 
-    if axe_derive::crud_exists!(&pool, "users", where: ("username", username))? {
+    if mcms_derive::crud_exists!(&pool, "users", where: ("username", username))? {
         eprintln!("error: username already exists ({username})");
         std::process::exit(1);
     }
@@ -38,46 +38,23 @@ pub async fn create(
         _ => UserRole::Reader,
     };
 
-    let password_hash = axe::services::auth::hash_password(password)
+    let password_hash = mcms::services::auth::hash_password(password)
         .map_err(|e| anyhow::anyhow!("password hashing failed: {e}"))?;
 
     let (id, now) = (
-        axe::utils::id::new_snowflake_id(),
-        axe::utils::tz::now_utc(),
+        mcms::utils::id::new_snowflake_id(),
+        mcms::utils::tz::now_utc(),
     );
 
-    let tid: Option<String> = if cfg!(feature = "db-sqlite") {
-        let row: Option<(String,)> =
-            sqlx::query_as("SELECT id FROM tenants WHERE id = 'default' LIMIT 1")
-                .fetch_optional(&pool)
-                .await?;
-        row.map(|r| r.0)
-    } else {
-        None
-    };
-
-    if let Some(ref tid) = tid {
-        axe_derive::crud_insert!(&pool, "users", [
-            "id" => id,
-            "tenant_id" => tid,
-            "username" => username,
-            "created_at" => now,
-            "updated_at" => now,
-            "role" => role,
-            "status" => UserStatus::Active,
-            "registered_via" => RegisteredVia::Email
-        ])?;
-    } else {
-        axe_derive::crud_insert!(&pool, "users", [
-            "id" => id,
-            "username" => username,
-            "created_at" => now,
-            "updated_at" => now,
-            "role" => role,
-            "status" => UserStatus::Active,
-            "registered_via" => RegisteredVia::Email
-        ])?;
-    }
+    mcms_derive::crud_insert!(&pool, "users", [
+        "id" => id,
+        "username" => username,
+        "created_at" => now,
+        "updated_at" => now,
+        "role" => role,
+        "status" => UserStatus::Active,
+        "registered_via" => RegisteredVia::Email
+    ])?;
 
     let cred_data = user_credential::wrap_password_hash(&password_hash);
     user_credential::create(
@@ -101,7 +78,7 @@ pub async fn create(
 pub async fn list(config: &AppConfig) -> anyhow::Result<()> {
     let pool = init_pool(&config.database_url, 1).await?;
 
-    let users = axe::models::user::find_all(&pool, 1, 100, None).await?;
+    let users = mcms::models::user::find_all(&pool, 1, 100).await?;
 
     println!(
         "{:<20} {:<25} {:<10} {:<10}",
@@ -125,7 +102,7 @@ pub async fn list(config: &AppConfig) -> anyhow::Result<()> {
 pub async fn passwd(config: &AppConfig, username: &str, password: &str) -> anyhow::Result<()> {
     let pool = init_pool(&config.database_url, 1).await?;
 
-    let user = axe::models::user::find_by_username(&pool, username)
+    let user = mcms::models::user::find_by_username(&pool, username)
         .await?
         .ok_or_else(|| anyhow::anyhow!("user not found: {username}"))?;
 
@@ -134,7 +111,7 @@ pub async fn passwd(config: &AppConfig, username: &str, password: &str) -> anyho
         .iter()
         .find(|c| c.auth_type == user_credential::AuthType::Email);
 
-    let password_hash = axe::services::auth::hash_password(password)
+    let password_hash = mcms::services::auth::hash_password(password)
         .map_err(|e| anyhow::anyhow!("password hashing failed: {e}"))?;
     let cred_data = user_credential::wrap_password_hash(&password_hash);
 
@@ -159,7 +136,7 @@ pub async fn passwd(config: &AppConfig, username: &str, password: &str) -> anyho
 pub async fn delete(config: &AppConfig, username: &str, force: bool) -> anyhow::Result<()> {
     let pool = init_pool(&config.database_url, 1).await?;
 
-    let user = axe::models::user::find_by_username(&pool, username)
+    let user = mcms::models::user::find_by_username(&pool, username)
         .await?
         .ok_or_else(|| anyhow::anyhow!("user not found: {username}"))?;
 
@@ -173,7 +150,7 @@ pub async fn delete(config: &AppConfig, username: &str, force: bool) -> anyhow::
         user_credential::delete_by_id(&pool, cred.id).await?;
     }
 
-    axe::models::user::delete_by_id(&pool, user.id, None).await?;
+    mcms::models::user::delete_by_id(&pool, user.id).await?;
 
     println!("user deleted: {username}");
     Ok(())
@@ -182,7 +159,7 @@ pub async fn delete(config: &AppConfig, username: &str, force: bool) -> anyhow::
 pub async fn disable(config: &AppConfig, username: &str) -> anyhow::Result<()> {
     let pool = init_pool(&config.database_url, 1).await?;
 
-    let user = axe::models::user::find_by_username(&pool, username)
+    let user = mcms::models::user::find_by_username(&pool, username)
         .await?
         .ok_or_else(|| anyhow::anyhow!("user not found: {username}"))?;
 
@@ -191,8 +168,8 @@ pub async fn disable(config: &AppConfig, username: &str) -> anyhow::Result<()> {
         std::process::exit(1);
     }
 
-    let now = axe::utils::tz::now_utc();
-    axe_derive::crud_update!(&pool, "users",
+    let now = mcms::utils::tz::now_utc();
+    mcms_derive::crud_update!(&pool, "users",
         bind: ["status" => UserStatus::Suspended, "updated_at" => &now],
         where: ("id", user.id)
     )?;
@@ -204,7 +181,7 @@ pub async fn disable(config: &AppConfig, username: &str) -> anyhow::Result<()> {
 pub async fn enable(config: &AppConfig, username: &str) -> anyhow::Result<()> {
     let pool = init_pool(&config.database_url, 1).await?;
 
-    let user = axe::models::user::find_by_username(&pool, username)
+    let user = mcms::models::user::find_by_username(&pool, username)
         .await?
         .ok_or_else(|| anyhow::anyhow!("user not found: {username}"))?;
 
@@ -213,8 +190,8 @@ pub async fn enable(config: &AppConfig, username: &str) -> anyhow::Result<()> {
         std::process::exit(1);
     }
 
-    let now = axe::utils::tz::now_utc();
-    axe_derive::crud_update!(&pool, "users",
+    let now = mcms::utils::tz::now_utc();
+    mcms_derive::crud_update!(&pool, "users",
         bind: ["status" => UserStatus::Active, "updated_at" => &now],
         where: ("id", user.id)
     )?;

@@ -255,7 +255,7 @@ pub async fn admin_list(
     auth.ensure_admin()?;
     params.sanitize();
     let (items, total) =
-        media_service::admin_list(&state.pool, params.page, params.page_size, &auth).await?;
+        media_service::admin_list(&state.pool, params.page, params.page_size).await?;
 
     let storage = state.storage.as_ref();
     let responses = futures::future::join_all(items.iter().map(|m| async {
@@ -278,7 +278,7 @@ pub async fn admin_delete(
     Path(id): Path<String>,
 ) -> AppResult<ApiResponse<()>> {
     auth.ensure_admin()?;
-    media_service::admin_delete_media(state.storage.as_ref(), &state.pool, &id, &auth).await?;
+    media_service::admin_delete_media(state.storage.as_ref(), &state.pool, &id).await?;
     Ok(ApiResponse::success(()))
 }
 
@@ -297,7 +297,7 @@ pub async fn admin_batch(
     let mut affected = 0usize;
     if req.action == "delete" {
         for id in &req.ids {
-            if media_service::admin_delete_media(state.storage.as_ref(), &state.pool, id, &auth)
+            if media_service::admin_delete_media(state.storage.as_ref(), &state.pool, id)
                 .await
                 .is_ok()
             {

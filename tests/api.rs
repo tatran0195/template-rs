@@ -9,26 +9,26 @@
 //! cargo test
 //! ```
 
-use axe::AppState;
-use axe::DbDriver;
-use axe::config::app::AppConfig;
-use axe::handlers::{
-    api_token as h_token, auth as h_auth, category as h_cat, comment as h_cmt, cron as h_cron,
-    health as h_health, media as h_media, options as h_options, page as h_page, plugin as h_plugin,
-    post as h_post, rbac as h_rbac, reusable_block as h_block, rss as h_rss, sse as h_sse,
-    stats as h_stats, tag as h_tag, tenant as h_tenant, user as h_user,
-};
-use axe::middleware::locale::locale_middleware;
-use axe::middleware::rate_limit::{
-    RateLimiterSet, comment_rate_limit, global_rate_limit, login_rate_limit, register_rate_limit,
-};
-use axe::plugins::PluginManager;
-use axe::search::NoopSearchEngine;
 use axum::body::Body;
 use axum::http::{Request, StatusCode, header};
 use axum::middleware::from_fn;
 use axum::routing::{delete, get, post as http_post, put};
 use http_body_util::BodyExt;
+use mcms::AppState;
+use mcms::DbDriver;
+use mcms::config::app::AppConfig;
+use mcms::handlers::{
+    api_token as h_token, auth as h_auth, category as h_cat, comment as h_cmt, cron as h_cron,
+    health as h_health, media as h_media, options as h_options, page as h_page, plugin as h_plugin,
+    post as h_post, rbac as h_rbac, reusable_block as h_block, rss as h_rss, sse as h_sse,
+    stats as h_stats, tag as h_tag, user as h_user,
+};
+use mcms::middleware::locale::locale_middleware;
+use mcms::middleware::rate_limit::{
+    RateLimiterSet, comment_rate_limit, global_rate_limit, login_rate_limit, register_rate_limit,
+};
+use mcms::plugins::PluginManager;
+use mcms::search::NoopSearchEngine;
 use serde_json::{Value, json};
 use std::sync::Arc;
 use tower::ServiceExt;
@@ -52,11 +52,11 @@ pub(crate) fn test_config() -> AppConfig {
     cfg
 }
 
-pub(crate) async fn test_pool() -> axe::db::Pool {
+pub(crate) async fn test_pool() -> mcms::db::Pool {
     #[cfg(feature = "db-sqlite")]
     {
-        let pool = axe::db::Pool::connect("sqlite::memory:").await.unwrap();
-        sqlx::query(axe::db::schema::SCHEMA_SQL)
+        let pool = mcms::db::Pool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query(mcms::db::schema::SCHEMA_SQL)
             .execute(&pool)
             .await
             .unwrap();
@@ -64,7 +64,7 @@ pub(crate) async fn test_pool() -> axe::db::Pool {
     }
 }
 
-pub(crate) async fn test_pool_with_tenants() -> axe::db::Pool {
+pub(crate) async fn test_pool_with_tenants() -> mcms::db::Pool {
     #[cfg(feature = "db-sqlite")]
     {
         test_pool().await
@@ -79,78 +79,75 @@ pub(crate) async fn test_app_with_tenants() -> (axum::Router, AppState) {
     build_test_app(test_pool_with_tenants().await).await
 }
 
-async fn build_test_app(pool: axe::db::Pool) -> (axum::Router, AppState) {
+async fn build_test_app(pool: mcms::db::Pool) -> (axum::Router, AppState) {
     let config = Arc::new(test_config());
     let state = AppState {
         pool: pool.clone(),
         config: config.clone(),
         jwt_decoding_key: jsonwebtoken::DecodingKey::from_secret(config.jwt_secret.as_bytes()),
         plugins: PluginManager::new(config.clone()).await,
-        eventbus: axe::eventbus::EventBus::new(256),
+        eventbus: mcms::eventbus::EventBus::new(256),
         post_service: {
-            Arc::new(axe::services::post::PostServiceImpl::new(
+            Arc::new(mcms::services::post::PostServiceImpl::new(
                 Arc::new(pool.clone()),
-                Arc::new(axe::aspects::engine::AspectEngine::new()),
+                Arc::new(mcms::aspects::engine::AspectEngine::new()),
                 Arc::new(NoopSearchEngine),
             ))
         },
-        page_service: Arc::new(axe::services::page::PageServiceImpl::new(
-            Arc::new(axe::aspects::engine::AspectEngine::new()),
+        page_service: Arc::new(mcms::services::page::PageServiceImpl::new(
+            Arc::new(mcms::aspects::engine::AspectEngine::new()),
             Arc::new(pool.clone()),
         )),
-        category_service: Arc::new(axe::services::category::CategoryServiceImpl::new(
-            Arc::new(axe::aspects::engine::AspectEngine::new()),
+        category_service: Arc::new(mcms::services::category::CategoryServiceImpl::new(
+            Arc::new(mcms::aspects::engine::AspectEngine::new()),
             Arc::new(pool.clone()),
         )),
-        tag_service: Arc::new(axe::services::tag::TagServiceImpl::new(
-            Arc::new(axe::aspects::engine::AspectEngine::new()),
+        tag_service: Arc::new(mcms::services::tag::TagServiceImpl::new(
+            Arc::new(mcms::aspects::engine::AspectEngine::new()),
             Arc::new(pool.clone()),
         )),
-        comment_service: Arc::new(axe::services::comment::CommentServiceImpl::new(
+        comment_service: Arc::new(mcms::services::comment::CommentServiceImpl::new(
             Arc::new(pool.clone()),
-            Arc::new(axe::aspects::engine::AspectEngine::new()),
+            Arc::new(mcms::aspects::engine::AspectEngine::new()),
         )),
 
-        user_service: Arc::new(axe::services::user::UserServiceImpl::new(Arc::new(
+        user_service: Arc::new(mcms::services::user::UserServiceImpl::new(Arc::new(
             pool.clone(),
         ))),
         search: Arc::new(NoopSearchEngine),
-        content_type_registry: Arc::new(axe::content_type::ContentTypeRegistry::new()),
+        content_type_registry: Arc::new(mcms::content_type::ContentTypeRegistry::new()),
         aspect_engine: {
-            let engine = axe::aspects::engine::AspectEngine::new();
-            let mut reg = axe::protocols::ProtocolRegistry::new();
-            reg.register(axe::protocols::ownable::OwnableProtocol);
-            reg.register(axe::protocols::timestampable::TimestampableProtocol);
+            let engine = mcms::aspects::engine::AspectEngine::new();
+            let mut reg = mcms::protocols::ProtocolRegistry::new();
+            reg.register(mcms::protocols::ownable::OwnableProtocol);
+            reg.register(mcms::protocols::timestampable::TimestampableProtocol);
             let reg = Arc::new(reg);
             reg.register_aspects_into(&engine);
             Arc::new(engine)
         },
         protocol_registry: Arc::new({
-            let mut reg = axe::protocols::ProtocolRegistry::new();
-            reg.register(axe::protocols::ownable::OwnableProtocol);
-            reg.register(axe::protocols::timestampable::TimestampableProtocol);
+            let mut reg = mcms::protocols::ProtocolRegistry::new();
+            reg.register(mcms::protocols::ownable::OwnableProtocol);
+            reg.register(mcms::protocols::timestampable::TimestampableProtocol);
             reg
         }),
         options: Arc::new(
-            axe::services::options::OptionsService::new(Arc::new(pool.clone()), false).await,
+            mcms::services::options::OptionsService::new(Arc::new(pool.clone())).await,
         ),
-        rbac: Arc::new(axe::services::rbac::RbacService::new(Arc::new(
+        rbac: Arc::new(mcms::services::rbac::RbacService::new(Arc::new(
             pool.clone(),
         ))),
-        tenant: Arc::new(axe::services::tenant::TenantService::new(Arc::new(
-            pool.clone(),
-        ))),
-        audit: Arc::new(axe::services::audit::AuditService::new(pool.clone())),
-        webhook: Arc::new(axe::webhook::WebhookService::new(pool.clone())),
-        workflow: Arc::new(axe::workflow::WorkflowService::new(pool.clone())),
-        storage: axe::storage::create_storage(&config).expect("failed to create storage"),
-        cache: Arc::new(axe::cache::MemoryCache::new()),
+        audit: Arc::new(mcms::services::audit::AuditService::new(pool.clone())),
+        webhook: Arc::new(mcms::webhook::WebhookService::new(pool.clone())),
+        workflow: Arc::new(mcms::workflow::WorkflowService::new(pool.clone())),
+        storage: mcms::storage::create_storage(&config).expect("failed to create storage"),
+        cache: Arc::new(mcms::cache::MemoryCache::new()),
         cms_cache: Arc::new(dashmap::DashMap::new()),
-        oauth_registry: Arc::new(axe::oauth::OAuthProviderRegistry::default()),
-        email_sender: axe::notifier::build_email_sender(&config),
-        sms_sender: axe::notifier::build_sms_sender(&config),
+        oauth_registry: Arc::new(mcms::oauth::OAuthProviderRegistry::default()),
+        email_sender: mcms::notifier::build_email_sender(&config),
+        sms_sender: mcms::notifier::build_sms_sender(&config),
         route_registry: Arc::new(Vec::new()),
-        services: axe::app::ServiceRegistry::new(),
+        services: mcms::app::ServiceRegistry::new(),
     };
     let max_upload = state.config.max_upload_size;
 
@@ -239,59 +236,49 @@ async fn build_test_app(pool: axe::db::Pool) -> (axum::Router, AppState) {
                 .put(h_options::set_option)
                 .delete(h_options::delete_option),
         )
-        .route(
-            "/admin/tenants",
-            get(h_tenant::list_tenants).post(h_tenant::create_tenant),
-        )
-        .route(
-            "/admin/tenants/{id}",
-            get(h_tenant::get_tenant)
-                .put(h_tenant::update_tenant)
-                .delete(h_tenant::delete_tenant),
-        )
-        .route("/admin/audit", get(axe::handlers::audit::list))
-        .route("/admin/audit/{id}", get(axe::handlers::audit::get))
+        .route("/admin/audit", get(mcms::handlers::audit::list))
+        .route("/admin/audit/{id}", get(mcms::handlers::audit::get))
         .route(
             "/admin/webhooks",
-            get(axe::webhook::handler::list).post(axe::webhook::handler::create),
+            get(mcms::webhook::handler::list).post(mcms::webhook::handler::create),
         )
         .route(
             "/admin/webhooks/{id}",
-            get(axe::webhook::handler::get)
-                .put(axe::webhook::handler::update)
-                .delete(axe::webhook::handler::delete),
+            get(mcms::webhook::handler::get)
+                .put(mcms::webhook::handler::update)
+                .delete(mcms::webhook::handler::delete),
         )
         .route(
             "/admin/workflows",
-            get(axe::workflow::handler::list).post(axe::workflow::handler::create),
+            get(mcms::workflow::handler::list).post(mcms::workflow::handler::create),
         )
         .route(
             "/admin/workflows/{id}",
-            get(axe::workflow::handler::get).delete(axe::workflow::handler::delete),
+            get(mcms::workflow::handler::get).delete(mcms::workflow::handler::delete),
         )
         .route(
             "/admin/workflows/{id}/start",
-            http_post(axe::workflow::handler::start),
+            http_post(mcms::workflow::handler::start),
         )
         .route(
             "/admin/workflows/instances",
-            get(axe::workflow::handler::list_instances),
+            get(mcms::workflow::handler::list_instances),
         )
         .route(
             "/admin/workflows/instances/{id}",
-            get(axe::workflow::handler::get_instance),
+            get(mcms::workflow::handler::get_instance),
         )
         .route(
             "/admin/workflows/instances/{id}/execute",
-            http_post(axe::workflow::handler::execute_step),
+            http_post(mcms::workflow::handler::execute_step),
         )
         .route(
             "/admin/workflows/instances/{id}/cancel",
-            http_post(axe::workflow::handler::cancel_instance),
+            http_post(mcms::workflow::handler::cancel_instance),
         )
         .route(
             "/admin/workflows/instances/{id}/logs",
-            get(axe::workflow::handler::get_step_logs),
+            get(mcms::workflow::handler::get_step_logs),
         )
         .route("/pages", get(h_page::list).post(h_page::create))
         .route(
@@ -403,9 +390,9 @@ pub(crate) fn delete_auth(path: &str, token: &str) -> Request<Body> {
         .unwrap()
 }
 
-pub(crate) fn make_token(_user_id: &str, iid: i64, role: axe::models::user::UserRole) -> String {
-    axe::services::auth::generate_access_token_for_test(
-        axe::types::snowflake_id::SnowflakeId(iid),
+pub(crate) fn make_token(_user_id: &str, iid: i64, role: mcms::models::user::UserRole) -> String {
+    mcms::services::auth::generate_access_token_for_test(
+        mcms::types::snowflake_id::SnowflakeId(iid),
         role,
     )
 }
@@ -442,21 +429,21 @@ pub(crate) async fn register_and_login(
     )
 }
 
-pub(crate) async fn create_admin(pool: &axe::db::Pool) -> (i64, String) {
-    let hash = axe::services::auth::hash_password("AdminPass123!").unwrap();
+pub(crate) async fn create_admin(pool: &mcms::db::Pool) -> (i64, String) {
+    let hash = mcms::services::auth::hash_password("AdminPass123!").unwrap();
     let sql = "INSERT INTO users (username, role, status, registered_via) VALUES ('testadmin', 'admin', 'active', 'email') RETURNING id";
     let int_id: i64 = sqlx::query_scalar(sql).fetch_one(pool).await.unwrap();
     let cred_data = serde_json::json!({"password_hash": hash}).to_string();
-    let cred_id = axe::utils::id::new_id();
-    let cred_now = axe::utils::tz::now_utc();
+    let cred_id = mcms::utils::id::new_id();
+    let cred_now = mcms::utils::tz::now_utc();
     let cred_sql = format!(
         "INSERT INTO user_credentials (id, user_id, auth_type, identifier, credential_data, verified, created_at, updated_at) VALUES ({}, {}, 'email', {}, {}, 1, {}, {})",
-        axe::db::Driver::ph(1),
-        axe::db::Driver::ph(2),
-        axe::db::Driver::ph(3),
-        axe::db::Driver::ph(4),
-        axe::db::Driver::ph(5),
-        axe::db::Driver::ph(6)
+        mcms::db::Driver::ph(1),
+        mcms::db::Driver::ph(2),
+        mcms::db::Driver::ph(3),
+        mcms::db::Driver::ph(4),
+        mcms::db::Driver::ph(5),
+        mcms::db::Driver::ph(6)
     );
     sqlx::query(&cred_sql)
         .bind(cred_id)
@@ -471,21 +458,21 @@ pub(crate) async fn create_admin(pool: &axe::db::Pool) -> (i64, String) {
     (int_id, int_id.to_string())
 }
 
-pub(crate) async fn create_author(pool: &axe::db::Pool) -> (i64, String) {
-    let hash = axe::services::auth::hash_password("AuthorPass123!").unwrap();
+pub(crate) async fn create_author(pool: &mcms::db::Pool) -> (i64, String) {
+    let hash = mcms::services::auth::hash_password("AuthorPass123!").unwrap();
     let sql = "INSERT INTO users (username, role, status, registered_via) VALUES ('testauthor', 'author', 'active', 'email') RETURNING id";
     let int_id: i64 = sqlx::query_scalar(sql).fetch_one(pool).await.unwrap();
     let cred_data = serde_json::json!({"password_hash": hash}).to_string();
-    let cred_id = axe::utils::id::new_id();
-    let cred_now = axe::utils::tz::now_utc();
+    let cred_id = mcms::utils::id::new_id();
+    let cred_now = mcms::utils::tz::now_utc();
     let cred_sql = format!(
         "INSERT INTO user_credentials (id, user_id, auth_type, identifier, credential_data, verified, created_at, updated_at) VALUES ({}, {}, 'email', {}, {}, 1, {}, {})",
-        axe::db::Driver::ph(1),
-        axe::db::Driver::ph(2),
-        axe::db::Driver::ph(3),
-        axe::db::Driver::ph(4),
-        axe::db::Driver::ph(5),
-        axe::db::Driver::ph(6)
+        mcms::db::Driver::ph(1),
+        mcms::db::Driver::ph(2),
+        mcms::db::Driver::ph(3),
+        mcms::db::Driver::ph(4),
+        mcms::db::Driver::ph(5),
+        mcms::db::Driver::ph(6)
     );
     sqlx::query(&cred_sql)
         .bind(cred_id)
@@ -553,10 +540,6 @@ mod sse;
 mod stats;
 #[path = "api/tag.rs"]
 mod tag;
-#[path = "api/tenant_admin.rs"]
-mod tenant_admin;
-#[path = "api/tenant_e2e.rs"]
-mod tenant_e2e;
 #[path = "api/user.rs"]
 mod user;
 

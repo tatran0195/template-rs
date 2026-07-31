@@ -24,7 +24,6 @@ define_enum!(
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct OptionRow {
     pub id: SnowflakeId,
-    pub tenant_id: Option<String>,
     pub option_key: String,
     pub value: String,
     #[serde(rename = "type")]
@@ -42,53 +41,32 @@ pub struct OptionRow {
 
 /// Query all autoload options (preloaded at startup)
 pub async fn find_autoload(pool: &crate::db::Pool) -> AppResult<Vec<OptionRow>> {
-    Ok(axe_derive::crud_find_all!(pool, "options", OptionRow, where: ("autoload", 1_i64))?)
+    Ok(mcms_derive::crud_find_all!(pool, "options", OptionRow, where: ("autoload", 1_i64))?)
 }
 
 /// Query a single option by key
-pub async fn find_by_key(
-    pool: &crate::db::Pool,
-    key: &str,
-    tenant_id: Option<&str>,
-) -> AppResult<Option<OptionRow>> {
-    Ok(
-        axe_derive::crud_find!(pool, "options", OptionRow, where: ("option_key", key), tenant: tenant_id)?,
-    )
+pub async fn find_by_key(pool: &crate::db::Pool, key: &str) -> AppResult<Option<OptionRow>> {
+    Ok(mcms_derive::crud_find!(pool, "options", OptionRow, where: ("option_key", key))?)
 }
 
 /// Query all options
-pub async fn find_all(
-    pool: &crate::db::Pool,
-    tenant_id: Option<&str>,
-) -> AppResult<Vec<OptionRow>> {
-    Ok(
-        axe_derive::crud_list!(pool, "options", OptionRow, order_by: "sort_order, option_key", tenant: tenant_id)?,
-    )
+pub async fn find_all(pool: &crate::db::Pool) -> AppResult<Vec<OptionRow>> {
+    Ok(mcms_derive::crud_list!(pool, "options", OptionRow, order_by: "sort_order, option_key")?)
 }
 
 /// Insert or update an option value (UPSERT by key)
-pub async fn upsert_value(
-    pool: &crate::db::Pool,
-    key: &str,
-    value: &str,
-    tenant_id: Option<&str>,
-) -> AppResult<()> {
+pub async fn upsert_value(pool: &crate::db::Pool, key: &str, value: &str) -> AppResult<()> {
     let now = crate::utils::tz::now_utc();
-    axe_derive::crud_update!(pool, "options",
+    mcms_derive::crud_update!(pool, "options",
         bind: ["value" => value, "updated_at" => now],
-        where: ("option_key", key),
-        tenant: tenant_id
+        where: ("option_key", key)
     )?;
     Ok(())
 }
 
 /// Delete an option by key
-pub async fn delete_by_key(
-    pool: &crate::db::Pool,
-    key: &str,
-    tenant_id: Option<&str>,
-) -> AppResult<()> {
-    axe_derive::crud_delete!(pool, "options", where: ("option_key", key), tenant: tenant_id)?;
+pub async fn delete_by_key(pool: &crate::db::Pool, key: &str) -> AppResult<()> {
+    mcms_derive::crud_delete!(pool, "options", where: ("option_key", key))?;
     Ok(())
 }
 
@@ -128,9 +106,9 @@ mod tests {
         let now_str = crate::utils::tz::now_utc().to_rfc3339();
 
         insert_test_option(&pool, &key, "initial", true, &now_str).await;
-        upsert_value(&pool, &key, "updated", None).await.unwrap();
+        upsert_value(&pool, &key, "updated").await.unwrap();
 
-        let found = find_by_key(&pool, &key, None).await.unwrap();
+        let found = find_by_key(&pool, &key).await.unwrap();
         assert!(found.is_some());
         let row = found.unwrap();
         assert_eq!(row.option_key, key);
@@ -150,7 +128,7 @@ mod tests {
         insert_test_option(&pool, &k2, "v2", true, &now_str).await;
         insert_test_option(&pool, &k3, "v3", true, &now_str).await;
 
-        let all = find_all(&pool, None).await.unwrap();
+        let all = find_all(&pool).await.unwrap();
         assert!(all.len() >= 3);
     }
 
@@ -162,9 +140,9 @@ mod tests {
         let now_str = now.to_rfc3339();
 
         insert_test_option(&pool, &key, "v1", true, &now_str).await;
-        upsert_value(&pool, &key, "v2", None).await.unwrap();
+        upsert_value(&pool, &key, "v2").await.unwrap();
 
-        let found = find_by_key(&pool, &key, None).await.unwrap().unwrap();
+        let found = find_by_key(&pool, &key).await.unwrap().unwrap();
         assert_eq!(found.value, "v2");
     }
 
@@ -175,9 +153,9 @@ mod tests {
         let now_str = crate::utils::tz::now_utc().to_rfc3339();
 
         insert_test_option(&pool, &key, "val", true, &now_str).await;
-        delete_by_key(&pool, &key, None).await.unwrap();
+        delete_by_key(&pool, &key).await.unwrap();
 
-        let found = find_by_key(&pool, &key, None).await.unwrap();
+        let found = find_by_key(&pool, &key).await.unwrap();
         assert!(found.is_none());
     }
 

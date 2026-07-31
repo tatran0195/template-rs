@@ -4,7 +4,7 @@
     <strong>The fastest CMS, easiest to deploy.</strong>
   </p>
   <p align="center">
-    Rust-powered high-performance BaaS and headless CMS with built-in blog, ecommerce, wallet, payment & multi-tenant SaaS. JS / Rhai / Lua / WASM plugin engines for infinite extensibility.<br>
+    Rust-powered high-performance BaaS and headless CMS with built-in blog. JS / Rhai / Lua / WASM plugin engines for infinite extensibility.<br>
     Single binary, zero dependencies, zero GC. Download and run.
   </p>
 </p>
@@ -31,18 +31,18 @@ JS, Rhai, Lua, and WASM — a full spectrum from scripting to compiled. Dynamic 
 
 ## What's Built-In
 
-| Module | Features |
-|--------|----------|
-| **Blog / CMS** | Posts, pages, categories, tags, comments, media, RSS, sitemap |
-| **OAuth** | GitHub, Google and more social login |
-| **Workflow** | Job queue, cron scheduler, AOP aspects, event bus |
-| **Content Types** | Dynamic schema via TOML, automatic CRUD API |
-| **Auth** | JWT (HS256) + refresh tokens + API tokens + RBAC |
-| **Multi-tenant** | Optional tenant isolation for SaaS |
-| **Admin UI** | Modern React dashboard (embedded in binary) |
-| **Plugin Engine** | JS (QuickJS) / Rhai / Lua (mlua) / WASM (wasmtime) |
-| **Search** | Full-text search (Tantivy) |
-| **Multi-DB** | SQLite / PostgreSQL / MySQL — zero code changes |
+| Module            | Features                                                      |
+| ----------------- | ------------------------------------------------------------- |
+| **Blog / CMS**    | Posts, pages, categories, tags, comments, media, RSS, sitemap |
+| **OAuth**         | GitHub, Google and more social login                          |
+| **Workflow**      | Job queue, cron scheduler, AOP aspects, event bus             |
+| **Content Types** | Dynamic schema via TOML, automatic CRUD API                   |
+| **Auth**          | JWT (HS256) + refresh tokens + API tokens + RBAC              |
+| **Multi-tenant**  | Optional tenant isolation for SaaS                            |
+| **Admin UI**      | Modern React dashboard (embedded in binary)                   |
+| **Plugin Engine** | JS (QuickJS) / Rhai / Lua (mlua) / WASM (wasmtime)            |
+| **Search**        | Full-text search (Tantivy)                                    |
+| **Multi-DB**      | SQLite / PostgreSQL / MySQL — zero code changes               |
 
 ---
 
@@ -64,6 +64,7 @@ cargo run --features "db-sqlite plugin-all search-tantivy"
 ### First run
 
 On first startup, axe automatically:
+
 1. Creates all database tables
 2. Seeds default roles, permissions, and site options
 3. Starts serving API + Admin UI
@@ -181,7 +182,7 @@ All configuration via environment variables or `.env`:
 
 ```bash
 # Database
-DATABASE_URL=sqlite:./data/axe.db
+DATABASE_URL=sqlite:./data/mcms.db
 
 # Server
 PORT=9898
@@ -211,32 +212,32 @@ PLUGIN_HOT_RELOAD=true
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Language | Rust (edition 2024) |
-| HTTP Framework | Axum 0.8 |
-| Database | SQLx 0.8 (SQLite / PostgreSQL / MySQL) |
-| Auth | JWT (HS256) + Argon2 |
-| Search | Tantivy |
-| Plugin Runtime | wasmtime / rquickjs / mlua / rhai |
-| Admin UI | React 19 + Vite + shadcn/ui |
-| Desktop | Tauri |
-| Embedded Assets | rust-embed |
+| Layer           | Technology                             |
+| --------------- | -------------------------------------- |
+| Language        | Rust (edition 2024)                    |
+| HTTP Framework  | Axum 0.8                               |
+| Database        | SQLx 0.8 (SQLite / PostgreSQL / MySQL) |
+| Auth            | JWT (HS256) + Argon2                   |
+| Search          | Tantivy                                |
+| Plugin Runtime  | wasmtime / rquickjs / mlua / rhai      |
+| Admin UI        | React 19 + Vite + shadcn/ui            |
+| Desktop         | Tauri                                  |
+| Embedded Assets | rust-embed                             |
 
 ---
 
 ## Project Status
 
-| Component | Status |
-|-----------|--------|
-| Core API | ✅ Working |
-| Admin UI | ✅ Working |
-| Auth (JWT + OAuth + API Token) | ✅ Working |
-| Multi-database | ✅ Working |
-| Plugin engine (JS/Rhai/Lua/WASM) | ✅ Working |
-| Content Type system | ✅ Working |
-| Job queue + Cron | ✅ Working |
-| Tauri desktop | ✅ Working |
-| AOP aspects | ✅ Working |
-| Serverless adapter | 🔧 In design |
-| Plugin marketplace | 📋 Planned |
+| Component                        | Status       |
+| -------------------------------- | ------------ |
+| Core API                         | ✅ Working   |
+| Admin UI                         | ✅ Working   |
+| Auth (JWT + OAuth + API Token)   | ✅ Working   |
+| Multi-database                   | ✅ Working   |
+| Plugin engine (JS/Rhai/Lua/WASM) | ✅ Working   |
+| Content Type system              | ✅ Working   |
+| Job queue + Cron                 | ✅ Working   |
+| Tauri desktop                    | ✅ Working   |
+| AOP aspects                      | ✅ Working   |
+| Serverless adapter               | 🔧 In design |
+| Plugin marketplace               | 📋 Planned   |

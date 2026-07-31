@@ -14,17 +14,17 @@ fn validate_blocks_json(blocks: &str) -> AppResult<Vec<page::PageBlock>> {
 
 pub async fn list_reusable(
     pool: &crate::db::Pool,
-    auth: &AuthUser,
+    _auth: &AuthUser,
 ) -> AppResult<Vec<reusable_block::ReusableBlock>> {
-    reusable_block::list_reusable(pool, auth.tenant_id()).await
+    reusable_block::list_reusable(pool).await
 }
 
 pub async fn get_reusable(
     pool: &crate::db::Pool,
     id: SnowflakeId,
-    auth: &AuthUser,
+    _auth: &AuthUser,
 ) -> AppResult<Option<reusable_block::ReusableBlock>> {
-    reusable_block::find_reusable_by_id(pool, id, auth.tenant_id()).await
+    reusable_block::find_reusable_by_id(pool, id).await
 }
 
 pub async fn create_reusable(
@@ -46,7 +46,6 @@ pub async fn create_reusable(
             description: description.map(|s| s.to_string()),
             created_by: auth.user_id(),
         },
-        auth.tenant_id(),
     )
     .await
 }
@@ -63,7 +62,7 @@ pub async fn update_reusable(
     if let Some(c) = content {
         validate_blocks_json(c)?;
     }
-    let block = reusable_block::find_reusable_by_id(pool, id, auth.tenant_id())
+    let block = reusable_block::find_reusable_by_id(pool, id)
         .await?
         .ok_or_else(|| AppError::not_found("reusable_block"))?;
     reusable_block::update_reusable(
@@ -76,7 +75,6 @@ pub async fn update_reusable(
             description: description.map(|s| s.to_string()),
             updated_by: auth.user_id(),
         },
-        auth.tenant_id(),
     )
     .await
 }
@@ -84,12 +82,12 @@ pub async fn update_reusable(
 pub async fn delete_reusable(
     pool: &crate::db::Pool,
     id: SnowflakeId,
-    auth: &AuthUser,
+    _auth: &AuthUser,
 ) -> AppResult<()> {
-    let block = reusable_block::find_reusable_by_id(pool, id, auth.tenant_id())
+    let block = reusable_block::find_reusable_by_id(pool, id)
         .await?
         .ok_or_else(|| AppError::not_found("reusable_block"))?;
-    reusable_block::delete_reusable(pool, block.id, auth.tenant_id()).await
+    reusable_block::delete_reusable(pool, block.id).await
 }
 
 #[cfg(test)]

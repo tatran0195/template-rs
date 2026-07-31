@@ -12,7 +12,7 @@ mod route_cmd;
 mod server_cmd;
 mod user_cmd;
 
-use axe::config::app::AppConfig;
+use mcms::config::app::AppConfig;
 
 use clap::{Parser, Subcommand};
 
@@ -239,138 +239,14 @@ pub enum CodegenAction {
     },
 }
 
-fn lerp(a: u8, b: u8, t: f32) -> u8 {
-    (a as f32 + (b as f32 - a as f32) * t) as u8
-}
-
-fn gradient_rgb(t: f32) -> (u8, u8, u8) {
-    let t = t.clamp(0.0, 1.0).sqrt();
-    let (r1, g1, b1) = (37, 99, 235);
-    let (r2, g2, b2) = (204, 43, 28);
-    (lerp(r1, r2, t), lerp(g1, g2, t), lerp(b1, b2, t))
-}
-
-fn max_chars(lines: &[&str]) -> usize {
-    lines.iter().map(|l| l.chars().count()).max().unwrap_or(0)
-}
-
-fn print_gradient_line(line: &str, total_w: usize, offset: usize) {
-    let reset = "\x1b[0m";
-    let mut buf = String::new();
-    let mut prev_rgb: Option<(u8, u8, u8)> = None;
-    for (i, ch) in line.chars().enumerate() {
-        if ch == ' ' {
-            buf.push(ch);
-            prev_rgb = None;
-            continue;
-        }
-        let t = if total_w > 0 {
-            (offset + i) as f32 / total_w as f32
-        } else {
-            0.0
-        };
-        let rgb = gradient_rgb(t);
-        if prev_rgb != Some(rgb) {
-            buf.push_str(&format!("\x1b[38;2;{};{};{}m", rgb.0, rgb.1, rgb.2));
-            prev_rgb = Some(rgb);
-        }
-        buf.push(ch);
-    }
-    buf.push_str(reset);
-    println!("{buf}");
-}
-
-fn terminal_width() -> usize {
-    let output = std::process::Command::new("stty")
-        .arg("size")
-        .stdin(std::process::Stdio::inherit())
-        .output()
-        .ok();
-    output
-        .and_then(|o| {
-            let s = String::from_utf8_lossy(&o.stdout);
-            let mut parts = s.split_whitespace();
-            parts.next();
-            parts.next().and_then(|w| w.parse::<usize>().ok())
-        })
-        .unwrap_or_else(|| {
-            std::env::var("COLUMNS")
-                .ok()
-                .and_then(|s| s.parse().ok())
-                .unwrap_or(80)
-        })
-}
-
-// https://patorjk.com/software/taag/#p=display&f=Electronic&t=Rais
-const RAIS: &[&str] = &[
-    "     ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄",
-    "    ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌",
-    "    ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀",
-    "    ▐░▌       ▐░▌▐░▌       ▐░▌     ▐░▌     ▐░▌",
-    "    ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄▄▄",
-    "    ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌     ▐░▌     ▐░░░░░░░░░░░▌",
-    "    ▐░█▀▀▀▀█░█▀▀ ▐░█▀▀▀▀▀▀▀█░▌     ▐░▌      ▀▀▀▀▀▀▀▀▀█░▌",
-    "    ▐░▌     ▐░▌  ▐░▌       ▐░▌     ▐░▌               ▐░▌",
-    "    ▐░▌      ▐░▌ ▐░▌       ▐░▌ ▄▄▄▄█░█▄▄▄▄  ▄▄▄▄▄▄▄▄▄█░▌",
-    "    ▐░▌       ▐░▌▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌",
-    "     ▀         ▀  ▀         ▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀",
-];
-
-// https://patorjk.com/software/taag/#p=display&f=Electronic&t=Fast
-const FAST: &[&str] = &[
-    "▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄",
-    "▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌",
-    "▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀  ▀▀▀▀█░█▀▀▀▀",
-    "▐░▌          ▐░▌       ▐░▌▐░▌               ▐░▌",
-    "▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄      ▐░▌",
-    "▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌     ▐░▌",
-    "▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌ ▀▀▀▀▀▀▀▀▀█░▌     ▐░▌",
-    "▐░▌          ▐░▌       ▐░▌          ▐░▌     ▐░▌",
-    "▐░▌          ▐░▌       ▐░▌ ▄▄▄▄▄▄▄▄▄█░▌     ▐░▌",
-    "▐░▌          ▐░▌       ▐░▌▐░░░░░░░░░░░▌     ▐░▌",
-    " ▀            ▀         ▀  ▀▀▀▀▀▀▀▀▀▀▀       ▀",
-];
-
 pub fn print_banner(config: &AppConfig) {
     let d = "\x1b[2;37m";
     let r = "\x1b[0m";
-
-    let tw = terminal_width();
-    let rais_w = max_chars(RAIS);
-    let fast_w = max_chars(FAST);
-    let gap = 3;
-    let side_by_side_w = rais_w + gap + fast_w;
-
-    println!();
-
-    if tw >= side_by_side_w {
-        for i in 0..RAIS.len() {
-            let combined = format!(
-                "{:<rais_w$}{}{}",
-                RAIS[i].trim_end(),
-                " ".repeat(gap),
-                FAST[i],
-                rais_w = rais_w,
-            );
-            print_gradient_line(&combined, side_by_side_w, 0);
-        }
-    } else {
-        let rais_pad = (tw as isize - rais_w as isize).max(0) as usize / 2;
-        let fast_pad = (tw as isize - fast_w as isize).max(0) as usize / 2;
-        let fast_offset = rais_w + gap;
-        for line in RAIS {
-            print!("{}", " ".repeat(rais_pad));
-            print_gradient_line(line, side_by_side_w, 0);
-        }
-        for line in FAST {
-            print!("{}", " ".repeat(fast_pad));
-            print_gradient_line(line, side_by_side_w, fast_offset);
-        }
-    }
+    let name = env!("CARGO_PKG_NAME");
 
     println!();
     println!(
-        "{d}    axe v{}  ·  http://{}:{}{r}",
+        "{d}{name} v{}  ·  http://{}:{}{r}",
         env!("CARGO_PKG_VERSION"),
         config.host,
         config.port
@@ -527,7 +403,7 @@ pub async fn run(cli: Cli, config: &AppConfig) -> anyhow::Result<()> {
                 config: proxy_config,
             },
         }) => {
-            axe::proxy::start(&proxy_config).await?;
+            mcms::proxy::start(&proxy_config).await?;
         }
 
         #[cfg(feature = "proxy")]
@@ -535,28 +411,17 @@ pub async fn run(cli: Cli, config: &AppConfig) -> anyhow::Result<()> {
             action: ProxyAction::Check {
                 config: proxy_config,
             },
-        }) => {
-            match axe::proxy::config::ProxyConfig::load(std::path::Path::new(&proxy_config)) {
-                Ok(c) => {
-                    println!("proxy config OK");
-                    println!("  listen_http: {}", c.proxy.listen_http);
-                    println!("  listen_https: {}", c.proxy.listen_https);
-                    println!("  tenants_dir: {}", c.proxy.tenants_dir.display());
-                    let tenants = axe::proxy::config::load_all_tenants(&c.proxy.tenants_dir);
-                    println!("  tenants loaded: {}", tenants.len());
-                    for (_, t) in &tenants {
-                        println!(
-                            "    - {} (host={:?}, prefix={:?}, backend={})",
-                            t.tenant.name, t.tenant.host, t.tenant.prefix, t.tenant.backend
-                        );
-                    }
-                }
-                Err(e) => {
-                    eprintln!("proxy config error: {e}");
-                    std::process::exit(1);
-                }
+        }) => match mcms::proxy::config::ProxyConfig::load(std::path::Path::new(&proxy_config)) {
+            Ok(c) => {
+                println!("proxy config OK");
+                println!("  listen_http: {}", c.proxy.listen_http);
+                println!("  listen_https: {}", c.proxy.listen_https);
             }
-        }
+            Err(e) => {
+                eprintln!("proxy config error: {e}");
+                std::process::exit(1);
+            }
+        },
     }
 
     Ok(())

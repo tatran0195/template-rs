@@ -46,7 +46,6 @@ pub mod setup;
 pub mod sse;
 pub mod stats;
 pub mod tag;
-pub mod tenant;
 pub mod user;
 
 

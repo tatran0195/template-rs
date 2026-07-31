@@ -8,7 +8,6 @@ use std::sync::{Arc, OnceLock};
 use arc_swap::ArcSwap;
 use dashmap::DashMap;
 
-use crate::constants::DEFAULT_TENANT;
 use crate::errors::app_error::AppResult;
 use crate::event::Event;
 use crate::eventbus::EventBus;
@@ -553,7 +552,6 @@ fn matches_table_any(pointcuts: &[Pointcut], table: &str) -> bool {
 fn make_base_ctx(auth: &crate::middleware::auth::AuthUser) -> super::BaseContext {
     super::BaseContext::new(
         auth.user_id().map(|id| id.to_string()),
-        auth.tenant_id().unwrap_or(DEFAULT_TENANT).to_string(),
         crate::utils::tz::now_str(),
     )
     .with_user_int_id(auth.user_id())
@@ -619,7 +617,7 @@ mod tests {
         });
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "2026-01-01T00:00:00Z".into()),
+            base: BaseContext::new(None, "2026-01-01T00:00:00Z".into()),
             table: "articles".into(),
             record: Record::new(),
             schema: None,
@@ -678,7 +676,7 @@ mod tests {
         engine.register(RestrictedAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "2026-01-01T00:00:00Z".into()),
+            base: BaseContext::new(None, "2026-01-01T00:00:00Z".into()),
             table: "articles".into(),
             record: Record::new(),
             schema: None,
@@ -752,7 +750,7 @@ mod tests {
         engine.register(ShouldNotRunAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "articles".into(),
             record: Record::new(),
             schema: None,
@@ -826,7 +824,7 @@ mod tests {
         engine.register(AfterFailAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "articles".into(),
             record: Record::new(),
             schema: None,
@@ -852,7 +850,7 @@ mod tests {
         let engine = AspectEngine::new();
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "articles".into(),
             record: Record::new(),
             schema: None,
@@ -893,7 +891,7 @@ mod tests {
         engine.register(AuditAspect);
 
         let mut ctx = DataAfterCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "articles".into(),
             record: {
                 let mut r = Record::new();
@@ -942,7 +940,7 @@ mod tests {
         engine.register(LogAspect);
 
         let mut ctx = DataAfterUpdateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "articles".into(),
             old_record: Record::new(),
             new_record: {
@@ -1061,7 +1059,7 @@ mod tests {
         engine.register(CreateAndUpdateAspect);
 
         let mut create_ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "articles".into(),
             record: Record::new(),
             schema: None,
@@ -1072,7 +1070,7 @@ mod tests {
         assert!(create_ctx.record.contains_key("multi_create"));
 
         let mut update_ctx = DataBeforeUpdateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "articles".into(),
             old_record: Record::new(),
             new_record: Record::new(),
@@ -1147,7 +1145,7 @@ mod tests {
         engine.register(ConsumerAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "articles".into(),
             record: Record::new(),
             schema: None,
@@ -1175,11 +1173,7 @@ mod tests {
         assert!(aspects.is_empty());
 
         let mut ctx = DataBeforeCreateContext {
-            base: crate::aspects::BaseContext::new(
-                Some("user-1".into()),
-                "default".into(),
-                "now".into(),
-            ),
+            base: crate::aspects::BaseContext::new(Some("user-1".into()), "now".into()),
             table: "articles".into(),
             record: Record::new(),
             schema: None,
@@ -1216,7 +1210,7 @@ mod tests {
     async fn http_before_returns_none_when_no_aspects() {
         let engine = AspectEngine::new();
         let mut ctx = HttpBeforeContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             method: "GET".into(),
             path: "/api/v1/posts".into(),
             headers: std::collections::HashMap::new(),
@@ -1253,7 +1247,7 @@ mod tests {
         engine.register(BlockPathAspect);
 
         let mut ctx = HttpBeforeContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             method: "GET".into(),
             path: "/api/v1/blocked".into(),
             headers: std::collections::HashMap::new(),
@@ -1291,7 +1285,7 @@ mod tests {
         engine.register(LogHttpAspect);
 
         let mut ctx = HttpBeforeContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             method: "GET".into(),
             path: "/api/v1/posts".into(),
             headers: std::collections::HashMap::new(),
@@ -1330,7 +1324,7 @@ mod tests {
         engine.register(MetricsAspect);
 
         let mut ctx = HttpAfterContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             status_code: 200,
             response_body: None,
         };

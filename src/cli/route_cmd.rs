@@ -2,49 +2,48 @@
 //!
 //! Inspect registered routes without starting the HTTP server.
 
-use axe::config::app::AppConfig;
-use axe::server::RouteRegistry;
+use mcms::config::app::AppConfig;
+use mcms::server::RouteRegistry;
 
 fn collect_routes(config: &AppConfig) -> Vec<RouteInfo> {
     let mut registry = RouteRegistry::default();
-    let _ = axe::handlers::auth::routes(&mut registry, config);
-    let _ = axe::handlers::oauth::routes(&mut registry, config);
-    let _ = axe::handlers::api_token::routes(&mut registry, config);
-    let _ = axe::handlers::user::routes(&mut registry, config);
+    let _ = mcms::handlers::auth::routes(&mut registry, config);
+    let _ = mcms::handlers::oauth::routes(&mut registry, config);
+    let _ = mcms::handlers::api_token::routes(&mut registry, config);
+    let _ = mcms::handlers::user::routes(&mut registry, config);
 
 
     if config.builtins.blog {
-        let _ = axe::handlers::category::routes(&mut registry, config);
-        let _ = axe::handlers::tag::routes(&mut registry, config);
-        let _ = axe::handlers::post::routes(&mut registry, config);
-        let _ = axe::handlers::post::admin_routes(&mut registry, config);
-        let _ = axe::handlers::comment::routes(&mut registry, config);
+        let _ = mcms::handlers::category::routes(&mut registry, config);
+        let _ = mcms::handlers::tag::routes(&mut registry, config);
+        let _ = mcms::handlers::post::routes(&mut registry, config);
+        let _ = mcms::handlers::post::admin_routes(&mut registry, config);
+        let _ = mcms::handlers::comment::routes(&mut registry, config);
     }
 
     if config.builtins.pages {
-        let _ = axe::handlers::page::routes(&mut registry, config);
-        let _ = axe::handlers::reusable_block::routes(&mut registry, config);
+        let _ = mcms::handlers::page::routes(&mut registry, config);
+        let _ = mcms::handlers::reusable_block::routes(&mut registry, config);
     }
 
     if config.builtins.media {
-        let _ = axe::handlers::media::routes(0, &mut registry, config);
+        let _ = mcms::handlers::media::routes(0, &mut registry, config);
     }
 
-    let _ = axe::handlers::sse::routes(&mut registry, config);
-    let _ = axe::handlers::ws::routes(&mut registry, config);
+    let _ = mcms::handlers::sse::routes(&mut registry, config);
+    let _ = mcms::handlers::ws::routes(&mut registry, config);
 
-    let _ = axe::handlers::plugin::routes(&mut registry, config);
-    let _ = axe::handlers::cron::routes(&mut registry, config);
-    let _ = axe::handlers::rbac::routes(&mut registry, config);
-    let _ = axe::handlers::stats::routes(&mut registry, config);
-    let _ = axe::handlers::options::routes(&mut registry, config);
-    let _ = axe::handlers::tenant::routes(&mut registry, config);
-    let _ = axe::handlers::audit::routes(&mut registry, config);
-    let _ = axe::webhook::handler::routes(&mut registry, config);
-    let _ = axe::content_type::handler::routes(&mut registry, config);
+    let _ = mcms::handlers::plugin::routes(&mut registry, config);
+    let _ = mcms::handlers::cron::routes(&mut registry, config);
+    let _ = mcms::handlers::rbac::routes(&mut registry, config);
+    let _ = mcms::handlers::stats::routes(&mut registry, config);
+    let _ = mcms::handlers::options::routes(&mut registry, config);
+    let _ = mcms::handlers::audit::routes(&mut registry, config);
+    let _ = mcms::webhook::handler::routes(&mut registry, config);
+    let _ = mcms::content_type::handler::routes(&mut registry, config);
 
     if config.builtins.workflow {
-        let _ = axe::workflow::handler::routes(&mut registry, config);
+        let _ = mcms::workflow::handler::routes(&mut registry, config);
     }
 
     let mut routes = registry.into_vec();
@@ -274,4 +273,4 @@ fn show_stats(routes: &[RouteInfo]) {
     println!("  Modules:              {}", sources.len());
 }
 
-use axe::server::RouteInfo;
+use mcms::server::RouteInfo;

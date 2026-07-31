@@ -16,14 +16,14 @@
 
 rust_i18n::i18n!("locales", fallback = "en");
 
-use axe::config::app::AppConfig;
+use mcms::config::app::AppConfig;
 use clap::Parser;
 
 mod cli;
 mod logging;
 
 pub(crate) mod db {
-    pub use axe::db::*;
+    pub use mcms::db::*;
 }
 
 #[tokio::main]

@@ -116,7 +116,7 @@ mod tests {
         engine.register(NestableAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "categories".into(),
             record: Record::new(),
             schema: None,

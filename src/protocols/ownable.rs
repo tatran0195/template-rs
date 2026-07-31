@@ -131,7 +131,7 @@ mod tests {
         engine.register(OwnableAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(Some("user-123".into()), "default".into(), "now".into())
+            base: BaseContext::new(Some("user-123".into()), "now".into())
                 .with_user_int_id(Some(42)),
             table: "articles".into(),
             record: Record::new(),
@@ -152,7 +152,7 @@ mod tests {
         engine.register(OwnableAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "articles".into(),
             record: Record::new(),
             schema: None,
@@ -183,7 +183,6 @@ mod tests {
         let mut ctx = DataBeforeCreateContext {
             base: BaseContext::new(
                 Some("user-1".into()),
-                "default".into(),
                 "2026-01-01T00:00:00Z".into(),
             )
             .with_user_int_id(Some(1)),
@@ -216,7 +215,7 @@ mod tests {
         record.insert("created_by".into(), json!("old-user"));
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(Some("new-user".into()), "default".into(), "now".into())
+            base: BaseContext::new(Some("new-user".into()), "now".into())
                 .with_user_int_id(Some(99)),
             table: "articles".into(),
             record,
@@ -239,7 +238,7 @@ mod tests {
         new_record.insert("title".into(), json!("updated"));
 
         let mut ctx = DataBeforeUpdateContext {
-            base: BaseContext::new(Some("user-1".into()), "default".into(), "now".into())
+            base: BaseContext::new(Some("user-1".into()), "now".into())
                 .with_user_int_id(Some(1)),
             table: "articles".into(),
             old_record: {
@@ -266,7 +265,7 @@ mod tests {
         engine.register(OwnableAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(Some("user-1".into()), "default".into(), "now".into())
+            base: BaseContext::new(Some("user-1".into()), "now".into())
                 .with_user_int_id(Some(1)),
             table: String::new(),
             record: Record::new(),
@@ -284,7 +283,7 @@ mod tests {
         engine.register(OwnableAspect);
 
         let mut ctx1 = DataBeforeCreateContext {
-            base: BaseContext::new(Some("user-a".into()), "default".into(), "now".into())
+            base: BaseContext::new(Some("user-a".into()), "now".into())
                 .with_user_int_id(Some(10)),
             table: "articles".into(),
             record: Record::new(),
@@ -296,7 +295,7 @@ mod tests {
         assert_eq!(ctx1.record.get("created_by").unwrap(), &json!(10));
 
         let mut ctx2 = DataBeforeCreateContext {
-            base: BaseContext::new(Some("user-b".into()), "default".into(), "now".into())
+            base: BaseContext::new(Some("user-b".into()), "now".into())
                 .with_user_int_id(Some(20)),
             table: "articles".into(),
             record: Record::new(),

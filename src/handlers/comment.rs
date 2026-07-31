@@ -165,7 +165,7 @@ pub async fn list_all(
     p.sanitize();
     let (comments, total) = state
         .comment_service
-        .list_all_paginated(p.page, p.page_size, auth.tenant_id())
+        .list_all_paginated(p.page, p.page_size)
         .await?;
     Ok(p.paginate(comments, total))
 }
@@ -290,7 +290,7 @@ pub async fn admin_list(
     let pagination = PaginationParams::from_options(query.page, query.page_size);
     let (comments, total) = state
         .comment_service
-        .list_all_paginated(pagination.page, pagination.page_size, auth.tenant_id())
+        .list_all_paginated(pagination.page, pagination.page_size)
         .await?;
     Ok(pagination.paginate(comments, total))
 }

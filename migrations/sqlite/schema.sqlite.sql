@@ -1,26 +1,14 @@
 -- ============================================================
--- axe complete database schema (with multi-tenant support)
+-- mcms complete database schema
 -- Merged from all migration files for one-click initialization of new deployments
 -- Generated date：2026-05-07
 -- ============================================================
 
 -- ── Platform foundation layer (always enabled) ──────────────────────────────────
 
--- Tenants
-CREATE TABLE IF NOT EXISTS tenants (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE,
-    domain TEXT UNIQUE,
-    config TEXT NOT NULL DEFAULT '{}',
-    status TEXT NOT NULL DEFAULT 'active',
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
-);
-
 -- Users
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
     username TEXT UNIQUE NOT NULL,
     role TEXT NOT NULL DEFAULT 'reader',
     avatar TEXT,
@@ -36,8 +24,6 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
-
-CREATE INDEX IF NOT EXISTS idx_users_tenant ON users(tenant_id);
 
 -- User credentials
 CREATE TABLE IF NOT EXISTS user_credentials (
@@ -90,15 +76,13 @@ CREATE INDEX IF NOT EXISTS idx_oauth_states_expires ON oauth_states(expires_at);
 -- Currency configuration
 CREATE TABLE IF NOT EXISTS currencies (
     id INTEGER PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
-    code TEXT NOT NULL CHECK(code = UPPER(code) AND LENGTH(code) BETWEEN 1 AND 10),
+    code TEXT NOT NULL UNIQUE CHECK(code = UPPER(code) AND LENGTH(code) BETWEEN 1 AND 10),
     name TEXT NOT NULL,
     decimals INTEGER NOT NULL DEFAULT 0 CHECK(decimals BETWEEN 0 AND 18),
     is_active INTEGER NOT NULL DEFAULT 1,
     version INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    UNIQUE(tenant_id, code)
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (
@@ -115,8 +99,7 @@ CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expir
 -- Site options
 CREATE TABLE IF NOT EXISTS options (
     id INTEGER PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
-    option_key TEXT NOT NULL,
+    option_key TEXT NOT NULL UNIQUE,
     value TEXT NOT NULL,
     type TEXT NOT NULL DEFAULT 'text',
     group_name TEXT NOT NULL DEFAULT 'general',
@@ -126,32 +109,26 @@ CREATE TABLE IF NOT EXISTS options (
     is_public BOOLEAN NOT NULL DEFAULT 0,
     autoload BOOLEAN NOT NULL DEFAULT 1,
     sort_order INTEGER NOT NULL DEFAULT 0,
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    UNIQUE(tenant_id, option_key)
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
 -- RBAC roles
 CREATE TABLE IF NOT EXISTS roles (
     id INTEGER PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
-    name TEXT NOT NULL,
+    name TEXT NOT NULL UNIQUE,
     description TEXT,
     is_system BOOLEAN NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    UNIQUE(tenant_id, name)
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
-
-CREATE INDEX IF NOT EXISTS idx_roles_tenant ON roles(tenant_id);
 
 -- RBAC permissions
 CREATE TABLE IF NOT EXISTS permissions (
     id INTEGER PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
     role_id INTEGER NOT NULL,
     action TEXT NOT NULL,
     subject TEXT NOT NULL,
-     fields TEXT,
+    fields TEXT,
     conditions TEXT,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
@@ -159,19 +136,17 @@ CREATE TABLE IF NOT EXISTS permissions (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_permissions_role_action_subject
     ON permissions(role_id, action, subject);
-CREATE INDEX IF NOT EXISTS idx_permissions_tenant ON permissions(tenant_id);
 
 -- Audit log
 CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
     actor_id INTEGER,
     actor_role TEXT,
     action TEXT NOT NULL,
     subject TEXT NOT NULL,
     subject_id TEXT,
     detail TEXT,
-     ip_address TEXT,
+    ip_address TEXT,
     user_agent TEXT,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
@@ -179,7 +154,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
 
 CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
 CREATE INDEX IF NOT EXISTS idx_audit_log_actor ON audit_log(actor_id);
-CREATE INDEX IF NOT EXISTS idx_audit_log_tenant_created ON audit_log(tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at DESC);
 
 -- API Token
 CREATE TABLE IF NOT EXISTS api_tokens (
@@ -199,7 +174,6 @@ CREATE INDEX IF NOT EXISTS idx_api_tokens_user_id ON api_tokens(user_id);
 -- Webhook subscriptions
 CREATE TABLE IF NOT EXISTS webhook_subscriptions (
     id INTEGER PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
     url TEXT NOT NULL,
     secret TEXT NOT NULL,
     events TEXT NOT NULL DEFAULT '[]',
@@ -210,7 +184,6 @@ CREATE TABLE IF NOT EXISTS webhook_subscriptions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_webhook_subscriptions_enabled ON webhook_subscriptions(enabled);
-CREATE INDEX IF NOT EXISTS idx_webhook_subscriptions_tenant ON webhook_subscriptions(tenant_id);
 
 -- Plugin KV storage
 CREATE TABLE IF NOT EXISTS plugin_storage (
@@ -340,9 +313,8 @@ CREATE INDEX IF NOT EXISTS idx_cron_log_started ON cron_execution_log(started_at
 -- Categories
 CREATE TABLE IF NOT EXISTS categories (
     id INTEGER PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
-    name TEXT NOT NULL,
-    slug TEXT NOT NULL,
+    name TEXT NOT NULL UNIQUE,
+    slug TEXT NOT NULL UNIQUE,
     description TEXT,
     parent_id INTEGER,
     sort_order INTEGER NOT NULL DEFAULT 0,
@@ -355,21 +327,16 @@ CREATE TABLE IF NOT EXISTS categories (
     og_description TEXT,
     og_image TEXT,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    UNIQUE(tenant_id, name),
-    UNIQUE(tenant_id, slug)
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
-
-CREATE INDEX IF NOT EXISTS idx_categories_tenant ON categories(tenant_id);
 
 
 
 -- Tags
 CREATE TABLE IF NOT EXISTS tags (
     id INTEGER PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
-    name TEXT NOT NULL,
-    slug TEXT NOT NULL,
+    name TEXT NOT NULL UNIQUE,
+    slug TEXT NOT NULL UNIQUE,
     created_by INTEGER,
     updated_by INTEGER,
     description TEXT,
@@ -380,19 +347,14 @@ CREATE TABLE IF NOT EXISTS tags (
     og_description TEXT,
     og_image TEXT,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    UNIQUE(tenant_id, name),
-    UNIQUE(tenant_id, slug)
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
-
-CREATE INDEX IF NOT EXISTS idx_tags_tenant ON tags(tenant_id);
 
 -- Posts
 CREATE TABLE IF NOT EXISTS posts (
     id INTEGER PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
     title TEXT NOT NULL,
-    slug TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
     content TEXT NOT NULL,
     excerpt TEXT,
     cover_image TEXT,
@@ -416,8 +378,7 @@ CREATE TABLE IF NOT EXISTS posts (
     reading_time INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    published_at TEXT,
-    UNIQUE(tenant_id, slug)
+    published_at TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
@@ -429,7 +390,6 @@ CREATE INDEX IF NOT EXISTS idx_posts_status_category
     ON posts(status, category_id);
 CREATE INDEX IF NOT EXISTS idx_posts_status_author
     ON posts(status, created_by);
-CREATE INDEX IF NOT EXISTS idx_posts_tenant ON posts(tenant_id);
 
 -- Posts-Tags (many-to-many)
 CREATE TABLE IF NOT EXISTS posts_tags (
@@ -445,8 +405,7 @@ CREATE TABLE IF NOT EXISTS taggings (
     tag_id INTEGER NOT NULL,
     taggable_type TEXT NOT NULL,
     taggable_id INTEGER NOT NULL,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
-    UNIQUE(tenant_id, tag_id, taggable_type, taggable_id)
+    UNIQUE(tag_id, taggable_type, taggable_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_taggings_tag ON taggings(tag_id);
@@ -455,7 +414,6 @@ CREATE INDEX IF NOT EXISTS idx_taggings_taggable ON taggings(taggable_type, tagg
 -- Comments
 CREATE TABLE IF NOT EXISTS comments (
     id INTEGER PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
     post_id INTEGER NOT NULL,
     created_by INTEGER,
     updated_by INTEGER,
@@ -476,13 +434,11 @@ CREATE INDEX IF NOT EXISTS idx_comments_post_status
     ON comments(post_id, status);
 CREATE INDEX IF NOT EXISTS idx_comments_parent_id
     ON comments(parent_id);
-CREATE INDEX IF NOT EXISTS idx_comments_tenant ON comments(tenant_id);
 
 -- ── Built-in module: Pages (BUILTIN_PAGES=true) ────────────────
 
 CREATE TABLE IF NOT EXISTS pages (
     id               INTEGER PRIMARY KEY,
-    tenant_id        TEXT NOT NULL DEFAULT 'default',
     title            TEXT NOT NULL,
     slug             TEXT NOT NULL UNIQUE,
     content          TEXT,
@@ -504,19 +460,15 @@ CREATE TABLE IF NOT EXISTS pages (
     og_description TEXT,
     canonical_url TEXT,
     created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    UNIQUE(tenant_id, slug)
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_pages_status    ON pages(status);
 CREATE INDEX IF NOT EXISTS idx_pages_parent    ON pages(parent_id);
 CREATE INDEX IF NOT EXISTS idx_pages_author    ON pages(created_by);
-CREATE INDEX IF NOT EXISTS idx_pages_tenant_slug ON pages(tenant_id, slug);
-CREATE INDEX IF NOT EXISTS idx_pages_tenant_status ON pages(tenant_id, status);
 
 CREATE TABLE IF NOT EXISTS reusable_blocks (
     id          INTEGER PRIMARY KEY,
-    tenant_id   TEXT NOT NULL DEFAULT 'default',
     name        TEXT NOT NULL,
     block_type  TEXT NOT NULL,
     content     TEXT NOT NULL,
@@ -527,13 +479,10 @@ CREATE TABLE IF NOT EXISTS reusable_blocks (
     updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_reusable_blocks_tenant ON reusable_blocks(tenant_id);
-
 -- ── Built-in module: Media (BUILTIN_MEDIA=true) ────────────────
 
 CREATE TABLE IF NOT EXISTS media (
     id INTEGER PRIMARY KEY,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
     user_id INTEGER NOT NULL,
     filename TEXT NOT NULL,
     filepath TEXT NOT NULL,
@@ -551,7 +500,6 @@ CREATE TABLE IF NOT EXISTS media (
 
 CREATE INDEX IF NOT EXISTS idx_media_user_created
     ON media(user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_media_tenant ON media(tenant_id);
 
 -- ── Built-in module: Workflow (BUILTIN_WORKFLOW=true) ──────────
 
@@ -603,58 +551,54 @@ CREATE INDEX IF NOT EXISTS idx_wf_step_logs_instance ON workflow_step_logs(insta
 -- Seed data
 -- ============================================================
 
--- Default tenant
-INSERT OR IGNORE INTO tenants (id, name, domain, config, status, created_at, updated_at) VALUES
-    (10001, 'Default', NULL, '{}', 'active', strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
-
 -- Default currencies
-INSERT OR IGNORE INTO currencies (id, tenant_id, code, name, decimals) VALUES
-    (10001, 'default', 'CNY', 'Chinese Yuan', 2),
-    (10002, 'default', 'USD', 'US Dollar', 2),
-    (10003, 'default', 'EUR', 'Euro', 2),
-    (10004, 'default', 'GBP', 'British Pound', 2),
-    (10005, 'default', 'JPY', 'Japanese Yen', 0);
+INSERT OR IGNORE INTO currencies (id, code, name, decimals) VALUES
+    (10001, 'CNY', 'Chinese Yuan', 2),
+    (10002, 'USD', 'US Dollar', 2),
+    (10003, 'EUR', 'Euro', 2),
+    (10004, 'GBP', 'British Pound', 2),
+    (10005, 'JPY', 'Japanese Yen', 0);
 
 -- System roles
-INSERT OR IGNORE INTO roles (id, tenant_id, name, description, is_system, created_at, updated_at) VALUES
-    (10001, 'default', 'admin', 'Super administrator', 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10002, 'default', 'editor', 'Editor', 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10003, 'default', 'author', 'Author', 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10004, 'default', 'reader', 'Reader', 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+INSERT OR IGNORE INTO roles (id, name, description, is_system, created_at, updated_at) VALUES
+    (10001, 'admin', 'Super administrator', 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10002, 'editor', 'Editor', 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10003, 'author', 'Author', 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10004, 'reader', 'Reader', 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
 
 -- Admin global permissions
-INSERT OR IGNORE INTO permissions (id, tenant_id, role_id, action, subject, fields, conditions, created_at) VALUES
-    (10001, 'default', (SELECT id FROM roles WHERE name = 'admin'), '*', '*', '["*"]', NULL, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+INSERT OR IGNORE INTO permissions (id, role_id, action, subject, fields, conditions, created_at) VALUES
+    (10001, (SELECT id FROM roles WHERE name = 'admin'), '*', '*', '["*"]', NULL, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
 
 -- Editor permissions
-INSERT OR IGNORE INTO permissions (id, tenant_id, role_id, action, subject, fields, conditions, created_at) VALUES
-    (10002, 'default', (SELECT id FROM roles WHERE name = 'editor'), 'content-type::*.*', 'content-type::*', '["*"]', NULL, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+INSERT OR IGNORE INTO permissions (id, role_id, action, subject, fields, conditions, created_at) VALUES
+    (10002, (SELECT id FROM roles WHERE name = 'editor'), 'content-type::*.*', 'content-type::*', '["*"]', NULL, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
 
 -- Author permissions
-INSERT OR IGNORE INTO permissions (id, tenant_id, role_id, action, subject, fields, conditions, created_at) VALUES
-    (10003, 'default', (SELECT id FROM roles WHERE name = 'author'), 'content-type::post.create', 'content-type::post', '["*"]', NULL, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10004, 'default', (SELECT id FROM roles WHERE name = 'author'), 'content-type::post.read', 'content-type::post', '["*"]', NULL, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10005, 'default', (SELECT id FROM roles WHERE name = 'author'), 'content-type::post.update', 'content-type::post', '["*"]', '{"author_id":"$user.id"}', strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10006, 'default', (SELECT id FROM roles WHERE name = 'author'), 'content-type::post.delete', 'content-type::post', '["*"]', '{"author_id":"$user.id"}', strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+INSERT OR IGNORE INTO permissions (id, role_id, action, subject, fields, conditions, created_at) VALUES
+    (10003, (SELECT id FROM roles WHERE name = 'author'), 'content-type::post.create', 'content-type::post', '["*"]', NULL, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10004, (SELECT id FROM roles WHERE name = 'author'), 'content-type::post.read', 'content-type::post', '["*"]', NULL, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10005, (SELECT id FROM roles WHERE name = 'author'), 'content-type::post.update', 'content-type::post', '["*"]', '{"author_id":"$user.id"}', strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10006, (SELECT id FROM roles WHERE name = 'author'), 'content-type::post.delete', 'content-type::post', '["*"]', '{"author_id":"$user.id"}', strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
 
 -- Reader permissions
-INSERT OR IGNORE INTO permissions (id, tenant_id, role_id, action, subject, fields, conditions, created_at) VALUES
-    (10007, 'default', (SELECT id FROM roles WHERE name = 'reader'), 'content-type::post.read', 'content-type::post', '["title","slug","content","excerpt","status"]', NULL, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10008, 'default', (SELECT id FROM roles WHERE name = 'reader'), 'content-type::comment.create', 'content-type::comment', '["content","nickname","email"]', NULL, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+INSERT OR IGNORE INTO permissions (id, role_id, action, subject, fields, conditions, created_at) VALUES
+    (10007, (SELECT id FROM roles WHERE name = 'reader'), 'content-type::post.read', 'content-type::post', '["title","slug","content","excerpt","status"]', NULL, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10008, (SELECT id FROM roles WHERE name = 'reader'), 'content-type::comment.create', 'content-type::comment', '["content","nickname","email"]', NULL, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
 
 -- Site options
-INSERT OR IGNORE INTO options (id, tenant_id, option_key, value, type, group_name, label, description, validation, is_public, autoload, sort_order, updated_at) VALUES
-    (10001, 'default', 'site_title', '"My Blog"', 'text', 'general', 'Site title', 'Displayed in browser title bar and page header', '{"max_length":100}', 1, 1, 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10002, 'default', 'site_description', '""', 'text', 'general', 'Site description', 'Brief description of the site purpose', '{"max_length":500}', 1, 1, 2, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10003, 'default', 'site_url', '""', 'url', 'general', 'Site URL', 'e.g. https://example.com', NULL, 1, 1, 3, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10004, 'default', 'admin_email', '""', 'email', 'general', 'Admin email', NULL, NULL, 0, 1, 4, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10005, 'default', 'timezone', '"UTC"', 'select', 'general', 'Timezone', NULL, '{"values":["UTC","Asia/Shanghai","Asia/Tokyo","US/Eastern","US/Pacific","Europe/London","Europe/Berlin"]}', 1, 1, 5, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10006, 'default', 'date_format', '"%Y-%m-%d"', 'select', 'general', 'Date format', NULL, '{"values":["%Y-%m-%d","%d/%m/%Y","%m/%d/%Y","%Y年%m月%d日"]}', 1, 1, 6, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10007, 'default', 'posts_per_page', '10', 'integer', 'reading', 'Posts per page', NULL, '{"min":1,"max":100}', 1, 1, 10, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10008, 'default', 'rss_items', '20', 'integer', 'reading', 'RSS item count', NULL, '{"min":1,"max":100}', 1, 1, 11, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10009, 'default', 'permalink_structure', '"/:year/:month/:slug"', 'select', 'reading', 'URL structure', NULL, '{"values":["/:year/:month/:slug","/:slug","/posts/:slug"]}', 1, 1, 12, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10010, 'default', 'comment_moderation', 'true', 'boolean', 'discussion', 'Comments require moderation', 'When enabled, new comments require admin approval', NULL, 0, 1, 20, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10011, 'default', 'comment_order', '"asc"', 'select', 'discussion', 'Comment order', NULL, '{"values":["asc","desc"]}', 1, 1, 21, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10012, 'default', 'default_role', '"reader"', 'select', 'discussion', 'Default role for new users', NULL, '{"values":["reader","author"]}', 0, 1, 22, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10013, 'default', 'theme', '"default"', 'select', 'appearance', 'Current theme', NULL, '{"values":["default","corporate","minimal","warm"]}', 1, 1, 30, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    (10014, 'default', 'maintenance_mode', 'false', 'boolean', 'appearance', 'Maintenance mode', 'When enabled, a maintenance page is shown to visitors', NULL, 1, 1, 31, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+INSERT OR IGNORE INTO options (id, option_key, value, type, group_name, label, description, validation, is_public, autoload, sort_order, updated_at) VALUES
+    (10001, 'site_title', '"My Blog"', 'text', 'general', 'Site title', 'Displayed in browser title bar and page header', '{"max_length":100}', 1, 1, 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10002, 'site_description', '""', 'text', 'general', 'Site description', 'Brief description of the site purpose', '{"max_length":500}', 1, 1, 2, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10003, 'site_url', '""', 'url', 'general', 'Site URL', 'e.g. https://example.com', NULL, 1, 1, 3, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10004, 'admin_email', '""', 'email', 'general', 'Admin email', NULL, NULL, 0, 1, 4, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10005, 'timezone', '"UTC"', 'select', 'general', 'Timezone', NULL, '{"values":["UTC","Asia/Shanghai","Asia/Tokyo","US/Eastern","US/Pacific","Europe/London","Europe/Berlin"]}', 1, 1, 5, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10006, 'date_format', '"%Y-%m-%d"', 'select', 'general', 'Date format', NULL, '{"values":["%Y-%m-%d","%d/%m/%Y","%m/%d/%Y","%Y年%m月%d日"]}', 1, 1, 6, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10007, 'posts_per_page', '10', 'integer', 'reading', 'Posts per page', NULL, '{"min":1,"max":100}', 1, 1, 10, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10008, 'rss_items', '20', 'integer', 'reading', 'RSS item count', NULL, '{"min":1,"max":100}', 1, 1, 11, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10009, 'permalink_structure', '"/:year/:month/:slug"', 'select', 'reading', 'URL structure', NULL, '{"values":["/:year/:month/:slug","/:slug","/posts/:slug"]}', 1, 1, 12, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10010, 'comment_moderation', 'true', 'boolean', 'discussion', 'Comments require moderation', 'When enabled, new comments require admin approval', NULL, 0, 1, 20, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10011, 'comment_order', '"asc"', 'select', 'discussion', 'Comment order', NULL, '{"values":["asc","desc"]}', 1, 1, 21, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10012, 'default_role', '"reader"', 'select', 'discussion', 'Default role for new users', NULL, '{"values":["reader","author"]}', 0, 1, 22, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10013, 'theme', '"default"', 'select', 'appearance', 'Current theme', NULL, '{"values":["default","corporate","minimal","warm"]}', 1, 1, 30, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    (10014, 'maintenance_mode', 'false', 'boolean', 'appearance', 'Maintenance mode', 'When enabled, a maintenance page is shown to visitors', NULL, 1, 1, 31, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));

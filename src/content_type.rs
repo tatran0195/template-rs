@@ -50,7 +50,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use arc_swap::ArcSwap;
-use schema::ContentTypeSchema;
+pub use schema::ContentTypeSchema;
 
 use crate::errors::app_error::AppError;
 

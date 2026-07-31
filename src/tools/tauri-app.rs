@@ -2,9 +2,9 @@
 //!
 //! Usage (in src-tauri/ project):
 //! ```ignore
-//! use axe::tauri::setup;
+//! use mcms::tauri::setup;
 //!
-//! let config = axe::config::app::AppConfig::init();
+//! let config = mcms::config::app::AppConfig::init();
 //! let state = setup::build_state(&config).await?;
 //!
 //! tauri::Builder::default()
@@ -19,7 +19,7 @@
 #![deny(unsafe_code)]
 
 fn main() {
-    println!("axe Tauri adapter — compile-time check only.");
+    println!("MCMS Tauri adapter — compile-time check only.");
     println!("Use this crate as a library from your Tauri project's src-tauri/.");
     println!("See src/tauri/setup.rs for integration instructions.");
 }

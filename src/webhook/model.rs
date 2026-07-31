@@ -10,7 +10,6 @@ use crate::utils::tz::Timestamp;
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct WebhookSubscription {
     pub id: SnowflakeId,
-    pub tenant_id: Option<String>,
     pub url: String,
     pub secret: String,
     pub events: String,
@@ -48,7 +47,7 @@ pub struct WebhookPayload {
 
 pub async fn insert(pool: &crate::db::Pool, sub: &WebhookSubscription) -> AppResult<()> {
     let now = crate::utils::tz::now_utc();
-    axe_derive::crud_insert!(
+    mcms_derive::crud_insert!(
         pool,
         "webhook_subscriptions",
         [
@@ -60,23 +59,20 @@ pub async fn insert(pool: &crate::db::Pool, sub: &WebhookSubscription) -> AppRes
             "description" => &sub.description,
             "created_at" => now,
             "updated_at" => now
-        ],
-        tenant: sub.tenant_id.as_deref()
+        ]
     )?;
     Ok(())
 }
 
 pub async fn find_paginated(
     pool: &crate::db::Pool,
-    tenant_id: Option<&str>,
     page: i64,
     page_size: i64,
 ) -> AppResult<(Vec<WebhookSubscription>, i64)> {
-    let result = axe_derive::crud_query_paged!(
+    let result = mcms_derive::crud_query_paged!(
         pool, WebhookSubscription,
         table: "webhook_subscriptions",
         order_by: "created_at DESC",
-        tenant: tenant_id,
         page: page,
         page_size: page_size
     );
@@ -84,13 +80,13 @@ pub async fn find_paginated(
 }
 
 pub async fn find_by_id(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<WebhookSubscription> {
-    let result: WebhookSubscription = axe_derive::crud_find_one!(pool, "webhook_subscriptions", WebhookSubscription, where: ("id", id))?;
+    let result: WebhookSubscription = mcms_derive::crud_find_one!(pool, "webhook_subscriptions", WebhookSubscription, where: ("id", id))?;
     Ok(result)
 }
 
 pub async fn update(pool: &crate::db::Pool, sub: &WebhookSubscription) -> AppResult<()> {
     let now = crate::utils::tz::now_utc();
-    let result = axe_derive::crud_update!(
+    let result = mcms_derive::crud_update!(
         pool, "webhook_subscriptions",
         bind: ["url" => &sub.url, "secret" => &sub.secret, "events" => &sub.events, "enabled" => sub.enabled, "description" => &sub.description, "updated_at" => now],
         where: ("id", sub.id)
@@ -100,16 +96,13 @@ pub async fn update(pool: &crate::db::Pool, sub: &WebhookSubscription) -> AppRes
 }
 
 pub async fn delete_by_id(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<()> {
-    let result = axe_derive::crud_delete!(pool, "webhook_subscriptions", where: ("id", id))?;
+    let result = mcms_derive::crud_delete!(pool, "webhook_subscriptions", where: ("id", id))?;
     AppError::expect_affected(&result, "webhook_subscription")?;
     Ok(())
 }
 
-pub async fn find_enabled_by_tenant(
-    pool: &crate::db::Pool,
-    tenant_id: Option<&str>,
-) -> AppResult<Vec<WebhookSubscription>> {
+pub async fn find_enabled(pool: &crate::db::Pool) -> AppResult<Vec<WebhookSubscription>> {
     Ok(
-        axe_derive::crud_find_all!(pool, "webhook_subscriptions", WebhookSubscription, where: ("enabled", true), tenant: tenant_id)?,
+        mcms_derive::crud_find_all!(pool, "webhook_subscriptions", WebhookSubscription, where: ("enabled", true))?,
     )
 }

@@ -121,7 +121,7 @@ pub async fn restore_revision(
 
     let repo = ContentRepository::new(state.pool.clone());
     let result = repo
-        .update(&ct, int_id, snapshot, None, &Default::default())
+        .update(&ct, int_id, snapshot, &Default::default())
         .await?;
 
     let value = serde_json::to_value(result)

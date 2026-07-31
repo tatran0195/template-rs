@@ -103,7 +103,6 @@ fn make_base_ctx_from_auth(
 ) -> crate::aspects::BaseContext {
     crate::aspects::BaseContext::new(
         auth.user_id().map(|id| id.to_string()),
-        auth.tenant_id().unwrap_or(DEFAULT_TENANT).to_string(),
         crate::utils::tz::now_str(),
     )
     .with_pool(pool.clone())
@@ -111,20 +110,13 @@ fn make_base_ctx_from_auth(
 }
 
 fn make_base_ctx(state: &AppState, save_ctx: &SaveContext) -> crate::aspects::BaseContext {
-    crate::aspects::BaseContext::new(
-        save_ctx.user_id.clone(),
-        save_ctx
-            .tenant_id
-            .clone()
-            .unwrap_or_else(|| DEFAULT_TENANT.into()),
-        crate::utils::tz::now_str(),
-    )
-    .with_pool(state.pool.clone())
-    .with_user_int_id(save_ctx.user_int_id)
+    crate::aspects::BaseContext::new(save_ctx.user_id.clone(), crate::utils::tz::now_str())
+        .with_pool(state.pool.clone())
+        .with_user_int_id(save_ctx.user_int_id)
 }
 
 fn make_base_ctx_anon(state: &AppState) -> crate::aspects::BaseContext {
-    crate::aspects::BaseContext::new(None, DEFAULT_TENANT.into(), crate::utils::tz::now_str())
+    crate::aspects::BaseContext::new(None, crate::utils::tz::now_str())
         .with_pool(state.pool.clone())
 }
 
@@ -751,7 +743,7 @@ pub async fn do_list(
                         let parsed_id =
                             crate::types::snowflake_id::parse_id(v).unwrap_or(SnowflakeId(-1));
                         let int_id =
-                            axe_derive::crud_resolve_id!(&state.pool, &rel.target, *parsed_id)
+                            mcms_derive::crud_resolve_id!(&state.pool, &rel.target, *parsed_id)
                                 .ok()
                                 .flatten()
                                 .unwrap_or(-1);
@@ -773,7 +765,6 @@ pub async fn do_list(
         status: None,
         search: params.search,
         fields: ct.api.list.fields.clone(),
-        tenant_id: None,
         include,
         skip_total: params.skip_total.unwrap_or(false),
         rule_where,
@@ -866,7 +857,7 @@ pub async fn do_get(
     }
 
     let repo = ContentRepository::new(state.pool.clone());
-    let item = repo.find_by_id(ct, id, None, false).await?;
+    let item = repo.find_by_id(ct, id, false).await?;
     let result = item.ok_or_else(|| AppError::not_found(&format!("{}/{}", ct.name, id)))?;
 
     if let Some(rules) = ct.cached_rules.as_ref()
@@ -934,7 +925,7 @@ pub async fn do_create(
     }
 
     let repo = ContentRepository::new(state.pool.clone());
-    let result = repo.create(ct, data, None, save_ctx).await?;
+    let result = repo.create(ct, data, save_ctx).await?;
     invalidate_cms_cache(state, ct);
 
     let id = result
@@ -992,7 +983,7 @@ pub async fn do_update(
     if let Some(rules) = ct.cached_rules.as_ref()
         && let Some(rule) = rules.update.filter.as_ref()
     {
-        let existing = repo.find_by_id(ct, id, None, true).await?;
+        let existing = repo.find_by_id(ct, id, true).await?;
         if let Some(record) = existing {
             let ctx = super::rule_engine::RuleContext::from_auth(auth);
             if !rule.evaluate(&record, &ctx, &state.config.rule_engine) {
@@ -1001,7 +992,7 @@ pub async fn do_update(
         }
     }
 
-    let old_record_value = repo.find_by_id(ct, id, None, true).await?;
+    let old_record_value = repo.find_by_id(ct, id, true).await?;
 
     if let Some(rules) = ct.cached_rules.as_ref()
         && let Some(rule) = rules.update.filter.as_ref()
@@ -1046,7 +1037,7 @@ pub async fn do_update(
         data = Value::Object(ctx.new_record);
     }
 
-    let result = repo.update(ct, id, data, None, save_ctx).await?;
+    let result = repo.update(ct, id, data, save_ctx).await?;
     invalidate_cms_cache(state, ct);
 
     {
@@ -1089,7 +1080,7 @@ pub async fn do_delete(
 ) -> Result<(), AppError> {
     let repo = ContentRepository::new(state.pool.clone());
 
-    let existing = repo.find_by_id(ct, id, None, true).await?;
+    let existing = repo.find_by_id(ct, id, true).await?;
     let value = existing.ok_or_else(|| AppError::not_found(&ct.singular))?;
 
     let record: crate::aspects::Record = match value.as_object() {
@@ -1133,13 +1124,11 @@ pub async fn do_delete(
             .record
             .get(COL_DELETED_BY)
             .and_then(|v| v.as_i64());
-        repo.soft_delete(ct, id, deleted_at, deleted_by, auth.tenant_id())
-            .await?;
+        repo.soft_delete(ct, id, deleted_at, deleted_by).await?;
     } else {
         repo.delete(
             ct,
             id,
-            auth.tenant_id(),
             &state.protocol_registry,
             &state.content_type_registry,
         )
@@ -1210,7 +1199,7 @@ async fn do_admin_list(
                         let parsed_id =
                             crate::types::snowflake_id::parse_id(v).unwrap_or(SnowflakeId(-1));
                         let int_id =
-                            axe_derive::crud_resolve_id!(&state.pool, &rel.target, *parsed_id)
+                            mcms_derive::crud_resolve_id!(&state.pool, &rel.target, *parsed_id)
                                 .ok()
                                 .flatten()
                                 .unwrap_or(-1);
@@ -1232,7 +1221,6 @@ async fn do_admin_list(
         status: params.status,
         search: params.search,
         fields: None,
-        tenant_id: None,
         include,
         skip_total: params.skip_total.unwrap_or(false),
         rule_where: None,
@@ -1256,7 +1244,7 @@ async fn do_admin_get(
     id: SnowflakeId,
 ) -> Result<serde_json::Value, AppError> {
     let repo = ContentRepository::new(state.pool.clone());
-    let item = repo.find_by_id(ct, id, None, true).await?;
+    let item = repo.find_by_id(ct, id, true).await?;
     item.ok_or_else(|| AppError::not_found(&format!("{}/{}", ct.name, id)))
 }
 
@@ -1275,7 +1263,7 @@ pub async fn do_single_get(
     }
 
     let repo = ContentRepository::new(state.pool.clone());
-    let result = repo.ensure_single(ct, None).await?;
+    let result = repo.ensure_single(ct).await?;
 
     if let Some(rules) = ct.cached_rules.as_ref()
         && let Some(rule) = rules.get.filter.as_ref()
@@ -1304,7 +1292,7 @@ pub async fn do_single_update(
     auth: &AuthUser,
 ) -> Result<serde_json::Value, AppError> {
     let repo = ContentRepository::new(state.pool.clone());
-    let existing = repo.ensure_single(ct, None).await?;
+    let existing = repo.ensure_single(ct).await?;
     let id = existing.get(COL_ID).and_then(|v| v.as_i64()).unwrap_or(0);
 
     do_update(state, ct, SnowflakeId(id), data, save_ctx, auth).await
@@ -1315,7 +1303,7 @@ async fn do_admin_single_get(
     ct: &ContentTypeSchema,
 ) -> Result<serde_json::Value, AppError> {
     let repo = ContentRepository::new(state.pool.clone());
-    repo.ensure_single(ct, None).await
+    repo.ensure_single(ct).await
 }
 
 // ── Fixed route handlers (for content types registered at startup) ──────────────
@@ -1935,7 +1923,6 @@ type = "text"
             status: None,
             search: None,
             fields: None,
-            tenant_id: None,
             include: None,
             rule_where: None,
             rule_params: Vec::new(),
@@ -1959,7 +1946,6 @@ type = "text"
             status: None,
             search: None,
             fields: None,
-            tenant_id: None,
             include: None,
             rule_where: None,
             rule_params: Vec::new(),

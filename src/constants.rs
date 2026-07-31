@@ -3,11 +3,6 @@
 //! Centralized management of hardcoded strings used repeatedly across the system.
 //! Only includes values that are reused in multiple places; one-off values need not be constants.
 
-// ─── Default Tenant ───
-
-/// Default tenant ID
-pub const DEFAULT_TENANT: &str = "default";
-
 // ─── System Column Names ───
 
 /// Ownership — creator
@@ -40,14 +35,12 @@ pub const COL_DEPTH: &str = "depth";
 pub const COL_POSITION: &str = "position";
 /// Metadata JSON column
 pub const COL_META: &str = "__meta";
-/// Tenant ID column
-pub const COL_TENANT_ID: &str = "tenant_id";
 /// Primary key column
 pub const COL_ID: &str = "id";
+
 // ─── Auth Header ───
 
 pub const HEADER_AUTHORIZATION: &str = "authorization";
-pub const HEADER_TENANT_ID: &str = "x-tenant-id";
 pub const HEADER_API_TOKEN: &str = "x-api-token";
 pub const AUTH_BEARER_PREFIX: &str = "Bearer ";
 
@@ -65,4 +58,4 @@ pub const CMS_ROUTE: &str = "/cms";
 pub const CMS_ADMIN_ROUTE: &str = "/admin/cms";
 
 /// Plugin host function global object name (JS/Lua)
-pub const PLUGIN_HOST_GLOBAL: &str = "axeHost";
+pub const PLUGIN_HOST_GLOBAL: &str = "mcmsHost";

@@ -1,12 +1,12 @@
 [workspace]
-members = [".", "axe-derive"]
+members = [".", "mcms-derive"]
 resolver = "3"
 
 [package]
-name = "axe"
+name = "mcms"
 version = "0.2.29"
 edition = "2024"
-default-run = "axe"
+default-run = "mcms"
 repository = ""
 description = "The fastest CMS, easiest to deploy."
 homepage = ""
@@ -232,7 +232,7 @@ utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
 # TypeScript type generation
 ts-rs = { version = "12", optional = true, features = ["chrono-impl"] }
 inventory = "0.3.24"
-axe-derive = { version = "0.1.0", path = "axe-derive" }
+mcms-derive = { version = "0.1.0", path = "mcms-derive" }
 ferroid = { version = "2.0.0", features = [
     "snowflake",
     "atomic",

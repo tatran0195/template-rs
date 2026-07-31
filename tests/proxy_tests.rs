@@ -18,8 +18,8 @@ use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 use tokio::net::TcpStream;
 
-use axe::proxy::config::TenantSection;
-use axe::proxy::router::RouterTable;
+use mcms::proxy::config::TenantSection;
+use mcms::proxy::router::RouterTable;
 
 type BoxBody = http_body_util::combinators::BoxBody<Bytes, hyper::Error>;
 
@@ -287,7 +287,7 @@ async fn host_priority_over_prefix() {
 async fn start_proxy(
     router: Arc<RouterTable>,
 ) -> (String, tokio::task::JoinHandle<anyhow::Result<()>>) {
-    use axe::proxy::handler::handle_proxy_request;
+    use mcms::proxy::handler::handle_proxy_request;
 
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap().to_string();

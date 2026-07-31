@@ -38,7 +38,7 @@ pub async fn aop_http_layer(
         .collect();
 
     let mut ctx = HttpBeforeContext {
-        base: BaseContext::new(None, "default".to_string(), chrono::Utc::now().to_rfc3339()),
+        base: BaseContext::new(None, chrono::Utc::now().to_rfc3339()),
         method,
         path: path_owned.clone(),
         headers,

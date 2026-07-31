@@ -91,7 +91,7 @@ pub async fn list(
     params.sanitize();
     let (items, total) = state
         .webhook
-        .list(auth.tenant_id(), params.page, params.page_size)
+        .list(params.page, params.page_size)
         .await?;
     Ok(params.paginate(items, total))
 }
@@ -127,11 +127,9 @@ pub async fn create(
             "events must not be empty".into(),
         ));
     }
-    let tenant_id = auth.tenant_id();
     let sub = state
         .webhook
         .create(
-            tenant_id,
             req.url,
             req.events,
             req.description,

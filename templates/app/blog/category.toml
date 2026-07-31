@@ -4,7 +4,7 @@ singular = "category"
 plural = "categories"
 table = "categories"
 description = "Article classification"
-implements = ["ownable", "timestampable", "tenantable"]
+implements = ["ownable", "timestampable"]
 
 [fields.name]
 type = "text"

@@ -63,7 +63,7 @@ impl JobHandler for GenerateSitemapHandler {
         };
 
         let (posts, _) =
-            crate::models::post::find_published(&self.pool, 1, 50000, None, None, None, None)
+            crate::models::post::find_published(&self.pool, 1, 50000, None, None, None)
                 .await?;
 
         let xml = Self::build_xml(&self.config.base_url, &posts);
@@ -105,7 +105,6 @@ mod tests {
         use crate::models::post::Post;
         let posts = vec![Post {
             id: crate::types::snowflake_id::SnowflakeId(1i64),
-            tenant_id: Some(crate::constants::DEFAULT_TENANT.to_string()),
             title: "Hello".into(),
             slug: "hello".into(),
             content: "".into(),

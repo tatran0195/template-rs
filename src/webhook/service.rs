@@ -14,7 +14,6 @@ impl WebhookService {
 
     pub async fn create(
         &self,
-        tenant_id: Option<&str>,
         url: String,
         events: Vec<String>,
         description: Option<String>,
@@ -28,7 +27,6 @@ impl WebhookService {
         let secret = custom_secret.unwrap_or_else(Self::generate_secret);
         let sub = model::WebhookSubscription {
             id,
-            tenant_id: tenant_id.map(|t| t.to_string()),
             url,
             secret,
             events: serde_json::to_string(&events).unwrap_or_default(),
@@ -44,11 +42,10 @@ impl WebhookService {
 
     pub async fn list(
         &self,
-        tenant_id: Option<&str>,
         page: i64,
         page_size: i64,
     ) -> AppResult<(Vec<model::WebhookSubscription>, i64)> {
-        model::find_paginated(&self.pool, tenant_id, page, page_size).await
+        model::find_paginated(&self.pool, page, page_size).await
     }
 
     pub async fn get(&self, id: SnowflakeId) -> AppResult<model::WebhookSubscription> {
@@ -90,11 +87,8 @@ impl WebhookService {
         model::delete_by_id(&self.pool, id).await
     }
 
-    pub async fn find_enabled(
-        &self,
-        tenant_id: Option<&str>,
-    ) -> AppResult<Vec<model::WebhookSubscription>> {
-        model::find_enabled_by_tenant(&self.pool, tenant_id).await
+    pub async fn find_enabled(&self) -> AppResult<Vec<model::WebhookSubscription>> {
+        model::find_enabled(&self.pool).await
     }
 
     fn generate_secret() -> String {

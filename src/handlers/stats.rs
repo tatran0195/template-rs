@@ -60,7 +60,7 @@ pub fn routes(
 )]
 pub async fn overview(State(state): State<AppState>) -> AppResult<ApiResponse<serde_json::Value>> {
     let svc = StatsService::new(state.pool.clone());
-    let data = svc.overview(None).await?;
+    let data = svc.overview().await?;
     Ok(ApiResponse::success(data))
 }
 
@@ -77,7 +77,7 @@ pub async fn content_stats(
     Path(table): Path<String>,
 ) -> AppResult<ApiResponse<serde_json::Value>> {
     let svc = StatsService::new(state.pool.clone());
-    let data = svc.content_stats(&table, None).await?;
+    let data = svc.content_stats(&table).await?;
     Ok(ApiResponse::success(data))
 }
 
@@ -96,6 +96,6 @@ pub async fn trends(
     let days = query.days.unwrap_or(30);
 
     let svc = StatsService::new(state.pool.clone());
-    let data = svc.trends(table, days, None).await?;
+    let data = svc.trends(table, days).await?;
     Ok(ApiResponse::success(data))
 }

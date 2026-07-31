@@ -54,7 +54,6 @@ pub trait CommentService: Send + Sync {
         &self,
         page: i64,
         page_size: i64,
-        tenant_id: Option<&str>,
     ) -> AppResult<(Vec<AdminCommentRow>, i64)>;
 }
 
@@ -102,14 +101,13 @@ impl CommentService for CommentServiceImpl {
         nickname: Option<&str>,
         email: Option<&str>,
     ) -> AppResult<CommentResponse> {
-        let p = crate::models::post::find_by_slug(&self.pool, post_slug, auth.tenant_id())
+        let p = crate::models::post::find_by_slug(&self.pool, post_slug)
             .await?
             .ok_or_else(|| AppError::not_found("post"))?;
 
         if let Some(pid_str) = parent_id {
             let pid = crate::types::snowflake_id::parse_id(pid_str)?;
-            let all_comments =
-                comment::find_approved_by_post(&self.pool, p.id, auth.tenant_id()).await?;
+            let all_comments = comment::find_approved_by_post(&self.pool, p.id).await?;
             let parent = all_comments
                 .iter()
                 .find(|c| c.id == pid)
@@ -141,9 +139,7 @@ impl CommentService for CommentServiceImpl {
                 Some(int_id)
             } else {
                 let cid = crate::types::snowflake_id::parse_id(raw_id)?;
-                comment::find_by_id(&self.pool, cid, auth.tenant_id())
-                    .await?
-                    .map(|c| *c.id)
+                comment::find_by_id(&self.pool, cid).await?.map(|c| *c.id)
             }
         } else {
             None
@@ -159,7 +155,6 @@ impl CommentService for CommentServiceImpl {
                 content: filtered.content,
                 parent_id,
             },
-            auth.tenant_id(),
         )
         .await?;
 
@@ -183,30 +178,24 @@ impl CommentService for CommentServiceImpl {
         post_slug: &str,
         page: i64,
         page_size: i64,
-        auth: &AuthUser,
+        _auth: &AuthUser,
     ) -> AppResult<(Vec<CommentResponse>, i64)> {
-        let p = crate::models::post::find_by_slug(&self.pool, post_slug, auth.tenant_id())
+        let p = crate::models::post::find_by_slug(&self.pool, post_slug)
             .await?
             .ok_or_else(|| AppError::not_found("post"))?;
 
-        let (comments, total) = comment::find_approved_by_post_paginated(
-            &self.pool,
-            p.id,
-            page,
-            page_size,
-            auth.tenant_id(),
-        )
-        .await?;
+        let (comments, total) =
+            comment::find_approved_by_post_paginated(&self.pool, p.id, page, page_size).await?;
         Ok((comment::build_tree(&comments), total))
     }
 
     async fn delete(&self, comment_id: SnowflakeId, auth: &AuthUser) -> AppResult<()> {
-        let c = comment::find_by_id(&self.pool, comment_id, auth.tenant_id())
+        let c = comment::find_by_id(&self.pool, comment_id)
             .await?
             .ok_or_else(|| AppError::not_found("comment"))?;
 
         self.before_delete(auth, &c).await?;
-        comment::delete(&self.pool, c.id, auth.tenant_id()).await?;
+        comment::delete(&self.pool, c.id).await?;
         self.after_deleted(&c);
         Ok(())
     }
@@ -217,13 +206,13 @@ impl CommentService for CommentServiceImpl {
         status: CommentStatus,
         auth: &AuthUser,
     ) -> AppResult<()> {
-        let c = comment::find_by_id(&self.pool, comment_id, auth.tenant_id())
+        let c = comment::find_by_id(&self.pool, comment_id)
             .await?
             .ok_or_else(|| AppError::not_found("comment"))?;
         self.aspect_engine
             .before_update("comments", auth, &c, status)
             .await?;
-        comment::update_status(&self.pool, c.id, status, auth.tenant_id()).await?;
+        comment::update_status(&self.pool, c.id, status).await?;
         self.after_updated(&c);
         Ok(())
     }
@@ -232,9 +221,8 @@ impl CommentService for CommentServiceImpl {
         &self,
         page: i64,
         page_size: i64,
-        tenant_id: Option<&str>,
     ) -> AppResult<(Vec<AdminCommentRow>, i64)> {
-        comment::find_all_paginated(&self.pool, page, page_size, tenant_id).await
+        comment::find_all_paginated(&self.pool, page, page_size).await
     }
 }
 
@@ -248,7 +236,7 @@ mod tests {
     }
 
     fn auth(user: &crate::models::user::User) -> AuthUser {
-        AuthUser::from_parts(Some(*user.id), crate::models::user::UserRole::Admin, None)
+        AuthUser::from_parts(Some(*user.id), crate::models::user::UserRole::Admin)
     }
 
     async fn insert_user(pool: &crate::db::Pool) -> crate::models::user::User {
@@ -259,11 +247,10 @@ mod tests {
                 registered_via: crate::models::user::RegisteredVia::Email,
                 role: None,
             },
-            None,
         )
         .await
         .unwrap();
-        crate::models::user::update_role(pool, user.id, crate::models::user::UserRole::Admin, None)
+        crate::models::user::update_role(pool, user.id, crate::models::user::UserRole::Admin)
             .await
             .unwrap()
     }
@@ -290,7 +277,6 @@ mod tests {
                 og_image: None,
                 canonical_url: None,
             },
-            None,
         )
         .await
         .unwrap()
@@ -312,7 +298,6 @@ mod tests {
                 content: "nice post".into(),
                 parent_id: None,
             },
-            None,
         )
         .await
         .unwrap()
@@ -328,7 +313,7 @@ mod tests {
         svc.update_status(c.id, CommentStatus::Approved, &auth(&user))
             .await
             .unwrap();
-        let updated = crate::models::comment::find_by_id(&pool, c.id, None)
+        let updated = crate::models::comment::find_by_id(&pool, c.id)
             .await
             .unwrap()
             .unwrap();
@@ -342,7 +327,7 @@ mod tests {
     async fn update_comment_status_not_found() {
         let pool = setup_pool().await;
         let svc = CommentServiceImpl::new(Arc::new(pool.clone()), Arc::new(AspectEngine::new()));
-        let a = AuthUser::new_test(0, crate::models::user::UserRole::Admin, "");
+        let a = AuthUser::new_test(0, crate::models::user::UserRole::Admin);
         assert!(
             svc.update_status(SnowflakeId(999999), CommentStatus::Approved, &a)
                 .await
@@ -357,10 +342,10 @@ mod tests {
         let post_id = insert_post(&pool, *user.id).await;
         let c = insert_comment(&pool, post_id, *user.id).await;
         let svc = CommentServiceImpl::new(Arc::new(pool.clone()), Arc::new(AspectEngine::new()));
-        let a = AuthUser::from_parts(Some(*user.id), crate::models::user::UserRole::Admin, None);
+        let a = AuthUser::from_parts(Some(*user.id), crate::models::user::UserRole::Admin);
         svc.delete(c.id, &a).await.unwrap();
         assert!(
-            crate::models::comment::find_by_id(&pool, c.id, None)
+            crate::models::comment::find_by_id(&pool, c.id)
                 .await
                 .unwrap()
                 .is_none()
@@ -371,7 +356,7 @@ mod tests {
     async fn delete_comment_not_found() {
         let pool = setup_pool().await;
         let svc = CommentServiceImpl::new(Arc::new(pool.clone()), Arc::new(AspectEngine::new()));
-        let a = AuthUser::new_test(0, crate::models::user::UserRole::Admin, "");
+        let a = AuthUser::new_test(0, crate::models::user::UserRole::Admin);
         assert!(svc.delete(SnowflakeId(999999), &a).await.is_err());
     }
 
@@ -385,7 +370,7 @@ mod tests {
         svc.update_status(c.id, CommentStatus::Spam, &auth(&user))
             .await
             .unwrap();
-        let updated = crate::models::comment::find_by_id(&pool, c.id, None)
+        let updated = crate::models::comment::find_by_id(&pool, c.id)
             .await
             .unwrap()
             .unwrap();

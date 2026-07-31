@@ -98,7 +98,6 @@ mod tests {
     fn make_post(id: i64, slug: &str) -> Post {
         Post {
             id: crate::types::snowflake_id::SnowflakeId(id),
-            tenant_id: None,
             title: String::new(),
             slug: slug.into(),
             content: String::new(),
@@ -131,7 +130,6 @@ mod tests {
     fn make_user(id: i64, username: &str) -> User {
         User {
             id: crate::types::snowflake_id::SnowflakeId(id),
-            tenant_id: None,
             username: username.into(),
             role: UserRole::Reader,
             status: UserStatus::Active,

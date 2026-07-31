@@ -9,7 +9,6 @@ pub mod driver;
 pub mod pool;
 pub mod schema;
 pub mod sql_type;
-pub mod tenant;
 
 pub mod schema_meta {
     include!(concat!(env!("OUT_DIR"), "/schema_meta.rs"));

@@ -171,7 +171,7 @@ mod tests {
         engine.register(SlugAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "posts".into(),
             record: {
                 let mut r = Record::new();
@@ -196,7 +196,7 @@ mod tests {
         engine.register(SlugAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "posts".into(),
             record: {
                 let mut r = Record::new();
@@ -221,7 +221,7 @@ mod tests {
         engine.register(SlugAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "users".into(),
             record: {
                 let mut r = Record::new();
@@ -245,7 +245,7 @@ mod tests {
         engine.register(SlugAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "tags".into(),
             record: {
                 let mut r = Record::new();

@@ -3,7 +3,7 @@ use super::*;
 async fn admin_setup() -> (axum::Router, AppState, String) {
     let (app, state) = test_app().await;
     let (int_id, id) = create_author(&state.pool).await;
-    let tok = make_token(&id, int_id, axe::models::user::UserRole::Author);
+    let tok = make_token(&id, int_id, mcms::models::user::UserRole::Author);
     (app, state, tok)
 }
 

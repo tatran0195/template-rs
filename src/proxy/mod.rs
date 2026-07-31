@@ -1,6 +1,5 @@
-//! Built-in reverse proxy module (multi-tenant).
+//! Built-in reverse proxy module.
 //!
-//! Replaces nginx/caddy for single-binary multi-tenant deployment.
 //! Routes requests to backend instances (Unix socket / TCP) based on Host header or path prefix.
 
 pub mod config;
@@ -26,21 +25,19 @@ pub async fn start(config_path: &str) -> anyhow::Result<()> {
 
     let router = Arc::new(RouterTable::new());
 
-    let tenants = config::load_all_tenants(&proxy_config.proxy.tenants_dir);
-    let tenant_sections: Vec<_> = tenants.iter().map(|(_, t)| t.tenant.clone()).collect();
-    router.load_from_tenants(&tenant_sections);
+    let routes = config::load_all_routes(&proxy_config.proxy.routes_dir);
+    let route_sections: Vec<_> = routes.iter().map(|(_, r)| r.route.clone()).collect();
+    router.load_from_routes(&route_sections);
 
     tracing::info!(
         addr = %addr,
-        tenants = tenant_sections.len(),
         routes = router.len(),
-        "starting axe proxy"
+        "starting mcms proxy"
     );
-    println!("axe proxy listening on http://{addr}");
+    println!("mcms proxy listening on http://{addr}");
     println!(
-        "registered {} routes for {} tenants",
-        router.len(),
-        tenant_sections.len()
+        "registered {} routes",
+        router.len()
     );
 
     let listener = TcpListener::bind(addr).await?;

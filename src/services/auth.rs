@@ -34,14 +34,8 @@ use crate::models::user_credential::AuthType;
 pub struct Claims {
     pub sub: String,
     pub role: UserRole,
-    #[serde(default = "default_tenant_id")]
-    pub tenant_id: String,
     pub exp: usize,
     pub iat: usize,
-}
-
-fn default_tenant_id() -> String {
-    crate::constants::DEFAULT_TENANT.to_string()
 }
 
 /// Validate password strength.
@@ -107,7 +101,6 @@ pub fn verify_password(password: &str, hash: &str) -> AppResult<bool> {
 pub(crate) fn generate_access_token_internal(
     user_id: SnowflakeId,
     role: UserRole,
-    tenant_id: &str,
     secret: &str,
     expires_in: u64,
 ) -> AppResult<String> {
@@ -117,7 +110,6 @@ pub(crate) fn generate_access_token_internal(
     let claims = Claims {
         sub: user_id.to_string(),
         role,
-        tenant_id: tenant_id.to_string(),
         exp,
         iat,
     };
@@ -157,7 +149,6 @@ pub fn generate_access_token_for_test(user_id: SnowflakeId, role: UserRole) -> S
     generate_access_token_internal(
         user_id,
         role,
-        crate::constants::DEFAULT_TENANT,
         "test-secret-key-at-least-32-characters-long",
         900,
     )
@@ -172,7 +163,6 @@ pub fn generate_access_token_for_test(user_id: SnowflakeId, role: UserRole) -> S
 pub async fn register(
     aspect_engine: &AspectEngine,
     req: RegisterRequest,
-    tenant_id: Option<&str>,
     require_email_verification: bool,
     pool: &crate::db::Pool,
 ) -> AppResult<UserResponse> {
@@ -200,7 +190,6 @@ pub async fn register(
                 registered_via,
                 role: None,
             },
-            tenant_id,
         )
         .await?;
 
@@ -242,7 +231,6 @@ pub async fn register(
 pub async fn admin_create_user(
     aspect_engine: &AspectEngine,
     req: crate::dto::AdminCreateUserRequest,
-    tenant_id: Option<&str>,
     pool: &crate::db::Pool,
 ) -> AppResult<UserResponse> {
     if crate::models::user_credential::find_by_auth_type_and_identifier(
@@ -268,7 +256,6 @@ pub async fn admin_create_user(
                 registered_via: crate::models::user::RegisteredVia::Email,
                 role: req.role,
             },
-            tenant_id,
         )
         .await?;
 
@@ -303,7 +290,6 @@ pub async fn login(
     jwt_secret: &str,
     jwt_access_expires: u64,
     jwt_refresh_expires: u64,
-    tenant_id: Option<&str>,
     require_email_verification: bool,
 ) -> AppResult<LoginResponse> {
     let cred = crate::models::user_credential::find_by_auth_type_and_identifier(
@@ -325,7 +311,7 @@ pub async fn login(
         return Err(AppError::BadRequest("email_not_verified".into()));
     }
 
-    let user = crate::models::user::find_by_id(pool, cred.user_id, tenant_id)
+    let user = crate::models::user::find_by_id(pool, cred.user_id)
         .await?
         .ok_or_else(|| AppError::Unauthorized)?;
 
@@ -333,25 +319,9 @@ pub async fn login(
         return Err(AppError::BadRequest("account_disabled".into()));
     }
 
-    if let Some(ref tid) = user.tenant_id
-        && let Ok(tid_int) = tid.parse::<i64>()
-        && let Ok(Some(tenant)) =
-            crate::models::tenant::find_by_id(pool, SnowflakeId(tid_int)).await
-        && tenant.status != crate::models::tenant::TenantStatus::Active
-    {
-        return Err(AppError::BadRequest("tenant_disabled".into()));
-    }
-
     let user_role = user.role;
-    let access_token = generate_access_token_internal(
-        user.id,
-        user_role,
-        user.tenant_id
-            .as_deref()
-            .unwrap_or(crate::constants::DEFAULT_TENANT),
-        jwt_secret,
-        jwt_access_expires,
-    )?;
+    let access_token =
+        generate_access_token_internal(user.id, user_role, jwt_secret, jwt_access_expires)?;
     let refresh_token_str = generate_refresh_token_string_internal()?;
 
     let expires_at = Utc::now() + chrono::Duration::seconds(jwt_refresh_expires as i64);
@@ -380,14 +350,12 @@ pub async fn login(
 ///
 /// Validates the refresh token and performs token rotation: within a transaction, deletes
 /// the old refresh token and generates new access and refresh tokens, ensuring atomicity.
-#[allow(clippy::too_many_arguments)]
 pub async fn refresh(
     pool: &crate::db::Pool,
     refresh_token_str: &str,
     jwt_secret: &str,
     jwt_access_expires: u64,
     jwt_refresh_expires: u64,
-    tenant_id: Option<&str>,
 ) -> AppResult<LoginResponse> {
     let stored = crate::models::refresh_token::find_by_token(pool, refresh_token_str)
         .await?
@@ -398,20 +366,13 @@ pub async fn refresh(
         return Err(AppError::Unauthorized);
     }
 
-    let user = crate::models::user::find_by_id(pool, stored.user_id, tenant_id)
+    let user = crate::models::user::find_by_id(pool, stored.user_id)
         .await?
         .ok_or_else(|| AppError::Unauthorized)?;
 
     let user_role = user.role;
-    let access_token = generate_access_token_internal(
-        user.id,
-        user_role,
-        user.tenant_id
-            .as_deref()
-            .unwrap_or(crate::constants::DEFAULT_TENANT),
-        jwt_secret,
-        jwt_access_expires,
-    )?;
+    let access_token =
+        generate_access_token_internal(user.id, user_role, jwt_secret, jwt_access_expires)?;
     let new_refresh_token = generate_refresh_token_string_internal()?;
     let new_expires_at = Utc::now() + chrono::Duration::seconds(jwt_refresh_expires as i64);
     let new_expires_str = new_expires_at.to_rfc3339();
@@ -442,7 +403,7 @@ pub async fn refresh(
 /// Deletes all refresh tokens for the user, invalidating sessions across all devices.
 pub async fn logout(pool: &crate::db::Pool, auth: &AuthUser) -> AppResult<()> {
     let uid = auth.ensure_snowflake_user_id()?;
-    let user = crate::models::user::find_by_id(pool, uid, auth.tenant_id())
+    let user = crate::models::user::find_by_id(pool, uid)
         .await?
         .ok_or(AppError::Unauthorized)?;
     crate::models::refresh_token::delete_by_user(pool, user.id).await
@@ -458,8 +419,7 @@ pub async fn change_password(
     req: UpdatePasswordRequest,
 ) -> AppResult<()> {
     let uid = auth.ensure_snowflake_user_id()?;
-    let tenant_id = auth.tenant_id();
-    let _user = crate::models::user::find_by_id(pool, uid, tenant_id)
+    let _user = crate::models::user::find_by_id(pool, uid)
         .await?
         .ok_or_else(|| AppError::not_found("user"))?;
 
@@ -497,7 +457,7 @@ pub async fn bind_email_credential(
     password: &str,
 ) -> AppResult<()> {
     let uid = auth.ensure_snowflake_user_id()?;
-    let user = crate::models::user::find_by_id(pool, uid, auth.tenant_id())
+    let user = crate::models::user::find_by_id(pool, uid)
         .await?
         .ok_or(AppError::Unauthorized)?;
 
@@ -535,7 +495,7 @@ pub async fn delete_credential(
     credential_id: SnowflakeId,
 ) -> AppResult<()> {
     let uid = auth.ensure_snowflake_user_id()?;
-    let user = crate::models::user::find_by_id(pool, uid, auth.tenant_id())
+    let user = crate::models::user::find_by_id(pool, uid)
         .await?
         .ok_or(AppError::Unauthorized)?;
 
@@ -562,7 +522,7 @@ pub async fn list_credentials(
     auth: &AuthUser,
 ) -> AppResult<Vec<crate::models::user_credential::UserCredential>> {
     let uid = auth.ensure_snowflake_user_id()?;
-    let user = crate::models::user::find_by_id(pool, uid, auth.tenant_id())
+    let user = crate::models::user::find_by_id(pool, uid)
         .await?
         .ok_or(AppError::Unauthorized)?;
 
@@ -615,7 +575,6 @@ mod tests {
         let token = generate_access_token_internal(
             SnowflakeId(1),
             UserRole::Admin,
-            "default",
             "secret",
             900,
         )
@@ -631,7 +590,6 @@ mod tests {
         let token = generate_access_token_internal(
             SnowflakeId(1),
             UserRole::Admin,
-            "default",
             "secret-a",
             900,
         )
@@ -646,7 +604,6 @@ mod tests {
         let claims = Claims {
             sub: "1".into(),
             role: UserRole::Admin,
-            tenant_id: "default".to_string(),
             exp: (now - chrono::Duration::seconds(120)).timestamp() as usize,
             iat: (now - chrono::Duration::seconds(180)).timestamp() as usize,
         };

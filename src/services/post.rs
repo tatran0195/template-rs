@@ -64,11 +64,7 @@ pub trait PostService: Send + Sync {
     ) -> AppResult<PostResponse>;
     async fn admin_delete(&self, auth: &AuthUser, id: SnowflakeId) -> AppResult<()>;
     async fn batch(&self, auth: &AuthUser, action: &str, ids: &[String]) -> AppResult<usize>;
-    async fn list_recent_published(
-        &self,
-        limit: i64,
-        tenant_id: Option<&str>,
-    ) -> AppResult<Vec<PostJoinedRow>>;
+    async fn list_recent_published(&self, limit: i64) -> AppResult<Vec<PostJoinedRow>>;
 }
 
 // ─── Implementation ───
@@ -151,29 +147,24 @@ impl PostService for PostServiceImpl {
         });
 
         let created_by = auth.user_id().ok_or(AppError::Unauthorized)?;
-        let author_name =
-            crate::models::post::get_author_name(&self.pool, created_by, auth.tenant_id())
-                .await
-                .inspect_err(|e| tracing::warn!("failed to fetch author name: {e}"))
-                .ok()
-                .flatten();
+        let author_name = crate::models::post::get_author_name(&self.pool, created_by)
+            .await
+            .inspect_err(|e| tracing::warn!("failed to fetch author name: {e}"))
+            .ok()
+            .flatten();
 
         let category_id = if let Some(ref raw_id) = req.category_id {
             let parsed = crate::types::snowflake_id::parse_id(raw_id)?;
-            axe_derive::crud_resolve_id!(&self.pool, "categories", *parsed, tenant: auth.tenant_id())?
+            mcms_derive::crud_resolve_id!(&self.pool, "categories", *parsed)?
         } else {
             None
         };
         let category_name = if let Some(cat_id) = category_id {
-            crate::models::post::get_category_name(
-                &self.pool,
-                SnowflakeId(cat_id),
-                auth.tenant_id(),
-            )
-            .await
-            .inspect_err(|e| tracing::warn!("failed to fetch category name: {e}"))
-            .ok()
-            .flatten()
+            crate::models::post::get_category_name(&self.pool, SnowflakeId(cat_id))
+                .await
+                .inspect_err(|e| tracing::warn!("failed to fetch category name: {e}"))
+                .ok()
+                .flatten()
         } else {
             None
         };
@@ -183,7 +174,8 @@ impl PostService for PostServiceImpl {
                 let mut resolved = Vec::new();
                 for raw_id in ids {
                     let parsed = crate::types::snowflake_id::parse_id(raw_id)?;
-                    if let Some(int_id) = axe_derive::crud_resolve_id!(&self.pool, "tags", *parsed, tenant: auth.tenant_id())?
+                    if let Some(int_id) =
+                        mcms_derive::crud_resolve_id!(&self.pool, "tags", *parsed)?
                     {
                         resolved.push(int_id);
                     }
@@ -193,7 +185,7 @@ impl PostService for PostServiceImpl {
             None => None,
         };
         let tags = if let Some(ref ids) = tag_ids {
-            crate::models::post::get_tags_by_ids(&self.pool, ids, auth.tenant_id())
+            crate::models::post::get_tags_by_ids(&self.pool, ids)
                 .await
                 .inspect_err(|e| tracing::warn!("failed to fetch tags: {e}"))
                 .unwrap_or_default()
@@ -220,7 +212,7 @@ impl PostService for PostServiceImpl {
             og_image: req.og_image,
             canonical_url: req.canonical_url,
         };
-        let p = create_post_with_tags(&self.pool, cmd, auth.tenant_id()).await?;
+        let p = create_post_with_tags(&self.pool, cmd).await?;
 
         let resp = build_response_from_post(&p, author_name, category_name, tags).await?;
         tracing::Span::current().record("slug", &resp.slug);
@@ -234,7 +226,7 @@ impl PostService for PostServiceImpl {
         slug: &str,
         req: UpdatePostRequest,
     ) -> AppResult<PostResponse> {
-        let existing = crate::models::post::find_by_slug(&self.pool, slug, auth.tenant_id())
+        let existing = crate::models::post::find_by_slug(&self.pool, slug)
             .await?
             .ok_or_else(|| AppError::not_found("post"))?;
 
@@ -243,7 +235,7 @@ impl PostService for PostServiceImpl {
         let resp = self
             .update_inner(existing_id, existing, req, d, auth)
             .await?;
-        let updated = crate::models::post::find_by_id(&self.pool, existing_id, auth.tenant_id())
+        let updated = crate::models::post::find_by_id(&self.pool, existing_id)
             .await?
             .ok_or_else(|| AppError::not_found("post"))?;
         self.after_updated(&updated);
@@ -251,41 +243,38 @@ impl PostService for PostServiceImpl {
     }
 
     async fn delete(&self, auth: &AuthUser, slug: &str) -> AppResult<()> {
-        let existing = crate::models::post::find_by_slug(&self.pool, slug, auth.tenant_id())
+        let existing = crate::models::post::find_by_slug(&self.pool, slug)
             .await?
             .ok_or_else(|| AppError::not_found("post"))?;
 
         self.before_delete(auth, &existing).await?;
 
-        crate::models::post::delete(&self.pool, existing.id, auth.tenant_id()).await?;
+        crate::models::post::delete(&self.pool, existing.id).await?;
         self.after_deleted(&existing);
         Ok(())
     }
 
-    async fn get(&self, auth: &AuthUser, slug: &str) -> AppResult<PostResponse> {
-        let row =
-            crate::models::post::increment_view_count_joined(&self.pool, slug, auth.tenant_id())
-                .await?;
-        let tags = crate::models::post::get_post_tags(&self.pool, row.id, auth.tenant_id())
+    async fn get(&self, _auth: &AuthUser, slug: &str) -> AppResult<PostResponse> {
+        let row = crate::models::post::increment_view_count_joined(&self.pool, slug).await?;
+        let tags = crate::models::post::get_post_tags(&self.pool, row.id)
             .await
             .unwrap_or_default();
         joined_row_to_response(row, tags).await
     }
 
-    async fn get_any_status(&self, auth: &AuthUser, slug: &str) -> AppResult<PostResponse> {
-        let post = crate::models::post::find_by_slug(&self.pool, slug, auth.tenant_id()).await?;
+    async fn get_any_status(&self, _auth: &AuthUser, slug: &str) -> AppResult<PostResponse> {
+        let post = crate::models::post::find_by_slug(&self.pool, slug).await?;
         let post = post.ok_or_else(|| AppError::not_found("post not found"))?;
-        let row =
-            crate::models::post::find_joined_by_id(&self.pool, post.id, auth.tenant_id()).await?;
-        let tags = crate::models::post::get_post_tags(&self.pool, row.id, auth.tenant_id())
+        let row = crate::models::post::find_joined_by_id(&self.pool, post.id).await?;
+        let tags = crate::models::post::get_post_tags(&self.pool, row.id)
             .await
             .unwrap_or_default();
         joined_row_to_response(row, tags).await
     }
 
-    async fn admin_get_by_id(&self, auth: &AuthUser, id: SnowflakeId) -> AppResult<PostResponse> {
-        let row = crate::models::post::find_joined_by_id(&self.pool, id, auth.tenant_id()).await?;
-        let tags = crate::models::post::get_post_tags(&self.pool, row.id, auth.tenant_id())
+    async fn admin_get_by_id(&self, _auth: &AuthUser, id: SnowflakeId) -> AppResult<PostResponse> {
+        let row = crate::models::post::find_joined_by_id(&self.pool, id).await?;
+        let tags = crate::models::post::get_post_tags(&self.pool, row.id)
             .await
             .unwrap_or_default();
         joined_row_to_response(row, tags).await
@@ -294,7 +283,7 @@ impl PostService for PostServiceImpl {
     #[allow(clippy::too_many_arguments)]
     async fn list(
         &self,
-        auth: &AuthUser,
+        _auth: &AuthUser,
         page: i64,
         page_size: i64,
         category_id: Option<i64>,
@@ -309,7 +298,6 @@ impl PostService for PostServiceImpl {
             tag_id,
             q,
             Some(self.search.as_ref()),
-            auth,
         )
         .await
     }
@@ -331,7 +319,7 @@ impl PostService for PostServiceImpl {
         id: SnowflakeId,
         req: UpdatePostRequest,
     ) -> AppResult<PostResponse> {
-        let existing = crate::models::post::find_by_id(&self.pool, id, auth.tenant_id())
+        let existing = crate::models::post::find_by_id(&self.pool, id)
             .await?
             .ok_or_else(|| AppError::not_found("post"))?;
 
@@ -339,7 +327,7 @@ impl PostService for PostServiceImpl {
         let resp = self
             .update_inner(id, existing.clone(), req, d, auth)
             .await?;
-        let updated = crate::models::post::find_by_id(&self.pool, id, auth.tenant_id())
+        let updated = crate::models::post::find_by_id(&self.pool, id)
             .await?
             .unwrap_or(existing);
         self.after_updated(&updated);
@@ -347,13 +335,13 @@ impl PostService for PostServiceImpl {
     }
 
     async fn admin_delete(&self, auth: &AuthUser, id: SnowflakeId) -> AppResult<()> {
-        let existing = crate::models::post::find_by_id(&self.pool, id, auth.tenant_id())
+        let existing = crate::models::post::find_by_id(&self.pool, id)
             .await?
             .ok_or_else(|| AppError::not_found("post"))?;
 
         self.before_delete(auth, &existing).await?;
 
-        crate::models::post::delete(&self.pool, id, auth.tenant_id()).await?;
+        crate::models::post::delete(&self.pool, id).await?;
         self.after_deleted(&existing);
         Ok(())
     }
@@ -364,32 +352,24 @@ impl PostService for PostServiceImpl {
             let Ok(parsed_id) = crate::types::snowflake_id::parse_id(raw_id) else {
                 continue;
             };
-            let Some(int_id) = axe_derive::crud_resolve_id!(&self.pool, "posts", *parsed_id, tenant: auth.tenant_id())?
+            let Some(int_id) = mcms_derive::crud_resolve_id!(&self.pool, "posts", *parsed_id)?
             else {
                 continue;
             };
 
             match action {
                 "delete" => {
-                    let Ok(Some(existing)) = crate::models::post::find_by_id(
-                        &self.pool,
-                        SnowflakeId(int_id),
-                        auth.tenant_id(),
-                    )
-                    .await
+                    let Ok(Some(existing)) =
+                        crate::models::post::find_by_id(&self.pool, SnowflakeId(int_id)).await
                     else {
                         continue;
                     };
                     if self.before_delete(auth, &existing).await.is_err() {
                         continue;
                     }
-                    if crate::models::post::delete(
-                        &self.pool,
-                        SnowflakeId(int_id),
-                        auth.tenant_id(),
-                    )
-                    .await
-                    .is_ok()
+                    if crate::models::post::delete(&self.pool, SnowflakeId(int_id))
+                        .await
+                        .is_ok()
                     {
                         self.after_deleted(&existing);
                         affected += 1;
@@ -401,12 +381,8 @@ impl PostService for PostServiceImpl {
                     } else {
                         PostStatus::Draft
                     };
-                    if let Some(post) = crate::models::post::find_by_id(
-                        &self.pool,
-                        SnowflakeId(int_id),
-                        auth.tenant_id(),
-                    )
-                    .await?
+                    if let Some(post) =
+                        crate::models::post::find_by_id(&self.pool, SnowflakeId(int_id)).await?
                     {
                         let (req, _d) = self
                             .before_update(
@@ -450,10 +426,7 @@ impl PostService for PostServiceImpl {
                             og_image: None,
                             canonical_url: None,
                         };
-                        if update_post_with_tags(&self.pool, cmd, auth.tenant_id())
-                            .await
-                            .is_ok()
-                        {
+                        if update_post_with_tags(&self.pool, cmd).await.is_ok() {
                             self.after_updated(&post);
                             affected += 1;
                         }
@@ -465,15 +438,10 @@ impl PostService for PostServiceImpl {
         Ok(affected)
     }
 
-    async fn list_recent_published(
-        &self,
-        limit: i64,
-        tenant_id: Option<&str>,
-    ) -> AppResult<Vec<PostJoinedRow>> {
-        let (rows, _) = crate::models::post::find_published_joined(
-            &self.pool, 1, limit, None, None, None, tenant_id,
-        )
-        .await?;
+    async fn list_recent_published(&self, limit: i64) -> AppResult<Vec<PostJoinedRow>> {
+        let (rows, _) =
+            crate::models::post::find_published_joined(&self.pool, 1, limit, None, None, None)
+                .await?;
         Ok(rows)
     }
 }
@@ -514,7 +482,7 @@ impl PostServiceImpl {
 
         let category_id = if let Some(ref raw_id) = req.category_id {
             let parsed = crate::types::snowflake_id::parse_id(raw_id)?;
-            axe_derive::crud_resolve_id!(&self.pool, "categories", *parsed, tenant: auth.tenant_id())?
+            mcms_derive::crud_resolve_id!(&self.pool, "categories", *parsed)?
         } else {
             None
         };
@@ -523,7 +491,8 @@ impl PostServiceImpl {
                 let mut resolved = Vec::new();
                 for raw_id in ids {
                     let parsed = crate::types::snowflake_id::parse_id(raw_id)?;
-                    if let Some(int_id) = axe_derive::crud_resolve_id!(&self.pool, "tags", *parsed, tenant: auth.tenant_id())?
+                    if let Some(int_id) =
+                        mcms_derive::crud_resolve_id!(&self.pool, "tags", *parsed)?
                     {
                         resolved.push(int_id);
                     }
@@ -552,9 +521,9 @@ impl PostServiceImpl {
             og_image: req.og_image,
             canonical_url: req.canonical_url,
         };
-        update_post_with_tags(&self.pool, cmd, auth.tenant_id()).await?;
+        update_post_with_tags(&self.pool, cmd).await?;
 
-        build_post_response_from_pool(&self.pool, id, auth).await
+        build_post_response_from_pool(&self.pool, id).await
     }
 }
 
@@ -647,10 +616,9 @@ async fn build_response_from_post(
 async fn build_post_response_from_pool(
     pool: &crate::db::Pool,
     id: SnowflakeId,
-    auth: &AuthUser,
 ) -> AppResult<PostResponse> {
-    let row = crate::models::post::find_joined_by_id(pool, id, auth.tenant_id()).await?;
-    let tags = crate::models::post::get_post_tags(pool, row.id, auth.tenant_id())
+    let row = crate::models::post::find_joined_by_id(pool, id).await?;
+    let tags = crate::models::post::get_post_tags(pool, row.id)
         .await
         .unwrap_or_default();
     joined_row_to_response(row, tags).await
@@ -665,7 +633,6 @@ async fn list_posts_inner(
     tag_id: Option<i64>,
     q: Option<&str>,
     search: Option<&dyn SearchEngine>,
-    auth: &AuthUser,
 ) -> AppResult<(Vec<PostResponse>, i64)> {
     let (rows, total, highlights): (Vec<_>, _, std::collections::HashMap<SnowflakeId, _>) =
         if let (Some(engine), Some(keyword)) = (search, q) {
@@ -681,8 +648,7 @@ async fn list_posts_inner(
                         Some(pid)
                     })
                     .collect();
-                let rows =
-                    crate::models::post::find_joined_by_ids(pool, &ids, auth.tenant_id()).await?;
+                let rows = crate::models::post::find_joined_by_ids(pool, &ids).await?;
                 (rows, total, hmap)
             } else {
                 let (rows, total) = crate::models::post::find_published_joined(
@@ -696,7 +662,6 @@ async fn list_posts_inner(
                     } else {
                         Some(keyword)
                     },
-                    auth.tenant_id(),
                 )
                 .await?;
                 let hmap = if keyword.is_empty() {
@@ -727,7 +692,6 @@ async fn list_posts_inner(
                 category_id,
                 tag_id,
                 q,
-                auth.tenant_id(),
             )
             .await?;
             let hmap = if let Some(kw) = q {
@@ -756,7 +720,7 @@ async fn list_posts_inner(
         };
 
     let post_ids: Vec<SnowflakeId> = rows.iter().map(|r: &PostJoinedRow| r.id).collect();
-    let tags_map = crate::models::post::get_tags_for_posts(pool, &post_ids, auth.tenant_id())
+    let tags_map = crate::models::post::get_tags_for_posts(pool, &post_ids)
         .await
         .unwrap_or_default();
 
@@ -811,20 +775,13 @@ async fn list_all_posts_inner(
     page_size: i64,
     status: Option<PostStatus>,
     keyword: Option<&str>,
-    auth: &AuthUser,
+    _auth: &AuthUser,
 ) -> AppResult<(Vec<PostResponse>, i64)> {
-    let (rows, total) = crate::models::post::find_all_joined(
-        pool,
-        page,
-        page_size,
-        status,
-        keyword,
-        auth.tenant_id(),
-    )
-    .await?;
+    let (rows, total) =
+        crate::models::post::find_all_joined(pool, page, page_size, status, keyword).await?;
 
     let post_ids: Vec<SnowflakeId> = rows.iter().map(|r| r.id).collect();
-    let tags_map = crate::models::post::get_tags_for_posts(pool, &post_ids, auth.tenant_id())
+    let tags_map = crate::models::post::get_tags_for_posts(pool, &post_ids)
         .await
         .unwrap_or_default();
 
@@ -875,36 +832,34 @@ async fn list_all_posts_inner(
 async fn create_post_with_tags(
     pool: &crate::db::Pool,
     cmd: CreatePostCmd,
-    tenant_id: Option<&str>,
 ) -> AppResult<crate::models::post::Post> {
     if let Some(ref tag_ids) = cmd.tag_ids {
         let _guard = crate::db::connection::acquire_write().await;
         let mut tx = pool.begin().await?;
-        let p = crate::models::post::create_tx(&mut tx, &cmd, tenant_id).await?;
-        crate::models::tagging::sync_tags_tx(&mut tx, "post", p.id, tag_ids, tenant_id).await?;
+        let p = crate::models::post::create_tx(&mut tx, &cmd).await?;
+        crate::models::tagging::sync_tags_tx(&mut tx, "post", p.id, tag_ids).await?;
         tx.commit().await?;
         Ok(p)
     } else {
-        crate::models::post::create(pool, &cmd, tenant_id).await
+        crate::models::post::create(pool, &cmd).await
     }
 }
 
 async fn update_post_with_tags(
     pool: &crate::db::Pool,
     cmd: UpdatePostCmd,
-    tenant_id: Option<&str>,
 ) -> AppResult<crate::models::post::Post> {
     if let Some(ref tag_ids) = cmd.tag_ids {
         let _guard = crate::db::connection::acquire_write().await;
         let mut tx = pool.begin().await?;
-        crate::models::post::update_tx(&mut tx, &cmd, tenant_id).await?;
-        crate::models::tagging::sync_tags_tx(&mut tx, "post", cmd.id, tag_ids, tenant_id).await?;
+        crate::models::post::update_tx(&mut tx, &cmd).await?;
+        crate::models::tagging::sync_tags_tx(&mut tx, "post", cmd.id, tag_ids).await?;
         tx.commit().await?;
-        crate::models::post::find_by_id(pool, cmd.id, tenant_id)
+        crate::models::post::find_by_id(pool, cmd.id)
             .await?
             .ok_or_else(|| AppError::not_found("post"))
     } else {
-        crate::models::post::update(pool, &cmd, tenant_id).await
+        crate::models::post::update(pool, &cmd).await
     }
 }
 
@@ -977,19 +932,19 @@ mod tests {
             .execute(&pool)
             .await
             .unwrap();
-        let result = axe_derive::crud_resolve_id!(&pool, "users", *SnowflakeId(42));
+        let result = mcms_derive::crud_resolve_id!(&pool, "users", *SnowflakeId(42));
         assert_eq!(result.unwrap(), Some(42));
     }
 
     #[tokio::test]
     async fn resolve_id_unsafe_table() {
         let pool = crate::db::Pool::connect("sqlite::memory:").await.unwrap();
-        let result = axe_derive::crud_resolve_id!(&pool, "drop table", *SnowflakeId(999));
+        let result = mcms_derive::crud_resolve_id!(&pool, "drop table", *SnowflakeId(999));
         assert_eq!(result.unwrap(), None);
     }
 
     #[tokio::test]
-    async fn resolve_id_with_tenant() {
+    async fn resolve_id() {
         let pool = crate::db::Pool::connect("sqlite::memory:").await.unwrap();
         sqlx::query(crate::db::schema::SCHEMA_SQL)
             .execute(&pool)
@@ -999,45 +954,22 @@ mod tests {
             .execute(&pool)
             .await
             .unwrap();
-        sqlx::query("INSERT INTO posts (id, title, slug, content, status, created_by, updated_by, tenant_id) VALUES (1, 'T', 't', 'c', 'draft', 1, 1, 't1')")
+        sqlx::query("INSERT INTO posts (id, title, slug, content, status, created_by, updated_by) VALUES (1, 'T', 't', 'c', 'draft', 1, 1)")
             .execute(&pool)
             .await
             .unwrap();
-        let result =
-            axe_derive::crud_resolve_id!(&pool, "posts", *SnowflakeId(1), tenant: Some("t1"))
-                .unwrap();
+        let result = mcms_derive::crud_resolve_id!(&pool, "posts", 1).unwrap();
         assert_eq!(result, Some(1));
     }
 
     #[tokio::test]
-    async fn resolve_id_with_wrong_tenant() {
+    async fn resolve_id_not_found() {
         let pool = crate::db::Pool::connect("sqlite::memory:").await.unwrap();
         sqlx::query(crate::db::schema::SCHEMA_SQL)
             .execute(&pool)
             .await
             .unwrap();
-        sqlx::query("INSERT INTO users (id, username, role, status, registered_via) VALUES (1, 'user1', 'user', 'active', 'email')")
-            .execute(&pool)
-            .await
-            .unwrap();
-        sqlx::query("INSERT INTO posts (id, title, slug, content, status, created_by, updated_by, tenant_id) VALUES (1, 'T', 't', 'c', 'draft', 1, 1, 't1')")
-            .execute(&pool)
-            .await
-            .unwrap();
-        let result = axe_derive::crud_resolve_id!(&pool, "posts", *SnowflakeId(1), tenant: Some("wrong"))
-            .unwrap();
-        assert_eq!(result, None);
-    }
-
-    #[tokio::test]
-    async fn resolve_id_not_found_with_tenant() {
-        let pool = crate::db::Pool::connect("sqlite::memory:").await.unwrap();
-        sqlx::query(crate::db::schema::SCHEMA_SQL)
-            .execute(&pool)
-            .await
-            .unwrap();
-        let result = axe_derive::crud_resolve_id!(&pool, "users", *SnowflakeId(99999), tenant: Some("t1"))
-            .unwrap();
+        let result = mcms_derive::crud_resolve_id!(&pool, "users", 99999).unwrap();
         assert_eq!(result, None);
     }
 }

@@ -103,7 +103,7 @@ mod tests {
         engine.register(ExpirableAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "coupons".into(),
             record: Record::new(),
             schema: None,

@@ -154,7 +154,6 @@ mod tests {
     fn make_user(id: i64, username: &str) -> User {
         User {
             id: crate::types::snowflake_id::SnowflakeId(id),
-            tenant_id: None,
             username: username.into(),
             role: UserRole::Reader,
             status: UserStatus::Active,
@@ -175,7 +174,6 @@ mod tests {
     fn make_media(id: i64, filename: &str) -> Media {
         Media {
             id: crate::types::snowflake_id::SnowflakeId(id),
-            tenant_id: None,
             user_id: crate::types::snowflake_id::SnowflakeId(1),
             filename: filename.into(),
             filepath: String::new(),
@@ -195,7 +193,6 @@ mod tests {
     fn make_comment(id: i64) -> Comment {
         Comment {
             id: crate::types::snowflake_id::SnowflakeId(id),
-            tenant_id: None,
             post_id: crate::types::snowflake_id::SnowflakeId(0),
             created_by: None,
             updated_by: None,

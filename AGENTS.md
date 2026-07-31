@@ -14,12 +14,12 @@ axe — Rust-powered high-performance BaaS and headless CMS. Single binary, zero
 
 ```bash
 # Compile (SQLite + JS + Rhai)
-SQLX_OFFLINE=false DATABASE_URL="sqlite:./storage/db/axe.db?mode=rwc" \
+SQLX_OFFLINE=false DATABASE_URL="sqlite:./storage/db/mcms.db?mode=rwc" \
   cargo clippy --tests --no-default-features \
   --features "db-sqlite,plugin-js,plugin-rhai" -- -D warnings
 
 # Test
-SQLX_OFFLINE=false DATABASE_URL="sqlite:./storage/db/axe.db?mode=rwc" \
+SQLX_OFFLINE=false DATABASE_URL="sqlite:./storage/db/mcms.db?mode=rwc" \
   cargo test --no-default-features \
   --features "db-sqlite,plugin-js,plugin-rhai"
 

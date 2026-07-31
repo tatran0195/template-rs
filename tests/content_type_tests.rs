@@ -7,11 +7,10 @@ use std::collections::HashMap;
 
 use serde_json::json;
 
-use axe::content_type::ContentTypeRegistry;
-use axe::content_type::repository::{ContentQuery, ContentRepository, SaveContext};
-use axe::content_type::schema::ContentTypeSchema;
-use axe::db::tenant;
-use axe::types::snowflake_id::SnowflakeId;
+use mcms::content_type::ContentTypeRegistry;
+use mcms::content_type::repository::{ContentQuery, ContentRepository, SaveContext};
+use mcms::content_type::schema::ContentTypeSchema;
+use mcms::types::snowflake_id::SnowflakeId;
 
 const PRODUCT_TOML: &str = r#"
 [content_type]
@@ -20,7 +19,7 @@ singular = "product"
 plural = "products"
 table = "ct_products"
 description = "commodity"
-implements = ["ownable", "timestampable", "tenantable"]
+implements = ["ownable", "timestampable"]
 
 [fields.title]
 type = "text"
@@ -50,12 +49,11 @@ unique = true
 "#;
 
 async fn setup_pool() -> sqlx::SqlitePool {
-    let pool = axe::db::Pool::connect("sqlite::memory:").await.unwrap();
-    sqlx::query(axe::db::schema::SCHEMA_SQL)
+    let pool = mcms::db::Pool::connect("sqlite::memory:").await.unwrap();
+    sqlx::query(mcms::db::schema::SCHEMA_SQL)
         .execute(&pool)
         .await
         .unwrap();
-    tenant::invalidate_cache().await;
     pool
 }
 
@@ -87,21 +85,20 @@ fn parse_article() -> ContentTypeSchema {
     .unwrap()
 }
 
-fn test_ct_registry() -> axe::content_type::ContentTypeRegistry {
-    axe::content_type::ContentTypeRegistry::new()
+fn test_ct_registry() -> mcms::content_type::ContentTypeRegistry {
+    mcms::content_type::ContentTypeRegistry::new()
 }
 
-fn test_protocol_registry() -> axe::protocols::ProtocolRegistry {
-    let mut reg = axe::protocols::ProtocolRegistry::new();
-    reg.register(axe::protocols::ownable::OwnableProtocol);
-    reg.register(axe::protocols::timestampable::TimestampableProtocol);
-    reg.register(axe::protocols::soft_deletable::SoftDeletableProtocol);
-    reg.register(axe::protocols::versionable::VersionableProtocol);
-    reg.register(axe::protocols::lockable::LockableProtocol);
-    reg.register(axe::protocols::sortable::SortableProtocol);
-    reg.register(axe::protocols::expirable::ExpirableProtocol);
-    reg.register(axe::protocols::nestable::NestableProtocol);
-    reg.register(axe::protocols::tenantable::TenantableProtocol);
+fn test_protocol_registry() -> mcms::protocols::ProtocolRegistry {
+    let mut reg = mcms::protocols::ProtocolRegistry::new();
+    reg.register(mcms::protocols::ownable::OwnableProtocol);
+    reg.register(mcms::protocols::timestampable::TimestampableProtocol);
+    reg.register(mcms::protocols::soft_deletable::SoftDeletableProtocol);
+    reg.register(mcms::protocols::versionable::VersionableProtocol);
+    reg.register(mcms::protocols::lockable::LockableProtocol);
+    reg.register(mcms::protocols::sortable::SortableProtocol);
+    reg.register(mcms::protocols::expirable::ExpirableProtocol);
+    reg.register(mcms::protocols::nestable::NestableProtocol);
     reg
 }
 
@@ -192,7 +189,6 @@ async fn create_and_find_by_id() {
                 "description": "A test product",
                 "in_stock": true
             })),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -202,12 +198,7 @@ async fn create_and_find_by_id() {
     assert_eq!(created["price"], 99);
 
     let found = repo
-        .find_by_id(
-            &ct,
-            created["id"].as_str().unwrap().parse().unwrap(),
-            None,
-            true,
-        )
+        .find_by_id(&ct, created["id"].as_str().unwrap().parse().unwrap(), true)
         .await
         .unwrap()
         .unwrap();
@@ -230,7 +221,6 @@ async fn create_sets_defaults() {
                 "slug": "minimal",
                 "price": 0
             })),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -251,14 +241,13 @@ async fn find_by_slug() {
     repo.create(
         &ct,
         with_timestamps(json!({"title": "Slug Test", "slug": "slug-test", "price": 10})),
-        None,
         &SaveContext::default(),
     )
     .await
     .unwrap();
 
     let found = repo
-        .find_by_slug(&ct, "slug-test", Some("draft"), None, true)
+        .find_by_slug(&ct, "slug-test", Some("draft"), true)
         .await
         .unwrap()
         .unwrap();
@@ -278,7 +267,6 @@ async fn find_paginated() {
             with_timestamps(
                 json!({"title": format!("Item {i}"), "slug": format!("item-{i}"), "price": i}),
             ),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -293,7 +281,6 @@ async fn find_paginated() {
         status: None,
         search: None,
         fields: None,
-        tenant_id: None,
         include: None,
         skip_total: false,
         rule_where: None,
@@ -314,7 +301,6 @@ async fn find_paginated() {
         status: None,
         search: None,
         fields: None,
-        tenant_id: None,
         include: None,
         skip_total: false,
         rule_where: None,
@@ -339,7 +325,6 @@ async fn update_changes_fields() {
         .create(
             &ct,
             with_timestamps(json!({"title": "Original", "slug": "original", "price": 50})),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -349,9 +334,8 @@ async fn update_changes_fields() {
     let updated = repo
         .update(
             &ct,
-            axe::types::snowflake_id::SnowflakeId(id),
+            mcms::types::snowflake_id::SnowflakeId(id),
             json!({"title": "Updated", "price": 99}),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -373,7 +357,6 @@ async fn delete_removes_record() {
         .create(
             &ct,
             with_timestamps(json!({"title": "To Delete", "slug": "to-delete", "price": 1})),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -382,18 +365,14 @@ async fn delete_removes_record() {
 
     repo.delete(
         &ct,
-        axe::types::snowflake_id::SnowflakeId(id),
-        None,
+        mcms::types::snowflake_id::SnowflakeId(id),
         &test_protocol_registry(),
         &test_ct_registry(),
     )
     .await
     .unwrap();
 
-    let found = repo
-        .find_by_id(&ct, SnowflakeId(id), None, true)
-        .await
-        .unwrap();
+    let found = repo.find_by_id(&ct, SnowflakeId(id), true).await.unwrap();
     assert!(found.is_none());
 
     let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ct_products")
@@ -430,7 +409,6 @@ required = true
         .create(
             &ct,
             with_timestamps(json!({"title": "Soft Delete Me"})),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -439,8 +417,7 @@ required = true
 
     repo.delete(
         &ct,
-        axe::types::snowflake_id::SnowflakeId(id),
-        None,
+        mcms::types::snowflake_id::SnowflakeId(id),
         &test_protocol_registry(),
         &test_ct_registry(),
     )
@@ -467,7 +444,7 @@ async fn registry_load_and_lookup() {
     registry
         .register(
             ct,
-            &axe::config::app::RuleEngineConfig::default(),
+            &mcms::config::app::RuleEngineConfig::default(),
             &reserved,
             &protocol_names,
             &protocol_reg,
@@ -492,7 +469,6 @@ async fn tenant_isolation() {
         .create(
             &ct,
             with_timestamps(json!({"title": "Tenant A Product", "slug": "tenant-a", "price": 100})),
-            Some("tenant_a"),
             &SaveContext::default(),
         )
         .await
@@ -501,7 +477,6 @@ async fn tenant_isolation() {
         .create(
             &ct,
             with_timestamps(json!({"title": "Tenant B Product", "slug": "tenant-b", "price": 200})),
-            Some("tenant_b"),
             &SaveContext::default(),
         )
         .await
@@ -511,21 +486,21 @@ async fn tenant_isolation() {
     let id_b: i64 = b["id"].as_str().unwrap().parse().unwrap();
 
     assert!(
-        repo.find_by_id(&ct, SnowflakeId(id_a), Some("tenant_b"), true)
+        repo.find_by_id(&ct, SnowflakeId(id_a), true)
             .await
             .unwrap()
             .is_none(),
         "tenant_b should not see tenant_a's data"
     );
     assert!(
-        repo.find_by_id(&ct, SnowflakeId(id_b), Some("tenant_a"), true)
+        repo.find_by_id(&ct, SnowflakeId(id_b), true)
             .await
             .unwrap()
             .is_none(),
         "tenant_a should not see tenant_b's data"
     );
     assert!(
-        repo.find_by_id(&ct, SnowflakeId(id_a), Some("tenant_a"), true)
+        repo.find_by_id(&ct, SnowflakeId(id_a), true)
             .await
             .unwrap()
             .is_some(),
@@ -540,7 +515,6 @@ async fn tenant_isolation() {
         status: None,
         search: None,
         fields: None,
-        tenant_id: Some("tenant_a".into()),
         include: None,
         skip_total: false,
         rule_where: None,
@@ -565,7 +539,6 @@ async fn delete_respects_tenant() {
         .create(
             &ct,
             with_timestamps(json!({"title": "A", "slug": "a", "price": 1})),
-            Some("tenant_a"),
             &SaveContext::default(),
         )
         .await
@@ -574,8 +547,7 @@ async fn delete_respects_tenant() {
 
     repo.delete(
         &ct,
-        axe::types::snowflake_id::SnowflakeId(id_a),
-        Some("tenant_b"),
+        mcms::types::snowflake_id::SnowflakeId(id_a),
         &test_protocol_registry(),
         &test_ct_registry(),
     )
@@ -583,7 +555,7 @@ async fn delete_respects_tenant() {
     .unwrap();
 
     assert!(
-        repo.find_by_id(&ct, SnowflakeId(id_a), Some("tenant_a"), true)
+        repo.find_by_id(&ct, SnowflakeId(id_a), true)
             .await
             .unwrap()
             .is_some(),
@@ -592,15 +564,14 @@ async fn delete_respects_tenant() {
 
     repo.delete(
         &ct,
-        axe::types::snowflake_id::SnowflakeId(id_a),
-        Some("tenant_a"),
+        mcms::types::snowflake_id::SnowflakeId(id_a),
         &test_protocol_registry(),
         &test_ct_registry(),
     )
     .await
     .unwrap();
     assert!(
-        repo.find_by_id(&ct, SnowflakeId(id_a), Some("tenant_a"), true)
+        repo.find_by_id(&ct, SnowflakeId(id_a), true)
             .await
             .unwrap()
             .is_none(),
@@ -619,7 +590,6 @@ async fn find_with_custom_sort() {
         repo.create(
             &ct,
             with_timestamps(json!({"title": title, "slug": title.to_lowercase(), "price": price})),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -634,7 +604,6 @@ async fn find_with_custom_sort() {
         status: None,
         search: None,
         fields: None,
-        tenant_id: None,
         include: None,
         skip_total: false,
         rule_where: None,
@@ -659,7 +628,6 @@ async fn find_with_field_filter() {
     repo.create(
         &ct,
         with_timestamps(json!({"title": "Expensive", "slug": "expensive", "price": 999})),
-        None,
         &SaveContext::default(),
     )
     .await
@@ -667,7 +635,6 @@ async fn find_with_field_filter() {
     repo.create(
         &ct,
         with_timestamps(json!({"title": "Cheap", "slug": "cheap", "price": 1})),
-        None,
         &SaveContext::default(),
     )
     .await
@@ -684,7 +651,6 @@ async fn find_with_field_filter() {
         status: None,
         search: None,
         fields: None,
-        tenant_id: None,
         include: None,
         skip_total: false,
         rule_where: None,
@@ -708,7 +674,6 @@ async fn partial_field_selection() {
     repo.create(
         &ct,
         with_timestamps(json!({"title": "Select", "slug": "select", "price": 42})),
-        None,
         &SaveContext::default(),
     )
     .await
@@ -722,7 +687,6 @@ async fn partial_field_selection() {
         status: None,
         search: None,
         fields: Some(vec!["title".into()]),
-        tenant_id: None,
         include: None,
         skip_total: false,
         rule_where: None,
@@ -749,7 +713,6 @@ async fn create_auto_generates_id_and_timestamps() {
         .create(
             &ct,
             with_timestamps(json!({"title": "Auto", "slug": "auto", "price": 1})),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -768,7 +731,7 @@ async fn create_without_body_object_returns_error() {
     repo.migrate(&ct, &test_protocol_registry()).await.unwrap();
 
     let result = repo
-        .create(&ct, json!("not an object"), None, &SaveContext::default())
+        .create(&ct, json!("not an object"), &SaveContext::default())
         .await;
     assert!(result.is_err());
 }
@@ -784,7 +747,6 @@ async fn update_with_no_fields_returns_error() {
         .create(
             &ct,
             with_timestamps(json!({"title": "X", "slug": "x", "price": 1})),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -794,9 +756,8 @@ async fn update_with_no_fields_returns_error() {
     let result = repo
         .update(
             &ct,
-            axe::types::snowflake_id::SnowflakeId(id),
+            mcms::types::snowflake_id::SnowflakeId(id),
             json!({"nonexistent_field": "v"}),
-            None,
             &SaveContext::default(),
         )
         .await;
@@ -859,7 +820,6 @@ default = 0
         .create(
             &ct_v2,
             with_timestamps(json!({"title": "V2", "body": "hello", "priority": 5})),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -915,7 +875,6 @@ async fn versioning_creates_revision_on_update() {
         .create(
             &ct,
             with_timestamps(json!({"title": "V1 Title", "content": "V1 Content"})),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -925,15 +884,14 @@ async fn versioning_creates_revision_on_update() {
     let _updated = repo
         .update(
             &ct,
-            axe::types::snowflake_id::SnowflakeId(int_id),
+            mcms::types::snowflake_id::SnowflakeId(int_id),
             json!({"title": "V2 Title", "content": "V2 Content"}),
-            None,
             &SaveContext::default(),
         )
         .await
         .unwrap();
 
-    let revisions = axe::models::content_revision::list_revisions(
+    let revisions = mcms::models::content_revision::list_revisions(
         &pool,
         "article",
         SnowflakeId(id.parse::<i64>().unwrap()),
@@ -943,7 +901,7 @@ async fn versioning_creates_revision_on_update() {
     assert_eq!(revisions.len(), 1);
     assert_eq!(revisions[0].revision_number, 1);
 
-    let rev = axe::models::content_revision::get_revision(
+    let rev = mcms::models::content_revision::get_revision(
         &pool,
         "article",
         SnowflakeId(id.parse::<i64>().unwrap()),
@@ -969,7 +927,6 @@ async fn versioning_multiple_updates_create_multiple_revisions() {
         .create(
             &ct,
             with_timestamps(json!({"title": "Rev0"})),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -980,7 +937,6 @@ async fn versioning_multiple_updates_create_multiple_revisions() {
         &ct,
         SnowflakeId(int_id),
         json!({"title": "Rev1"}),
-        None,
         &SaveContext::default(),
     )
     .await
@@ -989,7 +945,6 @@ async fn versioning_multiple_updates_create_multiple_revisions() {
         &ct,
         SnowflakeId(int_id),
         json!({"title": "Rev2"}),
-        None,
         &SaveContext::default(),
     )
     .await
@@ -998,13 +953,12 @@ async fn versioning_multiple_updates_create_multiple_revisions() {
         &ct,
         SnowflakeId(int_id),
         json!({"title": "Rev3"}),
-        None,
         &SaveContext::default(),
     )
     .await
     .unwrap();
 
-    let revisions = axe::models::content_revision::list_revisions(
+    let revisions = mcms::models::content_revision::list_revisions(
         &pool,
         "article",
         SnowflakeId(id.parse::<i64>().unwrap()),
@@ -1029,7 +983,6 @@ async fn versioning_delete_cleans_up_revisions() {
         .create(
             &ct,
             with_timestamps(json!({"title": "Temp"})),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -1041,13 +994,12 @@ async fn versioning_delete_cleans_up_revisions() {
         &ct,
         SnowflakeId(int_id),
         json!({"title": "Updated"}),
-        None,
         &SaveContext::default(),
     )
     .await
     .unwrap();
 
-    let before = axe::models::content_revision::list_revisions(
+    let before = mcms::models::content_revision::list_revisions(
         &pool,
         "article",
         SnowflakeId(id.parse::<i64>().unwrap()),
@@ -1058,15 +1010,14 @@ async fn versioning_delete_cleans_up_revisions() {
 
     repo.delete(
         &ct,
-        axe::types::snowflake_id::SnowflakeId(int_id),
-        None,
+        mcms::types::snowflake_id::SnowflakeId(int_id),
         &test_protocol_registry(),
         &test_ct_registry(),
     )
     .await
     .unwrap();
 
-    let after = axe::models::content_revision::list_revisions(
+    let after = mcms::models::content_revision::list_revisions(
         &pool,
         "article",
         SnowflakeId(id.parse::<i64>().unwrap()),
@@ -1104,7 +1055,6 @@ required = true
         .create(
             &ct,
             with_timestamps(json!({"title": "NoRev"})),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -1116,13 +1066,12 @@ required = true
         &ct,
         SnowflakeId(int_id),
         json!({"title": "Updated"}),
-        None,
         &SaveContext::default(),
     )
     .await
     .unwrap();
 
-    let revisions = axe::models::content_revision::list_revisions(
+    let revisions = mcms::models::content_revision::list_revisions(
         &pool,
         "note",
         SnowflakeId(id.parse::<i64>().unwrap()),
@@ -1137,7 +1086,7 @@ async fn versioning_diff_computes_correctly() {
     let old = json!({"title": "Old", "content": "Same", "status": "draft"});
     let new = json!({"title": "New", "content": "Same", "status": "published", "extra": 42});
 
-    let diff = axe::models::content_revision::compute_diff(&old, &new);
+    let diff = mcms::models::content_revision::compute_diff(&old, &new);
 
     let changed = diff["changed"].as_object().unwrap();
     assert!(changed.contains_key("title"));
@@ -1182,7 +1131,6 @@ target_field = "title"
     repo.create(
         &ct,
         with_timestamps(json!({"title": "Visible Note", "slug": "visible"})),
-        None,
         &SaveContext::default(),
     )
     .await
@@ -1191,7 +1139,6 @@ target_field = "title"
         .create(
             &ct,
             with_timestamps(json!({"title": "Deleted Note", "slug": "deleted"})),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -1199,7 +1146,7 @@ target_field = "title"
     let deleted_id: i64 = deleted["id"].as_str().unwrap().parse().unwrap();
 
     let now = now_str();
-    repo.soft_delete(&ct, SnowflakeId(deleted_id), &now, None, None)
+    repo.soft_delete(&ct, SnowflakeId(deleted_id), &now, None)
         .await
         .unwrap();
 
@@ -1211,7 +1158,6 @@ target_field = "title"
         status: None,
         search: None,
         fields: None,
-        tenant_id: None,
         include: None,
         skip_total: false,
         rule_where: None,
@@ -1257,7 +1203,6 @@ target_field = "title"
         .create(
             &ct,
             with_timestamps(json!({"title": "Gone", "slug": "gone"})),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -1266,14 +1211,11 @@ target_field = "title"
     let int_id: i64 = id.parse().unwrap();
 
     let now = now_str();
-    repo.soft_delete(&ct, SnowflakeId(int_id), &now, None, None)
+    repo.soft_delete(&ct, SnowflakeId(int_id), &now, None)
         .await
         .unwrap();
 
-    let found = repo
-        .find_by_slug(&ct, "gone", None, None, true)
-        .await
-        .unwrap();
+    let found = repo.find_by_slug(&ct, "gone", None, true).await.unwrap();
     assert!(found.is_none());
 }
 
@@ -1304,7 +1246,6 @@ required = true
         .create(
             &ct,
             with_timestamps(json!({"title": "Soft Deleted"})),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -1313,12 +1254,12 @@ required = true
     let int_id: i64 = id.parse().unwrap();
 
     let now = now_str();
-    repo.soft_delete(&ct, SnowflakeId(int_id), &now, None, None)
+    repo.soft_delete(&ct, SnowflakeId(int_id), &now, None)
         .await
         .unwrap();
 
     let found = repo
-        .find_by_id(&ct, SnowflakeId(int_id), None, true)
+        .find_by_id(&ct, SnowflakeId(int_id), true)
         .await
         .unwrap();
     assert!(found.is_some());
@@ -1352,7 +1293,6 @@ required = true
         .create(
             &ct,
             with_timestamps(json!({"title": "Audit Me"})),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -1360,7 +1300,7 @@ required = true
     let id: i64 = created["id"].as_str().unwrap().parse().unwrap();
 
     let now = now_str();
-    repo.soft_delete(&ct, SnowflakeId(id), &now, Some(42), None)
+    repo.soft_delete(&ct, SnowflakeId(id), &now, Some(42))
         .await
         .unwrap();
 
@@ -1404,7 +1344,6 @@ required = true
         .create(
             &ct,
             with_timestamps(json!({"title": "Implements Test"})),
-            None,
             &SaveContext::default(),
         )
         .await
@@ -1412,7 +1351,7 @@ required = true
     let id: i64 = created["id"].as_str().unwrap().parse().unwrap();
 
     let now = now_str();
-    repo.soft_delete(&ct, SnowflakeId(id), &now, None, None)
+    repo.soft_delete(&ct, SnowflakeId(id), &now, None)
         .await
         .unwrap();
 
@@ -1424,7 +1363,6 @@ required = true
         status: None,
         search: None,
         fields: None,
-        tenant_id: None,
         include: None,
         skip_total: false,
         rule_where: None,

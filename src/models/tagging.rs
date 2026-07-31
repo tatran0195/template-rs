@@ -8,7 +8,6 @@ pub struct Tagging {
     pub tag_id: SnowflakeId,
     pub taggable_type: String,
     pub taggable_id: SnowflakeId,
-    pub tenant_id: Option<String>,
 }
 
 pub async fn sync_tags_tx(
@@ -16,25 +15,22 @@ pub async fn sync_tags_tx(
     taggable_type: &str,
     taggable_id: SnowflakeId,
     tag_ids: &[i64],
-    tenant_id: Option<&str>,
 ) -> AppResult<()> {
-    axe_derive::crud_delete!(
+    mcms_derive::crud_delete!(
         &mut **tx, "taggings",
-        where: AND(("taggable_type", taggable_type), ("taggable_id", taggable_id)),
-        tenant: tenant_id
+        where: AND(("taggable_type", taggable_type), ("taggable_id", taggable_id))
     )?;
 
     for tag_id in tag_ids {
         let id = crate::utils::id::new_snowflake_id();
-        axe_derive::crud_insert!(
+        mcms_derive::crud_insert!(
             &mut **tx, "taggings",
             [
                 "id" => id,
                 "tag_id" => *tag_id,
                 "taggable_type" => taggable_type,
                 "taggable_id" => taggable_id
-            ],
-            tenant: tenant_id
+            ]
         )?;
     }
 
@@ -42,7 +38,7 @@ pub async fn sync_tags_tx(
 }
 
 pub async fn count_by_tag_id(pool: &crate::db::Pool, tag_id: i64) -> AppResult<i64> {
-    axe_derive::crud_count!(pool, "taggings", where: ("tag_id", tag_id)).map_err(Into::into)
+    mcms_derive::crud_count!(pool, "taggings", where: ("tag_id", tag_id)).map_err(Into::into)
 }
 
 pub async fn get_tags_for(
@@ -50,7 +46,7 @@ pub async fn get_tags_for(
     taggable_type: &str,
     taggable_id: SnowflakeId,
 ) -> AppResult<Vec<crate::models::post::TagBrief>> {
-    let rows: Vec<crate::models::post::TagRow> = axe_derive::crud_join!(
+    let rows: Vec<crate::models::post::TagRow> = mcms_derive::crud_join!(
         pool, crate::models::post::TagRow,
         select: ["t.id", "t.name", "t.slug"],
         from: "tags t",
@@ -86,7 +82,7 @@ pub async fn get_tags_for_posts(
         slug: String,
     }
 
-    let rows: Vec<TagWithPostId> = axe_derive::crud_join!(
+    let rows: Vec<TagWithPostId> = mcms_derive::crud_join!(
         pool,
         TagWithPostId,
         select: ["tg.taggable_id", "t.id", "t.name", "t.slug"],

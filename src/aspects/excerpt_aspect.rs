@@ -146,7 +146,7 @@ mod tests {
         engine.register(ExcerptAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "posts".into(),
             record: {
                 let mut r = Record::new();
@@ -173,7 +173,7 @@ mod tests {
         engine.register(ExcerptAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "posts".into(),
             record: {
                 let mut r = Record::new();
@@ -198,7 +198,7 @@ mod tests {
         engine.register(ExcerptAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "pages".into(),
             record: {
                 let mut r = Record::new();
@@ -227,7 +227,7 @@ mod tests {
         let new = Record::new();
 
         let mut ctx = DataBeforeUpdateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "posts".into(),
             old_record: old,
             new_record: new,

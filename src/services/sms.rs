@@ -83,7 +83,7 @@ pub async fn verify_sms_and_auth(
     .await?;
 
     let user = match cred {
-        Some(c) => crate::models::user::find_by_id(pool, c.user_id, None)
+        Some(c) => crate::models::user::find_by_id(pool, c.user_id)
             .await?
             .ok_or_else(|| AppError::not_found("user"))?,
         None => {
@@ -98,7 +98,6 @@ pub async fn verify_sms_and_auth(
                     registered_via: crate::models::user::RegisteredVia::Phone,
                     role: None,
                 },
-                None,
             )
             .await?;
             crate::models::user_credential::create(
@@ -118,9 +117,6 @@ pub async fn verify_sms_and_auth(
     let access_token = crate::services::auth::generate_access_token_internal(
         user.id,
         user_role,
-        user.tenant_id
-            .as_deref()
-            .unwrap_or(crate::constants::DEFAULT_TENANT),
         jwt_secret,
         jwt_access_expires,
     )?;
@@ -151,8 +147,7 @@ pub async fn bind_phone(
     code: &str,
 ) -> AppResult<()> {
     let user_id = auth.ensure_snowflake_user_id()?;
-    let tenant_id = auth.tenant_id();
-    let _user = crate::models::user::find_by_id(pool, user_id, tenant_id)
+    let _user = crate::models::user::find_by_id(pool, user_id)
         .await?
         .ok_or(AppError::Unauthorized)?;
 

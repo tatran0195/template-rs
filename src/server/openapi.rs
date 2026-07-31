@@ -90,12 +90,6 @@ use crate::dto;
         crate::handlers::rbac::get_permissions,
         crate::handlers::rbac::set_permissions,
         crate::handlers::rbac::admin_batch,
-        crate::handlers::tenant::list_tenants,
-        crate::handlers::tenant::get_tenant,
-        crate::handlers::tenant::create_tenant,
-        crate::handlers::tenant::update_tenant,
-        crate::handlers::tenant::delete_tenant,
-        crate::handlers::tenant::admin_batch,
         crate::handlers::options::get_public_options,
         crate::handlers::options::list_options,
         crate::handlers::options::get_option,
@@ -171,7 +165,6 @@ use crate::dto;
         (name = "pages", description = "Pages"),
         (name = "reusable_blocks", description = "Reusable Blocks"),
         (name = "rbac", description = "RBAC"),
-        (name = "tenants", description = "Tenants"),
         (name = "options", description = "Options"),
 
         (name = "stats", description = "Statistics"),
@@ -283,7 +276,7 @@ pub async fn serve_scalar_ui() -> impl IntoResponse {
             const data = await res.json();
             const token = data.access_token || data.data?.access_token;
             if (!token) throw new Error('No token in response');
-            localStorage.setItem('axe_token', token);
+            localStorage.setItem('MCMS_token', token);
             s.textContent = 'Token saved'; s.className = 'status ok';
             applyToken(token);
         } catch (e) {

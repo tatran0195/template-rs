@@ -44,7 +44,6 @@ define_enum!(
 #[non_exhaustive]
 pub struct User {
     pub id: SnowflakeId,
-    pub tenant_id: Option<String>,
     pub username: String,
     pub role: UserRole,
     pub status: UserStatus,
@@ -82,30 +81,25 @@ pub fn encode_metadata(meta: &Option<UserMetadata>) -> Option<String> {
 
 /// Find user by username
 pub async fn find_by_username(pool: &crate::db::Pool, username: &str) -> AppResult<Option<User>> {
-    Ok(axe_derive::crud_find!(pool, "users", User, where: ("username", username))?)
+    Ok(mcms_derive::crud_find!(pool, "users", User, where: ("username", username))?)
 }
 
 /// Find user by integer primary key (internal FK lookup)
-pub async fn find_by_id(
-    pool: &crate::db::Pool,
-    id: SnowflakeId,
-    tenant_id: Option<&str>,
-) -> AppResult<Option<User>> {
-    Ok(axe_derive::crud_find!(pool, "users", User, where: ("id", id), tenant: tenant_id)?)
+pub async fn find_by_id(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<Option<User>> {
+    Ok(mcms_derive::crud_find!(pool, "users", User, where: ("id", id))?)
 }
 
 /// Create a new user
 pub async fn create(
     pool: &crate::db::Pool,
     cmd: &crate::commands::CreateUserCmd,
-    tenant_id: Option<&str>,
 ) -> AppResult<User> {
     let (id, now) = (
         crate::utils::id::new_snowflake_id(),
         crate::utils::tz::now_utc(),
     );
 
-    axe_derive::crud_insert!(
+    mcms_derive::crud_insert!(
         pool,
         "users",
         [
@@ -116,12 +110,10 @@ pub async fn create(
             "role" => UserRole::Reader,
             "status" => UserStatus::Active,
             "registered_via" => cmd.registered_via
-        ],
-        tenant: tenant_id
+        ]
     )?;
 
-    let user: Option<User> =
-        axe_derive::crud_find!(pool, "users", User, where: ("id", id), tenant: tenant_id)?;
+    let user: Option<User> = mcms_derive::crud_find!(pool, "users", User, where: ("id", id))?;
     let user = user
         .ok_or_else(|| AppError::Internal(anyhow::anyhow!("failed to fetch newly created user")))?;
     Ok(user)
@@ -131,9 +123,8 @@ pub async fn create(
 pub async fn update_profile(
     pool: &crate::db::Pool,
     cmd: &crate::commands::UpdateProfileCmd,
-    tenant_id: Option<&str>,
 ) -> AppResult<User> {
-    let user = find_by_id(pool, cmd.id, tenant_id)
+    let user = find_by_id(pool, cmd.id)
         .await?
         .ok_or_else(|| AppError::not_found("user"))?;
     let username = cmd.username.as_deref().unwrap_or(&user.username);
@@ -163,12 +154,11 @@ pub async fn update_profile(
         .map(|v| serde_json::to_string(v).unwrap_or_default())
         .or_else(|| user.metadata.clone());
     let now = crate::utils::tz::now_utc();
-    axe_derive::crud_update!(pool, "users",
+    mcms_derive::crud_update!(pool, "users",
         bind: ["username" => username, "bio" => bio, "website" => website, "avatar" => avatar, "social_links" => social_links, "metadata" => metadata, "updated_at" => &now],
-        where: ("id", user.id),
-        tenant: tenant_id
+        where: ("id", user.id)
     )?;
-    find_by_id(pool, cmd.id, tenant_id)
+    find_by_id(pool, cmd.id)
         .await?
         .ok_or_else(|| AppError::Internal(anyhow::anyhow!("failed to fetch updated user")))
 }
@@ -178,13 +168,11 @@ pub async fn find_all(
     pool: &crate::db::Pool,
     page: i64,
     page_size: i64,
-    tenant_id: Option<&str>,
 ) -> AppResult<(Vec<User>, i64)> {
-    let result = axe_derive::crud_query_paged!(
+    let result = mcms_derive::crud_query_paged!(
         pool, User,
         table: "users",
         order_by: "created_at DESC",
-        tenant: tenant_id,
         page: page,
         page_size: page_size
     );
@@ -196,16 +184,14 @@ pub async fn update_role(
     pool: &crate::db::Pool,
     id: SnowflakeId,
     role: UserRole,
-    tenant_id: Option<&str>,
 ) -> AppResult<User> {
     let now = crate::utils::tz::now_utc();
-    let result = axe_derive::crud_update!(pool, "users",
+    let result = mcms_derive::crud_update!(pool, "users",
         bind: ["role" => role, "updated_at" => &now],
-        where: ("id", id),
-        tenant: tenant_id
+        where: ("id", id)
     )?;
     AppError::expect_affected(&result, "user")?;
-    find_by_id(pool, id, tenant_id)
+    find_by_id(pool, id)
         .await?
         .ok_or_else(|| AppError::not_found("user"))
 }
@@ -214,33 +200,26 @@ pub async fn update_status(
     pool: &crate::db::Pool,
     id: SnowflakeId,
     status: UserStatus,
-    tenant_id: Option<&str>,
 ) -> AppResult<User> {
     let now = crate::utils::tz::now_utc();
-    let result = axe_derive::crud_update!(pool, "users",
+    let result = mcms_derive::crud_update!(pool, "users",
         bind: ["status" => status, "updated_at" => &now],
-        where: ("id", id),
-        tenant: tenant_id
+        where: ("id", id)
     )?;
     AppError::expect_affected(&result, "user")?;
-    find_by_id(pool, id, tenant_id)
+    find_by_id(pool, id)
         .await?
         .ok_or_else(|| AppError::not_found("user"))
 }
 
-pub async fn delete_by_id(
-    pool: &crate::db::Pool,
-    id: SnowflakeId,
-    tenant_id: Option<&str>,
-) -> AppResult<()> {
-    axe_derive::crud_delete!(pool, "users", where: ("id", id), tenant: tenant_id)?;
+pub async fn delete_by_id(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<()> {
+    mcms_derive::crud_delete!(pool, "users", where: ("id", id))?;
     Ok(())
 }
 
 pub async fn tx_create(
     tx: &mut crate::db::pool::DbConnection,
     cmd: &crate::commands::user::CreateUserCmd,
-    tenant_id: Option<&str>,
 ) -> AppResult<User> {
     let (id, now) = (
         crate::utils::id::new_snowflake_id(),
@@ -248,29 +227,16 @@ pub async fn tx_create(
     );
     let registered_via = cmd.registered_via;
     let role = cmd.role.unwrap_or(UserRole::Reader);
-    if let Some(tid) = tenant_id {
-        axe_derive::crud_insert!(&mut *tx, "users", [
-            "id" => id,
-            "tenant_id" => tid,
-            "username" => &cmd.username,
-            "created_at" => now,
-            "updated_at" => now,
-            "role" => role,
-            "status" => UserStatus::Active,
-            "registered_via" => registered_via
-        ])?;
-    } else {
-        axe_derive::crud_insert!(&mut *tx, "users", [
-            "id" => id,
-            "username" => &cmd.username,
-            "created_at" => now,
-            "updated_at" => now,
-            "role" => role,
-            "status" => UserStatus::Active,
-            "registered_via" => registered_via
-        ])?;
-    }
-    Ok(tx_find_by_id(tx, id, tenant_id)
+    mcms_derive::crud_insert!(&mut *tx, "users", [
+        "id" => id,
+        "username" => &cmd.username,
+        "created_at" => now,
+        "updated_at" => now,
+        "role" => role,
+        "status" => UserStatus::Active,
+        "registered_via" => registered_via
+    ])?;
+    Ok(tx_find_by_id(tx, id)
         .await?
         .ok_or_else(|| anyhow::anyhow!("user not found after insert"))?)
 }
@@ -278,23 +244,18 @@ pub async fn tx_create(
 pub async fn tx_find_by_id(
     tx: &mut crate::db::pool::DbConnection,
     id: SnowflakeId,
-    tenant_id: Option<&str>,
 ) -> AppResult<Option<User>> {
-    let filter = crate::db::tenant::tenant_filter_ph(tenant_id, 2);
     let sql = format!(
-        "SELECT * FROM users WHERE id = {}{filter}",
+        "SELECT * FROM users WHERE id = {}",
         crate::db::Driver::ph(1)
     );
-    let mut q = sqlx::query_as::<_, User>(&sql).bind(id);
-    if let Some(tid) = tenant_id {
-        q = q.bind(tid);
-    }
+    let q = sqlx::query_as::<_, User>(&sql).bind(id);
     Ok(q.fetch_optional(&mut *tx).await?)
 }
 
 pub async fn update_avatar(pool: &crate::db::Pool, id: SnowflakeId, avatar: &str) -> AppResult<()> {
     let now = crate::utils::tz::now_str();
-    axe_derive::crud_update!(pool, "users",
+    mcms_derive::crud_update!(pool, "users",
         bind: ["avatar" => avatar, "updated_at" => now],
         where: ("id", id)
     )?;
@@ -317,17 +278,14 @@ mod tests {
     #[tokio::test]
     async fn find_by_id() {
         let pool = setup_pool().await;
-        let user = create(&pool, &new_cmd("pkuser"), None).await.unwrap();
-        let found = super::find_by_id(&pool, user.id, None)
-            .await
-            .unwrap()
-            .unwrap();
+        let user = create(&pool, &new_cmd("pkuser")).await.unwrap();
+        let found = super::find_by_id(&pool, user.id).await.unwrap().unwrap();
         assert_eq!(found.id, user.id);
     }
     #[tokio::test]
     async fn update_profile() {
         let pool = setup_pool().await;
-        let user = create(&pool, &new_cmd("profuser"), None).await.unwrap();
+        let user = create(&pool, &new_cmd("profuser")).await.unwrap();
         let updated = super::update_profile(
             &pool,
             &crate::commands::user::UpdateProfileCmd {
@@ -339,7 +297,6 @@ mod tests {
                 social_links: None,
                 metadata: None,
             },
-            None,
         )
         .await
         .unwrap();
@@ -349,20 +306,18 @@ mod tests {
     async fn find_all_paginated() {
         let pool = setup_pool().await;
         for i in 0..5 {
-            create(&pool, &new_cmd(&format!("user{i}")), None)
-                .await
-                .unwrap();
+            create(&pool, &new_cmd(&format!("user{i}"))).await.unwrap();
         }
-        let (users, total) = find_all(&pool, 1, 3, None).await.unwrap();
+        let (users, total) = find_all(&pool, 1, 3).await.unwrap();
         assert_eq!(users.len(), 3);
         assert_eq!(total, 5);
     }
     #[tokio::test]
     async fn update_role() {
         let pool = setup_pool().await;
-        let user = create(&pool, &new_cmd("roleuser"), None).await.unwrap();
+        let user = create(&pool, &new_cmd("roleuser")).await.unwrap();
         assert_eq!(user.role, UserRole::Reader);
-        let updated = super::update_role(&pool, user.id, UserRole::Author, None)
+        let updated = super::update_role(&pool, user.id, UserRole::Author)
             .await
             .unwrap();
         assert_eq!(updated.role, UserRole::Author);

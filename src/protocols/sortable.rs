@@ -122,7 +122,7 @@ mod tests {
         engine.register(SortableAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "pages".into(),
             record: Record::new(),
             schema: None,
@@ -145,7 +145,7 @@ mod tests {
         record.insert(COL_SORT_KEY.into(), json!(42));
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "pages".into(),
             record,
             schema: None,

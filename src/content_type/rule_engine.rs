@@ -1125,7 +1125,6 @@ mod tests {
         let ctx = RuleContext::from_auth(&crate::middleware::auth::AuthUser::new_test(
             0,
             crate::models::user::UserRole::Reader,
-            "",
         ));
         assert!(rule.evaluate(&record, &ctx, &cfg));
     }
@@ -1138,7 +1137,6 @@ mod tests {
         let ctx = RuleContext::from_auth(&crate::middleware::auth::AuthUser::new_test(
             0,
             crate::models::user::UserRole::Reader,
-            "",
         ));
         assert!(!rule.evaluate(&record, &ctx, &cfg));
     }
@@ -1178,7 +1176,6 @@ mod tests {
         let ctx = RuleContext::from_auth(&crate::middleware::auth::AuthUser::new_test(
             0,
             crate::models::user::UserRole::Reader,
-            "",
         ));
 
         let record1 = json!({"status": "published"});
@@ -1197,7 +1194,6 @@ mod tests {
         let ctx = RuleContext::from_auth(&crate::middleware::auth::AuthUser::new_test(
             0,
             crate::models::user::UserRole::Reader,
-            "",
         ));
 
         let r1 = Rule::parse("age > 18", &cfg).unwrap();
@@ -1221,7 +1217,6 @@ mod tests {
         let ctx = RuleContext::from_auth(&crate::middleware::auth::AuthUser::new_test(
             0,
             crate::models::user::UserRole::Reader,
-            "",
         ));
 
         assert!(rule.evaluate(&json!({"title": "learning rust"}), &ctx, &cfg));
@@ -1235,7 +1230,6 @@ mod tests {
         let ctx = RuleContext::from_auth(&crate::middleware::auth::AuthUser::new_test(
             0,
             crate::models::user::UserRole::Reader,
-            "",
         ));
 
         assert!(rule.evaluate(&json!({"title": "hello world"}), &ctx, &cfg));
@@ -1249,7 +1243,6 @@ mod tests {
         let ctx = RuleContext::from_auth(&crate::middleware::auth::AuthUser::new_test(
             0,
             crate::models::user::UserRole::Reader,
-            "",
         ));
 
         assert!(rule.evaluate(&json!({"title": "hello"}), &ctx, &cfg));
@@ -1264,7 +1257,6 @@ mod tests {
         let ctx = RuleContext::from_auth(&crate::middleware::auth::AuthUser::new_test(
             0,
             crate::models::user::UserRole::Reader,
-            "",
         ));
 
         let record1 = json!({"tags": ["rust", "go"]});
@@ -1348,7 +1340,6 @@ mod tests {
         let ctx = RuleContext::from_auth(&crate::middleware::auth::AuthUser::new_test(
             0,
             crate::models::user::UserRole::Reader,
-            "",
         ));
 
         assert!(rule.evaluate(&json!({"status": null}), &ctx, &cfg));
@@ -1361,11 +1352,8 @@ mod tests {
     fn compile_no_auth() {
         let cfg = default_config();
         let rule = Rule::parse(r#"status = "published""#, &cfg).unwrap();
-        let auth = crate::middleware::auth::AuthUser::new_test(
-            0,
-            crate::models::user::UserRole::Reader,
-            "",
-        );
+        let auth =
+            crate::middleware::auth::AuthUser::new_test(0, crate::models::user::UserRole::Reader);
         let (sql, params) = compile_rule_sql(&rule, 0, &auth, &cfg).unwrap();
         assert!(sql.contains("status"));
         assert_eq!(params, vec!["published"]);
@@ -1375,11 +1363,8 @@ mod tests {
     fn compile_with_auth() {
         let cfg = default_config();
         let rule = Rule::parse("author_id = @request.auth.id", &cfg).unwrap();
-        let auth = crate::middleware::auth::AuthUser::new_test(
-            123,
-            crate::models::user::UserRole::Reader,
-            "",
-        );
+        let auth =
+            crate::middleware::auth::AuthUser::new_test(123, crate::models::user::UserRole::Reader);
         let (sql, params) = compile_rule_sql(&rule, 0, &auth, &cfg).unwrap();
         assert!(!sql.contains("__AUTH_ID__"));
         assert!(params.contains(&"123".to_string()));
@@ -1389,11 +1374,8 @@ mod tests {
     fn compile_needs_auth_but_none_returns_none() {
         let cfg = default_config();
         let rule = Rule::parse("author_id = @request.auth.id", &cfg).unwrap();
-        let auth = crate::middleware::auth::AuthUser::new_test(
-            0,
-            crate::models::user::UserRole::Reader,
-            "",
-        );
+        let auth =
+            crate::middleware::auth::AuthUser::new_test(0, crate::models::user::UserRole::Reader);
         assert!(compile_rule_sql(&rule, 0, &auth, &cfg).is_none());
     }
 
@@ -1405,11 +1387,8 @@ mod tests {
             &cfg,
         )
         .unwrap();
-        let auth = crate::middleware::auth::AuthUser::new_test(
-            999,
-            crate::models::user::UserRole::Reader,
-            "",
-        );
+        let auth =
+            crate::middleware::auth::AuthUser::new_test(999, crate::models::user::UserRole::Reader);
         let (sql, params) = compile_rule_sql(&rule, 0, &auth, &cfg).unwrap();
         assert!(sql.contains("OR"));
         assert!(!sql.contains("__AUTH_ID__"));

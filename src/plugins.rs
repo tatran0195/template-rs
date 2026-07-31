@@ -1965,11 +1965,8 @@ mod tests {
     async fn dispatch_route_returns_none_with_no_plugins() {
         let config = test_config();
         let mgr = PluginManager::new(config).await;
-        let auth = crate::middleware::auth::AuthUser::new_test(
-            0,
-            crate::models::user::UserRole::Reader,
-            "",
-        );
+        let auth =
+            crate::middleware::auth::AuthUser::new_test(0, crate::models::user::UserRole::Reader);
         assert!(
             mgr.dispatch_route("/api/v1/test", "GET", None, None, &auth)
                 .await
@@ -2176,7 +2173,6 @@ export function handle_test(input) {
                 &crate::middleware::auth::AuthUser::new_test(
                     0,
                     crate::models::user::UserRole::Reader,
-                    "",
                 ),
             )
             .await;
@@ -2915,7 +2911,6 @@ end
                 &crate::middleware::auth::AuthUser::new_test(
                     0,
                     crate::models::user::UserRole::Reader,
-                    "",
                 ),
             )
             .await;
@@ -2930,7 +2925,6 @@ end
                 &crate::middleware::auth::AuthUser::new_test(
                     0,
                     crate::models::user::UserRole::Reader,
-                    "",
                 ),
             )
             .await;
@@ -3252,7 +3246,6 @@ fn handle_test(input) {
                 &crate::middleware::auth::AuthUser::new_test(
                     0,
                     crate::models::user::UserRole::Reader,
-                    "",
                 ),
             )
             .await;
@@ -3564,7 +3557,6 @@ fn seo_health(input) {
                 &crate::middleware::auth::AuthUser::new_test(
                     0,
                     crate::models::user::UserRole::Reader,
-                    "",
                 ),
             )
             .await;
@@ -3580,7 +3572,6 @@ fn seo_health(input) {
                 &crate::middleware::auth::AuthUser::new_test(
                     0,
                     crate::models::user::UserRole::Reader,
-                    "",
                 ),
             )
             .await;
@@ -3596,7 +3587,6 @@ fn seo_health(input) {
                 &crate::middleware::auth::AuthUser::new_test(
                     0,
                     crate::models::user::UserRole::Reader,
-                    "",
                 ),
             )
             .await;
@@ -3612,7 +3602,6 @@ fn seo_health(input) {
                 &crate::middleware::auth::AuthUser::new_test(
                     0,
                     crate::models::user::UserRole::Reader,
-                    "",
                 ),
             )
             .await;

@@ -81,15 +81,15 @@ mod tests {
     use crate::models::user::UserRole;
 
     fn admin() -> AuthUser {
-        AuthUser::from_parts(Some(1), UserRole::Admin, Some("t".into()))
+        AuthUser::from_parts(Some(1), UserRole::Admin)
     }
 
     fn author(uid: i64) -> AuthUser {
-        AuthUser::from_parts(Some(uid), UserRole::Author, Some("t".into()))
+        AuthUser::from_parts(Some(uid), UserRole::Author)
     }
 
     fn anon() -> AuthUser {
-        AuthUser::from_parts(None, UserRole::Reader, Some("t".into()))
+        AuthUser::from_parts(None, UserRole::Reader)
     }
 
     fn mock_post(created_by: i64) -> crate::models::post::Post {
@@ -97,7 +97,6 @@ mod tests {
         use crate::utils::tz::Timestamp;
         crate::models::post::Post {
             id: SnowflakeId(1),
-            tenant_id: None,
             title: String::new(),
             slug: String::new(),
             content: String::new(),
@@ -132,7 +131,6 @@ mod tests {
         use crate::utils::tz::Timestamp;
         crate::models::comment::Comment {
             id: SnowflakeId(1),
-            tenant_id: None,
             post_id: SnowflakeId(1),
             created_by: created_by.map(SnowflakeId),
             updated_by: None,

@@ -150,7 +150,7 @@ mod tests {
         engine.register(VersionableAspect);
 
         let mut ctx = DataAfterUpdateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "articles".into(),
             old_record: Record::new(),
             new_record: Record::new(),
@@ -170,7 +170,7 @@ mod tests {
         engine.register(VersionableAspect);
 
         let mut ctx = DataAfterUpdateContext {
-            base: BaseContext::new(None, "default".into(), "now".into())
+            base: BaseContext::new(None, "now".into())
                 .with_pool(crate::db::pool::Pool::from(pool)),
             table: "articles".into(),
             old_record: Record::new(),

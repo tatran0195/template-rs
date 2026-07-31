@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use axe_derive::aspect_service;
+use mcms_derive::aspect_service;
 
 use crate::aspects::engine::AspectEngine;
 use crate::aspects::slug_aspect;
@@ -53,7 +53,7 @@ impl CategoryService for CategoryServiceImpl {
             } else {
                 let pid = crate::types::snowflake_id::parse_id(raw_id)?;
                 let parent =
-                    crate::models::category::find_by_id(&self.pool, pid, auth.tenant_id()).await?;
+                    crate::models::category::find_by_id(&self.pool, pid).await?;
                 Some(*parent.id)
             }
         } else {
@@ -73,7 +73,7 @@ impl CategoryService for CategoryServiceImpl {
             og_image: req.og_image,
         };
         let cat =
-            crate::models::category::create(&self.pool, &cmd, auth.tenant_id(), auth.user_id())
+            crate::models::category::create(&self.pool, &cmd, auth.user_id())
                 .await?;
         self.after_created(&cat);
         Ok(cat)
@@ -86,7 +86,7 @@ impl CategoryService for CategoryServiceImpl {
         req: UpdateCategoryRequest,
     ) -> AppResult<Category> {
         let existing =
-            crate::models::category::find_by_id(&self.pool, id, auth.tenant_id()).await?;
+            crate::models::category::find_by_id(&self.pool, id).await?;
         let (req, _d) = self.before_update(auth, &existing, req).await?;
         let new_slug = if let Some(ref slug_val) = req.slug {
             if slug_val.is_empty() {
@@ -106,7 +106,7 @@ impl CategoryService for CategoryServiceImpl {
             } else {
                 let pid = crate::types::snowflake_id::parse_id(raw_id)?;
                 let parent =
-                    crate::models::category::find_by_id(&self.pool, pid, auth.tenant_id()).await?;
+                    crate::models::category::find_by_id(&self.pool, pid).await?;
                 Some(*parent.id)
             }
         } else {
@@ -127,7 +127,7 @@ impl CategoryService for CategoryServiceImpl {
             og_image: req.og_image,
         };
         let updated =
-            crate::models::category::update(&self.pool, &cmd, auth.tenant_id(), auth.user_id())
+            crate::models::category::update(&self.pool, &cmd, auth.user_id())
                 .await?;
         self.after_updated(&updated);
         Ok(updated)
@@ -135,30 +135,30 @@ impl CategoryService for CategoryServiceImpl {
 
     async fn delete(&self, id: SnowflakeId, auth: &AuthUser) -> AppResult<()> {
         let existing =
-            crate::models::category::find_by_id(&self.pool, id, auth.tenant_id()).await?;
+            crate::models::category::find_by_id(&self.pool, id).await?;
         self.before_delete(auth, &existing).await?;
-        crate::models::category::ensure_safe_to_delete(&self.pool, existing.id, auth.tenant_id())
+        crate::models::category::ensure_safe_to_delete(&self.pool, existing.id)
             .await?;
-        crate::models::category::delete(&self.pool, existing.id, auth.tenant_id()).await?;
+        crate::models::category::delete(&self.pool, existing.id).await?;
         self.after_deleted(&existing);
         Ok(())
     }
 
-    async fn get(&self, id: SnowflakeId, auth: &AuthUser) -> AppResult<Category> {
-        crate::models::category::find_by_id(&self.pool, id, auth.tenant_id()).await
+    async fn get(&self, id: SnowflakeId, _auth: &AuthUser) -> AppResult<Category> {
+        crate::models::category::find_by_id(&self.pool, id).await
     }
 
-    async fn list(&self, auth: &AuthUser) -> AppResult<Vec<Category>> {
-        crate::models::category::find_all(&self.pool, auth.tenant_id()).await
+    async fn list(&self, _auth: &AuthUser) -> AppResult<Vec<Category>> {
+        crate::models::category::find_all(&self.pool).await
     }
 
     async fn list_paginated(
         &self,
-        auth: &AuthUser,
+        _auth: &AuthUser,
         page: i64,
         page_size: i64,
     ) -> AppResult<(Vec<Category>, i64)> {
-        crate::models::category::find_paginated(&self.pool, auth.tenant_id(), page, page_size).await
+        crate::models::category::find_paginated(&self.pool, page, page_size).await
     }
 }
 
@@ -171,11 +171,10 @@ mod tests {
         crate::test_pool!()
     }
 
-    fn auth(tid: Option<&str>) -> AuthUser {
+    fn auth() -> AuthUser {
         AuthUser::from_parts(
             Some(1),
             crate::models::user::UserRole::Admin,
-            tid.map(|s| s.to_string()),
         )
     }
 
@@ -190,7 +189,7 @@ mod tests {
     async fn create_category_basic() {
         let pool = setup_pool().await;
         let svc = make_service(pool.clone());
-        let a = auth(None);
+        let a = auth();
         let cat = svc
             .create(
                 &a,
@@ -218,7 +217,7 @@ mod tests {
     async fn list_categories_empty() {
         let pool = setup_pool().await;
         let svc = make_service(pool.clone());
-        let a = auth(None);
+        let a = auth();
         let cats = svc.list(&a).await.unwrap();
         assert!(cats.is_empty());
     }
@@ -227,7 +226,7 @@ mod tests {
     async fn update_category_renames() {
         let pool = setup_pool().await;
         let svc = make_service(pool.clone());
-        let a = auth(None);
+        let a = auth();
         let cat = svc
             .create(
                 &a,
@@ -275,7 +274,7 @@ mod tests {
     async fn delete_category() {
         let pool = setup_pool().await;
         let svc = make_service(pool.clone());
-        let a = auth(None);
+        let a = auth();
         let cat = svc
             .create(
                 &a,
@@ -304,7 +303,7 @@ mod tests {
     async fn delete_category_not_found() {
         let pool = setup_pool().await;
         let svc = make_service(pool.clone());
-        let a = auth(None);
+        let a = auth();
         assert!(svc.delete(SnowflakeId(999999), &a).await.is_err());
     }
 
@@ -312,7 +311,7 @@ mod tests {
     async fn list_categories_paginated() {
         let pool = setup_pool().await;
         let svc = make_service(pool.clone());
-        let a = auth(None);
+        let a = auth();
         for i in 0..5 {
             svc.create(
                 &a,

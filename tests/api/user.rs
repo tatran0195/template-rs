@@ -111,7 +111,7 @@ async fn get_user_not_found() {
 async fn list_users_admin_only() {
     let (mut app, state) = test_app().await;
     let admin_id = create_admin(&state.pool).await;
-    let admin_token = make_token(&admin_id.1, admin_id.0, axe::models::user::UserRole::Admin);
+    let admin_token = make_token(&admin_id.1, admin_id.0, mcms::models::user::UserRole::Admin);
     let (reader_tok, _) =
         register_and_login(&mut app, "reader@test.com", "reader", "Password123").await;
 
@@ -165,7 +165,7 @@ async fn change_password_too_short() {
 async fn admin_can_update_role() {
     let (mut app, state) = test_app().await;
     let admin_id = create_admin(&state.pool).await;
-    let admin_token = make_token(&admin_id.1, admin_id.0, axe::models::user::UserRole::Admin);
+    let admin_token = make_token(&admin_id.1, admin_id.0, mcms::models::user::UserRole::Admin);
     let _ = register_and_login(&mut app, "roleuser@test.com", "roleuser", "Password123").await;
     let reader_id_i64: i64 = sqlx::query_scalar("SELECT id FROM users WHERE username = 'roleuser'")
         .fetch_one(&state.pool)

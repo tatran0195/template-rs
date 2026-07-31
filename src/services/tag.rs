@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use axe_derive::aspect_service;
+use mcms_derive::aspect_service;
 
 use crate::aspects::engine::AspectEngine;
 use crate::dto::CreateTagRequest;
@@ -49,14 +49,7 @@ impl TagService for TagServiceImpl {
     async fn create(&self, auth: &AuthUser, req: CreateTagRequest) -> AppResult<Tag> {
         let (req, _d) = self.before_create(auth, req).await?;
         let slug = generate_slug(&req.name);
-        let tag = crate::models::tag::create(
-            &self.pool,
-            &req.name,
-            &slug,
-            auth.tenant_id(),
-            auth.user_id(),
-        )
-        .await?;
+        let tag = crate::models::tag::create(&self.pool, &req.name, &slug, auth.user_id()).await?;
         self.after_created(&tag);
         Ok(tag)
     }
@@ -68,37 +61,36 @@ impl TagService for TagServiceImpl {
         name: String,
         slug: String,
     ) -> AppResult<Tag> {
-        let tag = crate::models::tag::find_by_id(&self.pool, id, auth.tenant_id()).await?;
+        let tag = crate::models::tag::find_by_id(&self.pool, id).await?;
         let ((name, slug), _d) = self.before_update(auth, &tag, (name, slug)).await?;
-        let updated =
-            crate::models::tag::update(&self.pool, tag.id, &name, &slug, auth.tenant_id()).await?;
+        let updated = crate::models::tag::update(&self.pool, tag.id, &name, &slug).await?;
         self.after_updated(&updated);
         Ok(updated)
     }
 
     async fn delete(&self, id: SnowflakeId, auth: &AuthUser) -> AppResult<()> {
-        let tag = crate::models::tag::find_by_id(&self.pool, id, auth.tenant_id()).await?;
+        let tag = crate::models::tag::find_by_id(&self.pool, id).await?;
         self.before_delete(auth, &tag).await?;
-        crate::models::tag::delete(&self.pool, tag.id, auth.tenant_id()).await?;
+        crate::models::tag::delete(&self.pool, tag.id).await?;
         self.after_deleted(&tag);
         Ok(())
     }
 
-    async fn get(&self, id: SnowflakeId, auth: &AuthUser) -> AppResult<Tag> {
-        crate::models::tag::find_by_id(&self.pool, id, auth.tenant_id()).await
+    async fn get(&self, id: SnowflakeId, _auth: &AuthUser) -> AppResult<Tag> {
+        crate::models::tag::find_by_id(&self.pool, id).await
     }
 
-    async fn list(&self, auth: &AuthUser) -> AppResult<Vec<Tag>> {
-        crate::models::tag::find_all(&self.pool, auth.tenant_id()).await
+    async fn list(&self, _auth: &AuthUser) -> AppResult<Vec<Tag>> {
+        crate::models::tag::find_all(&self.pool).await
     }
 
     async fn list_paginated(
         &self,
-        auth: &AuthUser,
+        _auth: &AuthUser,
         page: i64,
         page_size: i64,
     ) -> AppResult<(Vec<Tag>, i64)> {
-        crate::models::tag::find_paginated(&self.pool, auth.tenant_id(), page, page_size).await
+        crate::models::tag::find_paginated(&self.pool, page, page_size).await
     }
 }
 
@@ -112,7 +104,7 @@ mod tests {
     }
 
     fn auth() -> AuthUser {
-        AuthUser::from_parts(Some(1), crate::models::user::UserRole::Admin, None)
+        AuthUser::for_test_admin()
     }
 
     fn make_service(pool: crate::db::Pool) -> Arc<dyn TagService> {

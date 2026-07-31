@@ -6,8 +6,8 @@
 
 use std::path::Path;
 
-use axe::config::app::AppConfig;
-use axe::db::{DbDriver, Driver};
+use mcms::config::app::AppConfig;
+use mcms::db::{DbDriver, Driver};
 
 // ── Result types ─────────────────────────────────────────────
 
@@ -271,7 +271,7 @@ fn check_writable(path: &Path) -> bool {
 }
 
 async fn check_database(config: &AppConfig) -> CheckResult {
-    match axe::db::connection::init_pool(&config.database_url, 1).await {
+    match mcms::db::connection::init_pool(&config.database_url, 1).await {
         Ok(pool) => match sqlx::query("SELECT 1").execute(&pool).await {
             Ok(_) => {
                 let table_check = check_core_tables(&pool).await;
@@ -303,7 +303,7 @@ async fn check_database(config: &AppConfig) -> CheckResult {
     }
 }
 
-async fn check_core_tables(pool: &axe::db::Pool) -> Vec<String> {
+async fn check_core_tables(pool: &mcms::db::Pool) -> Vec<String> {
     let core_tables = [
         "users",
         "posts",

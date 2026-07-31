@@ -46,7 +46,7 @@ pub async fn backup_database(
             tracing::warn!("WAL checkpoint failed, proceeding with file copy: {e}");
         }
 
-        let backup_name = format!("axe_{}.db", timestamp);
+        let backup_name = format!("MCMS_{}.db", timestamp);
         let backup_path = Path::new(output_dir).join(&backup_name);
 
         std::fs::copy(db_path, &backup_path)?;
@@ -59,7 +59,7 @@ pub async fn backup_database(
 
     #[cfg(feature = "db-postgres")]
     {
-        let backup_name = format!("axe_{}.sql", timestamp);
+        let backup_name = format!("MCMS_{}.sql", timestamp);
         let backup_path = Path::new(output_dir).join(&backup_name);
 
         let status = std::process::Command::new("pg_dump")
@@ -83,7 +83,7 @@ pub async fn backup_database(
 
     #[cfg(feature = "db-mysql")]
     {
-        let backup_name = format!("axe_{}.sql", timestamp);
+        let backup_name = format!("MCMS_{}.sql", timestamp);
         let backup_path = Path::new(output_dir).join(&backup_name);
 
         let url = &config.database_url;

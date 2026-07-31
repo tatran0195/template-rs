@@ -9,11 +9,10 @@ use crate::AppState;
 use crate::admin_spa;
 use crate::cache::MemoryCache;
 use crate::config::app::AppConfig;
-use crate::constants::DEFAULT_TENANT;
 
 use crate::handlers::{
     api_token, auth, category, comment, cron, health, media, options, page, plugin, post, rbac,
-    reusable_block, rss, setup, sse, stats, tag, tenant, user, ws,
+    reusable_block, rss, setup, sse, stats, tag, user, ws,
 };
 use crate::middleware::locale::locale_middleware;
 use crate::middleware::metrics;
@@ -152,7 +151,6 @@ async fn build_app(
         .merge(rbac::routes(&mut registry, config))
         .merge(stats::routes(&mut registry, config))
         .merge(options::routes(&mut registry, config))
-        .merge(tenant::routes(&mut registry, config))
         .merge(crate::handlers::audit::routes(&mut registry, config))
         .merge(crate::webhook::handler::routes(&mut registry, config))
         .merge(crate::content_type::handler::routes(&mut registry, config));
@@ -365,10 +363,6 @@ async fn build_app(
             crate::middleware::aop_http::aop_http_layer,
         ))
         .layer(CompressionLayer::new())
-        .layer(from_fn_with_state(
-            state.clone(),
-            crate::middleware::tenant::subdomain_tenant_resolver,
-        ))
         .with_state(state);
 
     let app = app.route("/api/docs/openapi.json", get(openapi::serve_openapi_json));
@@ -605,13 +599,10 @@ async fn handle_plugin_route(
 pub fn spawn_audit_subscriber(
     eventbus: crate::eventbus::EventBus,
     audit: Arc<crate::services::audit::AuditService>,
-    tenant_service: Arc<crate::services::tenant::TenantService>,
     mut shutdown_rx: tokio::sync::watch::Receiver<bool>,
 ) {
     let mut rx = eventbus.subscribe();
     tokio::spawn(async move {
-        let default_tenant: &str = DEFAULT_TENANT;
-        let _ = tenant_service;
         loop {
             tokio::select! {
                 result = rx.recv() => {
@@ -623,7 +614,6 @@ pub fn spawn_audit_subscriber(
 
                     if let Err(e) = audit
                         .log(
-                            default_tenant,
                             info.actor_id,
                             None,
                             &info.action,
@@ -722,7 +712,7 @@ pub fn spawn_webhook_subscriber(
                         }
                     };
 
-                    let subs = match webhook_service.find_enabled(Some(DEFAULT_TENANT)).await {
+                    let subs = match webhook_service.find_enabled().await {
                         Ok(s) => s,
                         Err(e) => {
                             tracing::warn!("webhook find_enabled error: {e}");

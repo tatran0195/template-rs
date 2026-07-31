@@ -52,7 +52,6 @@ pub async fn list(
     let (items, total) = state
         .audit
         .list(
-            auth.tenant_id(),
             filter.action.as_deref(),
             filter.actor_id,
             params.page,
@@ -69,6 +68,6 @@ pub async fn get(
     Path(id): Path<i64>,
 ) -> AppResult<ApiResponse<crate::models::audit_log::AuditEntry>> {
     auth.ensure_admin()?;
-    let entry = state.audit.get(SnowflakeId(id)).await?;
+    let entry = state.audit.find_by_id(SnowflakeId(id)).await?;
     Ok(ApiResponse::success(entry))
 }

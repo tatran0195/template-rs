@@ -45,7 +45,7 @@ pub async fn create(
 
     let expires_at = crate::utils::tz::now_utc() + chrono::Duration::seconds(expires_in_secs);
 
-    axe_derive::crud_insert!(pool, "password_reset_tokens", [
+    mcms_derive::crud_insert!(pool, "password_reset_tokens", [
         "id" => id,
         "user_id" => user_id,
         "token" => &token,
@@ -65,7 +65,7 @@ pub async fn find_by_token(
     pool: &crate::db::Pool,
     token: &str,
 ) -> AppResult<Option<PasswordResetToken>> {
-    Ok(axe_derive::crud_find!(
+    Ok(mcms_derive::crud_find!(
         pool,
         "password_reset_tokens",
         PasswordResetToken,
@@ -76,7 +76,7 @@ pub async fn find_by_token(
 /// Mark a token as used
 pub async fn mark_used(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<()> {
     let now = crate::utils::tz::now_utc();
-    axe_derive::crud_update!(pool, "password_reset_tokens",
+    mcms_derive::crud_update!(pool, "password_reset_tokens",
         bind: ["used_at" => now],
         where: ("id", id)
     )?;
@@ -85,7 +85,7 @@ pub async fn mark_used(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<()>
 
 /// Delete all unused reset tokens for a user (called before creating a new token to prevent token accumulation)
 pub async fn delete_unused_by_user(pool: &crate::db::Pool, user_id: SnowflakeId) -> AppResult<()> {
-    axe_derive::crud_delete!(
+    mcms_derive::crud_delete!(
         pool,
         "password_reset_tokens",
         where: AND(("user_id", user_id), ("used_at", IS_NULL))
@@ -95,7 +95,7 @@ pub async fn delete_unused_by_user(pool: &crate::db::Pool, user_id: SnowflakeId)
 
 /// Clean up expired and unused tokens
 pub async fn cleanup_expired(pool: &crate::db::Pool) -> AppResult<u64> {
-    axe_derive::check_schema!("password_reset_tokens", "expires_at", "used_at");
+    mcms_derive::check_schema!("password_reset_tokens", "expires_at", "used_at");
     let now = crate::utils::tz::now_utc();
     let sql = format!(
         "DELETE FROM password_reset_tokens WHERE expires_at < {} AND used_at IS NULL",
@@ -110,7 +110,7 @@ pub async fn tx_mark_used(
     id: SnowflakeId,
 ) -> AppResult<()> {
     let now = crate::utils::tz::now_str();
-    axe_derive::crud_update!(&mut *tx, "password_reset_tokens",
+    mcms_derive::crud_update!(&mut *tx, "password_reset_tokens",
         bind: ["used_at" => now],
         where: ("id", id)
     )?;
@@ -134,7 +134,6 @@ mod tests {
                 registered_via: crate::models::user::RegisteredVia::Email,
                 role: None,
             },
-            None,
         )
         .await
         .unwrap();

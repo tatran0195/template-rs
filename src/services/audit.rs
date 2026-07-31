@@ -20,7 +20,6 @@ impl AuditService {
     #[allow(clippy::too_many_arguments)]
     pub async fn log(
         &self,
-        tenant_id: &str,
         actor_id: Option<i64>,
         actor_role: Option<&str>,
         action: &str,
@@ -36,7 +35,6 @@ impl AuditService {
         );
         let entry = AuditEntry {
             id,
-            tenant_id: Some(tenant_id.to_string()),
             actor_id: actor_id.map(crate::types::snowflake_id::SnowflakeId),
             actor_role: actor_role.map(|s| s.to_string()),
             action: action.to_string(),
@@ -52,16 +50,16 @@ impl AuditService {
 
     pub async fn list(
         &self,
-        tenant_id: Option<&str>,
+
         action: Option<&str>,
         actor_id: Option<i64>,
         page: i64,
         page_size: i64,
     ) -> AppResult<(Vec<AuditEntry>, i64)> {
-        audit_log::find_paginated(&self.pool, tenant_id, action, actor_id, page, page_size).await
+        audit_log::find_paginated(&self.pool, action, actor_id, page, page_size).await
     }
 
-    pub async fn get(&self, id: SnowflakeId) -> AppResult<AuditEntry> {
+    pub async fn find_by_id(&self, id: SnowflakeId) -> AppResult<AuditEntry> {
         audit_log::find_by_id(&self.pool, id).await
     }
 }

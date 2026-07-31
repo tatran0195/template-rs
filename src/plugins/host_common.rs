@@ -303,7 +303,6 @@ impl HostContext {
             match handle.block_on(crate::models::post::find_by_slug(
                 pool,
                 slug,
-                Some(crate::constants::DEFAULT_TENANT),
             )) {
                 Ok(Some(post)) => serde_json::to_string(&post).ok(),
                 Ok(None) => None,
@@ -557,11 +556,8 @@ impl HostContext {
     // ── High-level CRUD API ─────────────────────────────────────
 
     /// Check if a table is a content type table with tenantable protocol
-    fn is_tenantable_table(&self, table: &str) -> bool {
-        self.content_type_registry
-            .as_ref()
-            .and_then(|reg| reg.get_by_table(table))
-            .is_some_and(|ct| ct.implements_protocol("tenantable"))
+    fn is_tenantable_table(&self, _table: &str) -> bool {
+        false
     }
 
     fn check_table_readable(&self, table: &str) -> Result<(), String> {
@@ -812,7 +808,7 @@ impl HostContext {
             where_sql.push_str(&format!("{connector} tenant_id = {ph}"));
             let tid = opts
                 .tenant_value_owned()
-                .unwrap_or_else(|| crate::constants::DEFAULT_TENANT.to_string());
+                .unwrap_or_else(|| "default".to_string());
             args.add(tid).ok();
         }
 
@@ -873,7 +869,7 @@ impl HostContext {
             where_sql.push_str(&format!("{connector} tenant_id = {ph}"));
             let tid = opts
                 .tenant_value_owned()
-                .unwrap_or_else(|| crate::constants::DEFAULT_TENANT.to_string());
+                .unwrap_or_else(|| "default".to_string());
             args.add(tid).ok();
         }
 
@@ -934,7 +930,7 @@ impl HostContext {
             where_sql.push_str(&format!("{connector} tenant_id = {ph}"));
             let tid = opts
                 .tenant_value_owned()
-                .unwrap_or_else(|| crate::constants::DEFAULT_TENANT.to_string());
+                .unwrap_or_else(|| "default".to_string());
             args.add(tid).ok();
         }
 
@@ -1059,7 +1055,7 @@ impl HostContext {
             where_sql.push_str(&format!("{connector} tenant_id = {ph}"));
             let tid = opts
                 .tenant_value_owned()
-                .unwrap_or_else(|| crate::constants::DEFAULT_TENANT.to_string());
+                .unwrap_or_else(|| "default".to_string());
             args.add(tid).ok();
         }
 
@@ -1124,7 +1120,7 @@ impl HostContext {
             where_sql.push_str(&format!("{connector} tenant_id = {ph}"));
             let tid = opts
                 .tenant_value_owned()
-                .unwrap_or_else(|| crate::constants::DEFAULT_TENANT.to_string());
+                .unwrap_or_else(|| "default".to_string());
             args.add(tid).ok();
         }
 
@@ -1253,7 +1249,7 @@ impl HostContext {
             where_sql.push_str(&format!("{connector} tenant_id = {ph}"));
             let tid = opts
                 .tenant_value_owned()
-                .unwrap_or_else(|| crate::constants::DEFAULT_TENANT.to_string());
+                .unwrap_or_else(|| "default".to_string());
             args.add(tid).ok();
         }
 
@@ -1396,7 +1392,7 @@ impl HostContext {
             where_sql.push_str(&format!("{connector} tenant_id = {ph}"));
             let tid = opts
                 .tenant_value_owned()
-                .unwrap_or_else(|| crate::constants::DEFAULT_TENANT.to_string());
+                .unwrap_or_else(|| "default".to_string());
             args.add(tid).ok();
         }
         if let Some(ref order_by) = opts.order_by
@@ -2589,7 +2585,7 @@ mod tests {
         let r = ctx.db_sum(
             "categories",
             "sort_order",
-            r#"{"tenant_id":"default"}"#,
+            "{}",
             "{}",
         );
         assert!(r.contains(r#""sum":10"#), "sum: {r}");
@@ -2631,26 +2627,26 @@ mod tests {
 
         let _ = ctx.db_insert(
             "categories",
-            r#"{"name":"Rust1","slug":"rust1","tenant_id":"t1"}"#,
-            r#"{"tenant":"disabled"}"#,
+            r#"{"name":"Rust1","slug":"rust1","parent_id":1}"#,
+            "{}",
         );
         let _ = ctx.db_insert(
             "categories",
-            r#"{"name":"Go","slug":"go","tenant_id":"t2"}"#,
-            r#"{"tenant":"disabled"}"#,
+            r#"{"name":"Go","slug":"go","parent_id":2}"#,
+            "{}",
         );
         let _ = ctx.db_insert(
             "categories",
-            r#"{"name":"Rust2","slug":"rust2","tenant_id":"t1"}"#,
-            r#"{"tenant":"disabled"}"#,
+            r#"{"name":"Rust2","slug":"rust2","parent_id":1}"#,
+            "{}",
         );
 
         let r = ctx.db_group_by(
             "categories",
-            r#"{"group_by":"tenant_id","count":true,"order_by":"cnt DESC","tenant":false}"#,
+            r#"{"group_by":"parent_id","count":true,"order_by":"cnt DESC","tenant":false}"#,
         );
         assert!(r.contains(r#""total":2"#), "group_by count: {r}");
-        assert!(r.contains(r#""tenant_id":"t1""#), "group_by t1: {r}");
+        assert!(r.contains(r#""parent_id":1"#), "group_by t1: {r}");
         assert!(r.contains(r#""cnt":2"#), "group_by cnt: {r}");
     }
 
@@ -2665,23 +2661,23 @@ mod tests {
 
         let _ = ctx.db_insert(
             "categories",
-            r#"{"name":"A1","slug":"gsa","sort_order":"3","tenant_id":"grpA"}"#,
-            r#"{"tenant":"disabled"}"#,
+            r#"{"name":"A1","slug":"gsa","sort_order":"3","parent_id":1}"#,
+            "{}",
         );
         let _ = ctx.db_insert(
             "categories",
-            r#"{"name":"A2","slug":"gsb","sort_order":"7","tenant_id":"grpA"}"#,
-            r#"{"tenant":"disabled"}"#,
+            r#"{"name":"A2","slug":"gsb","sort_order":"7","parent_id":1}"#,
+            "{}",
         );
         let _ = ctx.db_insert(
             "categories",
-            r#"{"name":"B1","slug":"gsc","sort_order":"2","tenant_id":"grpB"}"#,
-            r#"{"tenant":"disabled"}"#,
+            r#"{"name":"B1","slug":"gsc","sort_order":"2","parent_id":2}"#,
+            "{}",
         );
 
         let r = ctx.db_group_by(
             "categories",
-            r#"{"group_by":"tenant_id","count":true,"sum":"sort_order","order_by":"sum_sort_order DESC","tenant":false}"#,
+            r#"{"group_by":"parent_id","count":true,"sum":"sort_order","order_by":"sum_sort_order DESC","tenant":false}"#,
         );
         assert!(r.contains(r#""total":2"#), "group_by sum total: {r}");
         assert!(
@@ -2701,23 +2697,23 @@ mod tests {
 
         let _ = ctx.db_insert(
             "categories",
-            r#"{"name":"W1","slug":"wa","tenant_id":"tA"}"#,
-            r#"{"tenant":"disabled"}"#,
+            r#"{"name":"W1","slug":"wa","parent_id":1}"#,
+            "{}",
         );
         let _ = ctx.db_insert(
             "categories",
-            r#"{"name":"W2","slug":"wb","tenant_id":"tA"}"#,
-            r#"{"tenant":"disabled"}"#,
+            r#"{"name":"W2","slug":"wb","parent_id":1}"#,
+            "{}",
         );
         let _ = ctx.db_insert(
             "categories",
-            r#"{"name":"W3","slug":"wc","tenant_id":"tB"}"#,
-            r#"{"tenant":"disabled"}"#,
+            r#"{"name":"W3","slug":"wc","parent_id":2}"#,
+            "{}",
         );
 
         let r = ctx.db_group_by(
             "categories",
-            r#"{"group_by":"tenant_id","count":true,"where":{"tenant_id":"tA"},"tenant":false}"#,
+            r#"{"group_by":"parent_id","count":true,"where":{"parent_id":1},"tenant":false}"#,
         );
         assert!(r.contains(r#""total":1"#), "group_by where: {r}");
         assert!(r.contains(r#""cnt":2"#), "group_by where cnt: {r}");

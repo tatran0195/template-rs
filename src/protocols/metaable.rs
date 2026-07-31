@@ -97,7 +97,7 @@ mod tests {
         engine.register(MetaableAspect);
 
         let mut ctx = DataBeforeCreateContext {
-            base: BaseContext::new(None, "default".into(), "now".into()),
+            base: BaseContext::new(None, "now".into()),
             table: "posts".into(),
             record: Record::new(),
             schema: None,

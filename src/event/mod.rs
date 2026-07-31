@@ -24,7 +24,7 @@ use crate::models::post::Post;
 use crate::models::tag::Tag;
 use crate::models::user::User;
 
-pub use axe_derive::EventMeta;
+pub use mcms_derive::EventMeta;
 
 pub struct AuditInfo {
     pub action: String,

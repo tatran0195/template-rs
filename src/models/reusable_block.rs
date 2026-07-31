@@ -14,7 +14,6 @@ use crate::utils::tz::Timestamp;
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct ReusableBlock {
     pub id: SnowflakeId,
-    pub tenant_id: Option<String>,
     pub name: String,
     pub block_type: String,
     pub content: String,
@@ -28,31 +27,25 @@ pub struct ReusableBlock {
 pub async fn find_reusable_by_id(
     pool: &crate::db::Pool,
     id: SnowflakeId,
-    tenant_id: Option<&str>,
 ) -> AppResult<Option<ReusableBlock>> {
-    Ok(
-        axe_derive::crud_find!(pool, "reusable_blocks", ReusableBlock, where: ("id", id), tenant: tenant_id)?,
-    )
+    Ok(mcms_derive::crud_find!(pool, "reusable_blocks", ReusableBlock, where: ("id", id))?)
 }
 
-pub async fn list_reusable(
-    pool: &crate::db::Pool,
-    tenant_id: Option<&str>,
-) -> AppResult<Vec<ReusableBlock>> {
-    let result: Vec<ReusableBlock> = axe_derive::crud_list!(pool, "reusable_blocks", ReusableBlock, order_by: "name ASC", tenant: tenant_id)?;
+pub async fn list_reusable(pool: &crate::db::Pool) -> AppResult<Vec<ReusableBlock>> {
+    let result: Vec<ReusableBlock> =
+        mcms_derive::crud_list!(pool, "reusable_blocks", ReusableBlock, order_by: "name ASC")?;
     Ok(result)
 }
 
 pub async fn create_reusable(
     pool: &crate::db::Pool,
     cmd: &CreateReusableBlockCmd,
-    tenant_id: Option<&str>,
 ) -> AppResult<ReusableBlock> {
     let (id, now) = (
         crate::utils::id::new_snowflake_id(),
         crate::utils::tz::now_utc(),
     );
-    axe_derive::crud_insert!(
+    mcms_derive::crud_insert!(
         pool,
         "reusable_blocks",
         [
@@ -65,11 +58,10 @@ pub async fn create_reusable(
             "updated_by" => cmd.created_by,
             "created_at" => now,
             "updated_at" => now
-        ],
-        tenant: tenant_id
+        ]
     )?;
 
-    find_reusable_by_id(pool, id, tenant_id)
+    find_reusable_by_id(pool, id)
         .await?
         .ok_or_else(|| AppError::not_found("reusable_block"))
 }
@@ -77,28 +69,22 @@ pub async fn create_reusable(
 pub async fn update_reusable(
     pool: &crate::db::Pool,
     cmd: &UpdateReusableBlockCmd,
-    tenant_id: Option<&str>,
 ) -> AppResult<ReusableBlock> {
     let now = crate::utils::tz::now_utc();
-    axe_derive::crud_update!(
+    mcms_derive::crud_update!(
         pool, "reusable_blocks",
         bind: ["updated_at" => now],
         optional: ["updated_by" => cmd.updated_by, "name" => cmd.name, "block_type" => cmd.block_type, "content" => cmd.content, "description" => cmd.description],
-        where: ("id", cmd.id),
-        tenant: tenant_id
+        where: ("id", cmd.id)
     )?;
 
-    find_reusable_by_id(pool, cmd.id, tenant_id)
+    find_reusable_by_id(pool, cmd.id)
         .await?
         .ok_or_else(|| AppError::not_found("reusable_block"))
 }
 
-pub async fn delete_reusable(
-    pool: &crate::db::Pool,
-    id: SnowflakeId,
-    tenant_id: Option<&str>,
-) -> AppResult<()> {
-    let result = axe_derive::crud_delete!(pool, "reusable_blocks", where: ("id", id), tenant: tenant_id)?;
+pub async fn delete_reusable(pool: &crate::db::Pool, id: SnowflakeId) -> AppResult<()> {
+    let result = mcms_derive::crud_delete!(pool, "reusable_blocks", where: ("id", id))?;
     AppError::expect_affected(&result, "reusable_block")
 }
 
@@ -117,7 +103,6 @@ mod tests {
                 registered_via: crate::models::user::RegisteredVia::Email,
                 role: None,
             },
-            None,
         )
         .await
         .unwrap();
@@ -137,11 +122,10 @@ mod tests {
                 description: None,
                 created_by: Some(uid),
             },
-            None,
         )
         .await
         .unwrap();
-        let found = find_reusable_by_id(&pool, block.id, None).await.unwrap();
+        let found = find_reusable_by_id(&pool, block.id).await.unwrap();
         assert!(found.is_some());
         assert_eq!(found.unwrap().name, "Block");
     }
@@ -160,12 +144,11 @@ mod tests {
                     description: None,
                     created_by: Some(uid),
                 },
-                None,
             )
             .await
             .unwrap();
         }
-        let list = super::list_reusable(&pool, None).await.unwrap();
+        let list = super::list_reusable(&pool).await.unwrap();
         assert!(list.len() >= 3);
     }
 
@@ -182,7 +165,6 @@ mod tests {
                 description: None,
                 created_by: Some(uid),
             },
-            None,
         )
         .await
         .unwrap();
@@ -196,7 +178,6 @@ mod tests {
                 description: None,
                 updated_by: Some(uid),
             },
-            None,
         )
         .await
         .unwrap();
@@ -216,12 +197,11 @@ mod tests {
                 description: None,
                 created_by: Some(uid),
             },
-            None,
         )
         .await
         .unwrap();
-        delete_reusable(&pool, block.id, None).await.unwrap();
-        let found = find_reusable_by_id(&pool, block.id, None).await.unwrap();
+        delete_reusable(&pool, block.id).await.unwrap();
+        let found = find_reusable_by_id(&pool, block.id).await.unwrap();
         assert!(found.is_none());
     }
 }

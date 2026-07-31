@@ -55,7 +55,7 @@ impl JobHandler for RebuildSearchIndexHandler {
             if !seen.insert(*id) {
                 continue;
             }
-            match crate::models::post::find_by_id(&self.pool, SnowflakeId(*id), None).await {
+            match crate::models::post::find_by_id(&self.pool, SnowflakeId(*id)).await {
                 Ok(Some(post)) => posts.push(SearchablePost {
                     id: post.id.to_string(),
                     title: post.title,
