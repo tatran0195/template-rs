@@ -53,7 +53,7 @@ in-memory in `src/mocks/db.ts` and resets on page reload.
   setup/status, info, auth (login/register/refresh/logout/me), stats + trends,
   generic CRUD for posts/categories/tags/comments/pages/reusable-blocks/users/
   tenants/webhooks/crons/workflows/tokens, media upload (multipart), content types,
-  dynamic `/admin/cms/{name}` collections **with revision tracking**, plugins
+  dynamic `/admin/cms/{name}` collections **with revision tracking**
   (enable/disable/reload/unload), RBAC roles + permissions, cron logs + cleanup,
   workflow start/instances/cancel/logs, audit, options.
 - Responses use the real `{code, message, data}` envelope and `{items, total, page, page_size}`
@@ -69,7 +69,7 @@ npm test           # vitest + msw/node — 28 tests against the same handlers
 
 Covers: envelope shape, setup probe, login/refresh, paginated CRUD + search + batch,
 comment moderation, stats/trends, the audit-log notification source, content-type
-collections incl. revisions & restore, plugin toggles, RBAC permission set/get,
+collections incl. revisions & restore, RBAC permission set/get,
 cron toggle/logs/cleanup, workflow start→instance→cancel, token show-once semantics,
 options upsert, multipart upload.
 
@@ -85,7 +85,7 @@ options upsert, multipart upload.
 /posts [/new, /:id/edit]   /categories  /tags  /comments  /media
 /pages [/new, /:id/edit]   /reusable-blocks
 /content-types [/builder, /:singular, /:singular/new, /:singular/:id/edit]
-/plugins [/:id]
+
 /users  /rbac  /crons [/:id]  /tenants  /webhooks  /tokens
 /workflows [/editor, /instances]  /audit  /options  /profile
 ```

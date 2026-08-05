@@ -116,15 +116,6 @@ test("content-types list returns event + faq", async () => {
   console.log("content-types => items", d.data.map((c: any) => c.singular));
 });
 
-test("plugins list returns 3 plugins with engines", async () => {
-  const r = await get("/admin/plugins");
-  const d = await json(r);
-  expect(r.status).toBe(200);
-  expect(d.data.length).toBe(3);
-  expect(d.data[0].engine).toBeDefined();
-  console.log("plugins =>", d.data.map((p: any) => p.name + " (" + p.engine + ")"));
-});
-
 test("audit page returns 8 entries with notification source", async () => {
   const r = await get("/admin/audit?page=1&page_size=20");
   const d = await json(r);

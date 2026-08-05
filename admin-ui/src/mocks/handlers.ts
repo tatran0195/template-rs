@@ -74,7 +74,7 @@ export const handlers = [
     ok({
       database: { db_type: "sqlite", connected: true, url_masked: "data/raisfast.db", host: null, port: null, username: null, database: null },
       storage: { writable: true, path: "storage" },
-      extensions: { writable: true, content_types_path: "extensions/content_types", plugins_path: "extensions/plugins" },
+      extensions: { writable: true, content_types_path: "extensions/content_types" },
       has_admin: true,
     }),
   ),
@@ -247,20 +247,6 @@ export const handlers = [
     cmsRecords.get(params.name as string)?.delete(params.id as string) ? ok(null) : fail(404, "not found"),
   ),
 
-  /* --------------------------------- plugins -------------------------------- */
-  http.get(`${B}/admin/plugins`, () => ok(plugins.items)),
-  http.post(`${B}/admin/plugins/batch`, async ({ request }) => {
-    const { ids } = (await request.json()) as { ids: string[] };
-    return ok({ affected: ids.length });
-  }),
-  http.get(`${B}/admin/plugins/:id`, ({ params }) => {
-    const p = plugins.get(params.id as string);
-    return p ? ok(p) : fail(404, "not found");
-  }),
-  http.post(`${B}/admin/plugins/:id/enable`, ({ params }) => ok(plugins.update(params.id as string, { enabled: true }))),
-  http.post(`${B}/admin/plugins/:id/disable`, ({ params }) => ok(plugins.update(params.id as string, { enabled: false }))),
-  http.post(`${B}/admin/plugins/:id/reload`, ({ params }) => ok(plugins.get(params.id as string))),
-  http.delete(`${B}/admin/plugins/:id`, ({ params }) => (plugins.delete(params.id as string) ? ok(null) : fail(404, "not found"))),
 
   /* ---------------------------------- rbac ---------------------------------- */
   http.get(`${B}/admin/rbac/roles`, () => ok(roles.items)),

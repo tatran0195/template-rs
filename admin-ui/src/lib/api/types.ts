@@ -107,18 +107,7 @@ export interface ContentType {
   [k: string]: unknown;
 }
 
-export interface Plugin {
-  id: string;
-  name: string;
-  version?: string;
-  description?: string;
-  author?: string;
-  engine?: string;
-  enabled?: boolean;
-  permissions?: string[];
-  manifest?: Record<string, unknown>;
-  [k: string]: unknown;
-}
+
 
 export interface CronJob {
   id: number | string;
@@ -261,6 +250,6 @@ export interface SetupStatus {
     database?: string | null;
   };
   storage: { writable: boolean; path: string };
-  extensions: { writable: boolean; content_types_path: string; plugins_path: string };
+  extensions: { writable: boolean; content_types_path: string };
   has_admin: boolean;
 }

@@ -17,9 +17,6 @@ refresh_expires = 604800
 [content_type]
 dir = "./extensions/content_types"
 
-[plugin]
-dir = "./extensions/plugins"
-hot_reload = true
 
 [upload]
 dir = "./public/uploads"

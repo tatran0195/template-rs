@@ -786,8 +786,8 @@ mod tests {
         let future = (now + chrono::Duration::hours(1)).to_rfc3339();
 
         sqlx::query(
-            "INSERT INTO cron_schedules (id, label, job_type, payload, cron_expr, enabled, next_run_at, plugin_id, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, 1, ?, NULL, ?, ?)",
+            "INSERT INTO cron_schedules (id, label, job_type, payload, cron_expr, enabled, next_run_at, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)",
         )
         .bind(2i64)
         .bind("Future Job")
@@ -967,8 +967,8 @@ mod tests {
         let past = (now - chrono::Duration::hours(1)).to_rfc3339();
 
         sqlx::query(
-            "INSERT INTO cron_schedules (id, label, job_type, payload, cron_expr, enabled, next_run_at, plugin_id, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, 1, ?, NULL, ?, ?)",
+            "INSERT INTO cron_schedules (id, label, job_type, payload, cron_expr, enabled, next_run_at, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)",
         )
         .bind(3i64)
         .bind("Log Test")

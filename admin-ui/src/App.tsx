@@ -15,7 +15,6 @@ import { ContentTypeList } from "@/pages/content-types/ContentTypeList";
 import { ContentTypeBuilder } from "@/pages/content-types/ContentTypeBuilder";
 import { CollectionList } from "@/pages/content-types/Collection";
 import { CollectionEdit } from "@/pages/content-types/CollectionEdit";
-import { PluginList, PluginDetail } from "@/pages/plugins/Plugins";
 import { Users } from "@/pages/Users";
 import { Rbac } from "@/pages/Rbac";
 import { Crons, CronDetail } from "@/pages/Crons";
@@ -76,8 +75,6 @@ export function App() {
           <Route path="content-types/:singular" element={<CollectionList />} />
           <Route path="content-types/:singular/new" element={<CollectionEdit />} />
           <Route path="content-types/:singular/:id/edit" element={<CollectionEdit />} />
-          <Route path="plugins" element={<PluginList />} />
-          <Route path="plugins/:id" element={<PluginDetail />} />
 
           <Route path="users" element={<Users />} />
           <Route path="users/:id" element={<Users />} />

@@ -101,7 +101,7 @@ export const posts = new Store<Row>([
   {
     id: 1, title: "Introducing RaisFast", slug: "introducing-raisfast", status: "published",
     excerpt: "The fastest CMS, easiest to deploy.", category_id: 3, tags: ["cms", "rust"],
-    content: "# Introducing RaisFast\n\nA single-binary, Rust-powered headless CMS.\n\n- zero dependencies\n- embedded admin UI\n- plugin engines: JS / Rhai / Lua / WASM",
+    content: "# Introducing RaisFast\n\nA single-binary, Rust-powered headless CMS.\n\n- zero dependencies\n- embedded admin UI",
     meta_title: "Introducing RaisFast", meta_description: "Single-binary headless CMS", author_id: 1,
     created_at: daysAgo(20), updated_at: daysAgo(2),
   },
@@ -201,7 +201,7 @@ export const cmsRecords = new Map<string, Store<Row>>([
     new Store([
       { id: 1, question: "Is it production ready?", answer: "Yes — single binary, migrations included.", sort_order: 1, visible: true, created_at: daysAgo(21), updated_at: daysAgo(21) },
       { id: 2, question: "Which databases are supported?", answer: "SQLite, PostgreSQL and MySQL.", sort_order: 2, visible: true, created_at: daysAgo(21), updated_at: daysAgo(4) },
-      { id: 3, question: "Can I write plugins?", answer: "JS, Rhai, Lua and WASM plugin engines are built in.", sort_order: 3, visible: false, created_at: daysAgo(19), updated_at: daysAgo(19) },
+      { id: 3, question: "Can I use multiple databases?", answer: "Yes, SQLite, PostgreSQL and MySQL.", sort_order: 3, visible: false, created_at: daysAgo(19), updated_at: daysAgo(19) },
     ]),
   ],
 ]);
@@ -215,31 +215,6 @@ export function pushRevision(collection: string, record: Row, editor = "admin") 
   arr.push({ id: nid(), revision: arr.length + 1, created_at: record.updated_at ?? now(), editor });
   revisions.set(key, arr);
 }
-
-export const plugins = new Store<Row>([
-  {
-    id: "seo-tools", name: "SEO Tools", version: "1.2.0", engine: "lua", enabled: true,
-    description: "Sitemap, meta helpers and structured data.",
-    author: "raisfast",
-    permissions: ["posts:read", "pages:read"],
-    manifest: { name: "SEO Tools", version: "1.2.0", engine: "lua", permissions: ["posts:read", "pages:read"], hooks: ["post.render"] },
-    created_at: daysAgo(26),
-  },
-  {
-    id: "analytics", name: "Analytics", version: "0.9.1", engine: "js", enabled: true,
-    description: "Privacy-friendly page view tracking.",
-    permissions: ["stats:read"],
-    manifest: { name: "Analytics", version: "0.9.1", engine: "js", permissions: ["stats:read"], hooks: ["page.view"] },
-    created_at: daysAgo(24),
-  },
-  {
-    id: "image-optimizer", name: "Image Optimizer", version: "2.0.0", engine: "wasm", enabled: false,
-    description: "Resize and compress uploads on the fly.",
-    permissions: ["media:read", "media:write"],
-    manifest: { name: "Image Optimizer", version: "2.0.0", engine: "wasm", permissions: ["media:read", "media:write"] },
-    created_at: daysAgo(16),
-  },
-]);
 
 export const roles = new Store<Row>([
   { id: 1, name: "admin", description: "Full access", builtin: true, permissions: ["*:*"], created_at: daysAgo(60) },

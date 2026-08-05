@@ -241,33 +241,6 @@ class DynamicCollection<T = any> {
   }
 }
 
-class AdminPlugins {
-  constructor(private http: HttpClient) {}
-  list() {
-    return this.http.get<Plugin[]>("/admin/plugins");
-  }
-  get(id: string) {
-    return this.http.get<Plugin>(`/admin/plugins/${id}`);
-  }
-  enable(id: string) {
-    return this.http.post(`/admin/plugins/${id}/enable`);
-  }
-  disable(id: string) {
-    return this.http.post(`/admin/plugins/${id}/disable`);
-  }
-  reload(id: string) {
-    return this.http.post(`/admin/plugins/${id}/reload`);
-  }
-  unload(id: string) {
-    return this.http.request(this.http.pathForDelete("/admin/plugins", id), {
-      method: this.http.methodForDelete(),
-    });
-  }
-  batch(body: { action: string; ids: string[] }) {
-    return this.http.post("/admin/plugins/batch", body);
-  }
-}
-
 class AdminUsers extends CrudResource<User> { protected base = "/admin/users"; }
 
 class AdminRbac {
@@ -443,7 +416,6 @@ export const api = {
   reusableBlocks: new AdminReusableBlocks(http),
   media: new AdminMedia(http),
   contentTypes: new AdminContentTypes(http),
-  plugins: new AdminPlugins(http),
   users: new AdminUsers(http),
   rbac: new AdminRbac(http),
   crons: new AdminCrons(http),

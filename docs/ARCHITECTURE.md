@@ -25,7 +25,6 @@
 - [Code Generation (mcms-derive)](#code-generation-mcms-derive)
 - [Type Export (TypeScript SDK)](#type-export-typescript-sdk)
 - [Auth System](#auth-system)
-- [Plugin Engine](#plugin-engine)
 - [Content Type System](#content-type-system)
 - [AOP & Protocols](#aop--protocols)
 - [Worker & Job Queue](#worker--job-queue)
@@ -67,7 +66,7 @@ mcms is a Rust-powered high-performance BaaS and headless CMS. It compiles to a 
                     │  │ DB  ││Cache││Search││Storage│  │
                     │  └─────┘└─────┘└─────┘└──────┘   │
                     │  ┌──────┐ ┌─────────┐ ┌───────┐  │
-                    │  │Plugin│ │  Worker  │ │EventBus│ │
+                    │  │  Worker  │ │EventBus│ │
                     │  │Engine│ │Job+Queue │ │Pub/Sub │ │
                     │  └──────┘ └─────────┘ └───────┘  │
                     └──────────────────────────────────┘
@@ -84,7 +83,6 @@ mcms is a Rust-powered high-performance BaaS and headless CMS. It compiles to a 
 | Database       | SQLx 0.8 (SQLite / PostgreSQL / MySQL)                       |
 | Auth           | JWT (HS256) + Argon2                                         |
 | Search         | Tantivy                                                      |
-| Plugin Runtime | wasmtime / rquickjs / mlua / rhai                            |
 | Cache          | moka (in-memory, TinyLFU + LRU)                              |
 | Admin UI       | React 19 + Vite + shadcn/ui (embedded via rust-embed)        |
 | Desktop        | Tauri (optional)                                             |
@@ -107,16 +105,6 @@ Feature flags control which components are compiled. Only the needed features ar
 | `db-sqlite`   | SQLite backend     |
 | `db-postgres` | PostgreSQL backend |
 | `db-mysql`    | MySQL backend      |
-
-### Plugin Engines
-
-| Flag          | Description            |
-| ------------- | ---------------------- |
-| `plugin-js`   | JavaScript (QuickJS)   |
-| `plugin-lua`  | Lua 5.4 (mlua)         |
-| `plugin-rhai` | Rhai scripting         |
-| `plugin-wasm` | WebAssembly (wasmtime) |
-| `plugin-all`  | All four engines       |
 
 ### Search
 
@@ -143,11 +131,11 @@ Feature flags control which components are compiled. Only the needed features ar
 ### Example Build
 
 ```bash
-# Minimal: SQLite + JS plugins + search
-cargo build --no-default-features --features "db-sqlite,plugin-js,search-tantivy"
+# Minimal: SQLite + search
+cargo build --no-default-features --features "db-sqlite,search-tantivy"
 
-# Full: all databases, all plugins
-cargo build --features "db-sqlite,plugin-all,search-tantivy,openapi"
+# Full: all databases
+cargo build --features "db-sqlite,search-tantivy,openapi"
 ```
 
 ---
@@ -160,7 +148,7 @@ src/
 ├── lib.rs                  # AppState composition + module declarations
 ├── server.rs               # HTTP server + route registration
 ├── app.rs                  # ServiceRegistry (type-safe service locator)
-├── cli/                    # CLI sub-commands (server/db/plugin/route/doctor/codegen)
+├── cli/                    # CLI sub-commands (server/db/route/doctor/codegen)
 ├── config/                 # Environment-based configuration loading
 ├── handlers/               # Axum route handlers (31 modules)
 ├── services/               # Business logic layer (28 modules)
@@ -168,7 +156,6 @@ src/
 ├── middleware/              # Auth, rate limiting, CORS, metrics, locale, AOP
 ├── dto/                    # Request/response DTOs with validation
 ├── db/                     # Connection pool, SQL dialect, schema, write lock
-├── plugins/                # 4-engine plugin system (15 files)
 ├── content_type/           # Dynamic content type system (7 files)
 ├── protocols/              # AOP protocol definitions (11 protocols)
 ├── aspects/                # AOP aspect engine (auto-slug, auto-excerpt, etc.)
@@ -259,7 +246,6 @@ pub struct AppState {
     pub pool: Pool,                            // DB connection pool
     pub config: Arc<AppConfig>,                // Application configuration
     pub jwt_decoding_key: DecodingKey,         // JWT verification key
-    pub plugins: Arc<PluginManager>,           // Plugin engine manager
     pub eventbus: EventBus,                    // Pub/sub event bus
     pub search: Arc<dyn SearchEngine>,         // Full-text search
     pub storage: Arc<dyn Storage>,             // File storage (local/S3)
@@ -481,75 +467,7 @@ async fn my_handler(auth: AuthUser, State(state): State<AppState>) -> AppResult<
 
 Four built-in roles: `admin`, `editor`, `author`, `reader`. Each role has fine-grained permissions (action + subject + fields + conditions).
 
----
 
-## Plugin Engine
-
-### Architecture
-
-```
-┌─────────────────────────────────────────────┐
-│              PluginManager                   │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐       │
-│  │ JS Pool │ │ Lua Pool│ │Rhai Pool│  ...   │
-│  └────┬────┘ └────┬────┘ └────┬────┘       │
-│       └───────────┼───────────┘             │
-│              Host Functions                  │
-│  ┌───────────────────────────────────────┐  │
-│  │  DB / HTTP / FS / Cache / Config      │  │
-│  │  (all permission-gated)               │  │
-│  └───────────────────────────────────────┘  │
-│                                              │
-│  Hook System: Filter / Action / RenderOverride│
-│  Route System: Declarative HTTP routes       │
-│  Cron System: Plugin-defined cron schedules  │
-│  VFS: Isolated virtual filesystem per plugin │
-│  Health: Auto-disable after 5 consecutive errors│
-│  Metrics: Call count, errors, duration        │
-└─────────────────────────────────────────────┘
-```
-
-### Plugin Manifest
-
-```toml
-[plugin]
-name = "my-plugin"
-version = "0.1.0"
-entry = "main.js"          # .js / .lua / .rhai / .wasm
-runtime = "js"
-
-[permissions]
-http = ["GET", "POST"]
-db = ["read", "write"]
-filesystem = ["read"]
-hooks = ["post_created", "comment_created"]
-
-[[hooks]]
-event = "post_created"
-priority = 10
-
-[[routes]]
-method = "GET"
-path = "/my-plugin/hello"
-
-[[cron]]
-label = "cleanup"
-cron_expr = "0 */6 * * *"
-```
-
-### Hook Types
-
-| Type               | Behavior                                         |
-| ------------------ | ------------------------------------------------ |
-| **Filter**         | Chain: each hook transforms data, passes to next |
-| **Action**         | Sequential: fire-and-forget side effects         |
-| **RenderOverride** | Override response rendering                      |
-
-### Hot Reload
-
-File watcher (debounced) monitors the plugin directory. Changed plugins are automatically reloaded without server restart.
-
----
 
 ## Content Type System
 
@@ -676,7 +594,7 @@ Protocols are composable, declarative behaviors that can be mixed into any conte
                                      ┌────────▼────────┐
                                      │ JobHandlerRegistry│
                                      │ (14 built-in +   │
-                                     │  plugin cron)    │
+                                     │  cron)    │
                                      └─────────────────┘
 ```
 
@@ -717,7 +635,6 @@ Service → eventbus.emit(Event::PostCreated { ... })
               ├──► AuditService (log event)
               ├──► WebhookService (deliver to subscribers)
               ├──► JobEnqueuer (enqueue side-effect jobs)
-              ├──► PluginManager (dispatch hooks)
               └──► SearchEngine (update index)
 ```
 
@@ -808,15 +725,6 @@ All configuration via environment variables or `.env` file:
 | `BUILTIN_PAYMENT`   | `true`  | Enable payment module   |
 | `BUILTIN_WALLET`    | `true`  | Enable wallet module    |
 | `BUILTIN_WORKFLOW`  | `true`  | Enable workflow module  |
-
-### Plugin
-
-| Variable                    | Default     | Description                |
-| --------------------------- | ----------- | -------------------------- |
-| `PLUGIN_DIR`                | `./plugins` | Plugin directory           |
-| `PLUGIN_HOT_RELOAD`         | `true`      | Auto-reload on file change |
-| `PLUGIN_MAX_MEMORY_MB`      | `32`        | Per-plugin memory limit    |
-| `PLUGIN_DEFAULT_TIMEOUT_MS` | `5000`      | Execution timeout          |
 
 ### Worker
 
@@ -925,8 +833,6 @@ mcms db migrate          # Run database migrations
 mcms db rollback         # Rollback migration
 mcms db backup           # Backup database
 mcms db seed <email> <username> <password>  # Seed admin user
-mcms plugin list         # List loaded plugins
-mcms plugin reload <id>  # Reload plugin
 mcms route list          # List all routes
 mcms ct list             # List content types
 mcms ct create <name>    # Create content type
@@ -950,5 +856,4 @@ mcms codegen             # Code generation
 | **Embedded admin**        | `rust-embed` serves SPA from binary, no separate deployment    |
 | **EventBus decoupling**   | Services emit events, subscribers handle side effects          |
 | **AOP protocols**         | Composable behaviors, no code duplication across content types |
-| **Plugin VFS**            | Isolated filesystem per plugin with size limits                |
 | **moka cache**            | High-performance concurrent cache, no external dependency      |

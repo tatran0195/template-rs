@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 
 /** Resources/actions matrix. The backend accepts arbitrary permission strings
  * ("resource:action"); the matrix below mirrors the admin API surface. */
-const RESOURCES = ["posts", "pages", "categories", "tags", "comments", "media", "users", "plugins", "crons", "webhooks", "workflows", "options", "audit"];
+const RESOURCES = ["posts", "pages", "categories", "tags", "comments", "media", "users", "crons", "webhooks", "workflows", "options", "audit"];
 const ACTIONS = ["read", "create", "update", "delete"];
 
 export function Rbac() {

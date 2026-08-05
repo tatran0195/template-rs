@@ -4,7 +4,7 @@
     <strong>The fastest CMS, easiest to deploy.</strong>
   </p>
   <p align="center">
-    Rust-powered high-performance BaaS and headless CMS with built-in blog. JS / Rhai / Lua / WASM plugin engines for infinite extensibility.<br>
+    Rust-powered high-performance BaaS and headless CMS with built-in blog.<br>
     Single binary, zero dependencies, zero GC. Download and run.
   </p>
 </p>
@@ -19,13 +19,10 @@
 ## Why mcms?
 
 **Single binary, full capability**
-One binary, no Node.js, no Docker, no runtime. Blog is native built-in — not plugin assemblies, but the skeleton itself.
+One binary, no Node.js, no Docker, no runtime. Blog is native built-in — not external assemblies, but the skeleton itself.
 
 **Rust performance, zero-GC stability**
 Sub-millisecond reads, zero performance degradation over time. No GC pauses, no memory leaks, no 3 AM OOM alerts.
-
-**4 plugin engines, inspired by Strapi**
-JS, Rhai, Lua, and WASM — a full spectrum from scripting to compiled. Dynamic language productivity with a Rust performance foundation.
 
 ---
 
@@ -40,7 +37,6 @@ JS, Rhai, Lua, and WASM — a full spectrum from scripting to compiled. Dynamic 
 | **Auth**          | JWT (HS256) + refresh tokens + API tokens + RBAC              |
 | **Multi-tenant**  | Optional tenant isolation for SaaS                            |
 | **Admin UI**      | Modern React dashboard (embedded in binary)                   |
-| **Plugin Engine** | JS (QuickJS) / Rhai / Lua (mlua) / WASM (wasmtime)            |
 | **Search**        | Full-text search (Tantivy)                                    |
 | **Multi-DB**      | SQLite / PostgreSQL / MySQL — zero code changes               |
 
@@ -54,7 +50,7 @@ git clone https://github.com/mcms/mcms.git
 cd mcms
 
 # Build and run (SQLite, default)
-cargo run --features "db-sqlite plugin-all search-tantivy"
+cargo run --features "db-sqlite search-tantivy"
 
 # Server starts at http://localhost:9898
 # Admin UI at http://localhost:9898/admin
@@ -102,7 +98,6 @@ src/
 ├── services/            # Business logic layer
 ├── models/              # Data structures + SQL queries
 ├── middleware/           # Auth, rate limiting, CORS, metrics
-├── plugins/             # Plugin engine (WASM/JS/Rhai/Lua)
 ├── content_type/        # Dynamic content type system
 ├── worker/              # Job queue + cron scheduler
 ├── db/                  # Connection pool, dialect, schema
@@ -148,34 +143,6 @@ cargo build --features "db-mysql"
 
 ---
 
-## Plugin System
-
-```bash
-plugins/
-├── my-plugin/
-│   ├── plugin.toml      # Manifest
-│   ├── main.js          # JavaScript (QuickJS)
-│   ├── main.lua         # Lua (mlua)
-│   ├── main.rhai        # Rhai
-│   └── main.wasm        # WASM (wasmtime)
-```
-
-Example `plugin.toml`:
-
-```toml
-[plugin]
-name = "my-plugin"
-version = "0.1.0"
-entry = "main.js"
-
-[permissions]
-http = ["GET"]
-db = ["read"]
-hooks = ["post_created", "comment_created"]
-```
-
----
-
 ## Configuration
 
 All configuration via environment variables or `.env`:
@@ -202,10 +169,6 @@ BUILTIN_TENANTABLE=false
 
 # Search
 SEARCH_DRIVER=tantivy        # tantivy | noop
-
-# Plugins
-PLUGIN_DIR=./plugins
-PLUGIN_HOT_RELOAD=true
 ```
 
 ---
@@ -219,7 +182,6 @@ PLUGIN_HOT_RELOAD=true
 | Database        | SQLx 0.8 (SQLite / PostgreSQL / MySQL) |
 | Auth            | JWT (HS256) + Argon2                   |
 | Search          | Tantivy                                |
-| Plugin Runtime  | wasmtime / rquickjs / mlua / rhai      |
 | Admin UI        | React 19 + Vite + shadcn/ui            |
 | Desktop         | Tauri                                  |
 | Embedded Assets | rust-embed                             |
@@ -234,10 +196,8 @@ PLUGIN_HOT_RELOAD=true
 | Admin UI                         | ✅ Working   |
 | Auth (JWT + OAuth + API Token)   | ✅ Working   |
 | Multi-database                   | ✅ Working   |
-| Plugin engine (JS/Rhai/Lua/WASM) | ✅ Working   |
 | Content Type system              | ✅ Working   |
 | Job queue + Cron                 | ✅ Working   |
 | Tauri desktop                    | ✅ Working   |
 | AOP aspects                      | ✅ Working   |
 | Serverless adapter               | 🔧 In design |
-| Plugin marketplace               | 📋 Planned   |

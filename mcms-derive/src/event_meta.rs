@@ -6,8 +6,7 @@
 //!   Used by the event bus for type-based routing/filtering.
 //! - `display_name()` — returns the PascalCase variant name (e.g., `"PostCreated"`).
 //!   Used for human-readable logging and SSE event type tags.
-//! - `table()` — returns `Some("table_name")` if the event is associated with a DB table,
-//!   or `None` otherwise. Used by the plugin host to determine which table a query affects.
+//!   or `None` otherwise.
 //!
 //! # Per-variant attributes
 //!
@@ -24,7 +23,7 @@
 //!     PostDeleted(Post),
 //!
 //!     #[event(dynamic)]
-//!     PluginEvent { event_type: String, payload: String },
+//!     DynamicEvent { event_type: String, payload: String },
 //! }
 //! ```
 //!

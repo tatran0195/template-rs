@@ -97,8 +97,6 @@ pub enum Job {
     },
 
     /// Custom job type, supports arbitrary `job_type` + JSON payload
-    ///
-    /// When no built-in Handler matches, WorkerRunner falls back to plugin dispatch.
     Custom {
         job_type: String,
         payload: serde_json::Value,

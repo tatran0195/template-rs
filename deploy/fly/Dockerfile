@@ -3,7 +3,7 @@
 # Usage:
 #   1. Cross-compile locally:
 #      cargo build --release --no-default-features \
-#        --features "db-sqlite,plugin-js,plugin-rhai" \
+#        --features "db-sqlite" \
 #        --target x86_64-unknown-linux-musl
 #
 #   2. Deploy:

@@ -168,20 +168,6 @@ describe("content types & dynamic collections", () => {
   });
 });
 
-describe("plugins", () => {
-  it("lists plugins with engines", async () => {
-    const j = await get("/admin/plugins");
-    expect(j.data.map((p: any) => p.engine)).toEqual(expect.arrayContaining(["lua", "js", "wasm"]));
-  });
-
-  it("enable/disable toggles the flag", async () => {
-    const off = await send("POST", "/admin/plugins/analytics/disable");
-    expect(off.data.enabled).toBe(false);
-    const on = await send("POST", "/admin/plugins/analytics/enable");
-    expect(on.data.enabled).toBe(true);
-  });
-});
-
 describe("rbac", () => {
   it("gets and sets role permissions", async () => {
     const before = await get("/admin/rbac/roles/3/permissions");

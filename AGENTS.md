@@ -2,26 +2,25 @@
 
 ## Project
 
-mcms — Rust-powered high-performance BaaS and headless CMS. Single binary, zero dependencies, zero GC. Built-in blog, ecommerce, wallet, payment & multi-tenant SaaS. JS / Rhai / Lua / WASM plugin engines for infinite extensibility.
+mcms — Rust-powered high-performance BaaS and headless CMS. Single binary, zero dependencies, zero GC. Built-in blog, ecommerce, wallet, payment & multi-tenant SaaS.
 
 - **Crate name:** `mcms`
 - **Rust edition:** 2024
 - **Architecture:** Handler → Service → Model three-layer
-- **Plugin engines:** JS (QuickJS) / Rhai / Lua (mlua) / WASM (wasmtime)
 - **Databases:** SQLite / PostgreSQL / MySQL (feature-gated)
 
 ## Commands
 
 ```bash
-# Compile (SQLite + JS + Rhai)
+# Compile (SQLite)
 SQLX_OFFLINE=false DATABASE_URL="sqlite:./storage/db/mcms.db?mode=rwc" \
   cargo clippy --tests --no-default-features \
-  --features "db-sqlite,plugin-js,plugin-rhai" -- -D warnings
+  --features "db-sqlite" -- -D warnings
 
 # Test
 SQLX_OFFLINE=false DATABASE_URL="sqlite:./storage/db/mcms.db?mode=rwc" \
   cargo test --no-default-features \
-  --features "db-sqlite,plugin-js,plugin-rhai"
+  --features "db-sqlite"
 
 # Format check
 cargo fmt --check
@@ -44,7 +43,6 @@ Handler → Service → Model (SQL)
 - **src/errors/** — unified `AppError` (thiserror) implementing `IntoResponse`
 - **src/config/** — env/config loading
 - **src/db/** — connection pool, SQL dialect, schema, write lock
-- **src/plugins/** — 4-engine plugin system (JS/Rhai/Lua/WASM)
 - **src/content_type/** — dynamic content type system
 - **src/worker/** — job queue + cron scheduler (infrastructure, not model layer)
 
@@ -62,7 +60,7 @@ Handler → Service → Model (SQL)
 
 - **`docs/ARCHITECTURE.md`** — full system design; read it first to avoid re-analyzing the whole tree.
   Covers layering, DB/CRUD macros, `mcms-derive` code generation, the `export-types` TS SDK, auth,
-  plugins, content types, AOP, workers, events, and key invariants.
+  content types, AOP, workers, events, and key invariants.
 - **`README.md`** — user-facing overview / quick start.
 - **`mcms-derive/src/lib.rs`** — authoritative reference for every proc-macro's syntax.
 

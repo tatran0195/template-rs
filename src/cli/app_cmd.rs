@@ -15,7 +15,6 @@ pub fn create_new(name: &str, template: &str) -> anyhow::Result<()> {
 
     let dirs = [
         "extensions/content_types",
-        "extensions/plugins",
         "migrations",
         "data",
         "logs",
@@ -59,8 +58,7 @@ pub fn create_new(name: &str, template: &str) -> anyhow::Result<()> {
     println!("  ├── .env.example");
     println!("  ├── .gitignore");
     println!("  ├── extensions/");
-    println!("  │   ├── content_types/");
-    println!("  │   └── plugins/");
+    println!("  │   └── content_types/");
     println!("  ├── migrations/");
     println!("  ├── data/");
     println!("  ├── logs/");

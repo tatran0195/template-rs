@@ -22,7 +22,6 @@ mcms server start
 ```
 extensions/
   content_types/    — Content Type TOML definitions
-  plugins/          — Plugin JS/Lua/WASM files
 migrations/         — SQL migration files
 data/               — SQLite database
 logs/               — Application logs

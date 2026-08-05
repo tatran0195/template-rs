@@ -292,7 +292,7 @@ mod tests {
             ),
             (
                 Event::Custom {
-                    source: "test-plugin".into(),
+                    source: "custom-source".into(),
                     event_type: "OrderCreated".into(),
                     data: serde_json::json!({"order_id": "o1"}),
                 },
