@@ -129,7 +129,7 @@ pub enum Event {
     OnLogin,
     CronTick,
 
-    // ── Plugin custom ──
+    // ── Custom Events ──
     #[event(dynamic)]
     Custom {
         source: String,

@@ -7,7 +7,7 @@ mod codegen_cmd;
 mod ct_cmd;
 mod db_cmd;
 mod doctor_cmd;
-mod plugin_cmd;
+
 mod route_cmd;
 mod server_cmd;
 mod user_cmd;
@@ -18,7 +18,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(
-    name = "axe",
+    name = "mcms",
     version,
     about = "Rust-powered high-performance BaaS and headless CMS"
 )]
@@ -48,11 +48,6 @@ enum Commands {
     Ct {
         #[command(subcommand)]
         action: CtAction,
-    },
-    /// Plugin management
-    Plugin {
-        #[command(subcommand)]
-        action: PluginAction,
     },
     /// Route inspection
     Route {
@@ -85,13 +80,13 @@ pub enum ProxyAction {
     /// Start the proxy server
     Start {
         /// Path to proxy config file
-        #[arg(short, long, default_value = "/etc/axe/proxy.toml")]
+        #[arg(short, long, default_value = "/etc/mcms/proxy.toml")]
         config: String,
     },
     /// Validate proxy configuration
     Check {
         /// Path to proxy config file
-        #[arg(short, long, default_value = "/etc/axe/proxy.toml")]
+        #[arg(short, long, default_value = "/etc/mcms/proxy.toml")]
         config: String,
     },
 }
@@ -207,22 +202,7 @@ pub enum CtAction {
     },
 }
 
-#[derive(Subcommand)]
-pub enum PluginAction {
-    /// Create a new plugin from template
-    New {
-        /// Plugin ID (e.g. "my-plugin")
-        id: String,
-        /// Runtime: js, lua, or wasm
-        #[arg(short, long, default_value = "js")]
-        runtime: String,
-    },
-    /// Validate plugin manifests
-    Check {
-        /// Path to check (default: plugin_dir)
-        path: Option<String>,
-    },
-}
+
 
 #[derive(Subcommand)]
 pub enum CodegenAction {
@@ -324,17 +304,7 @@ pub async fn run(cli: Cli, config: &AppConfig) -> anyhow::Result<()> {
             ct_cmd::generate_types(config, singular.as_deref(), output.as_deref())?;
         }
 
-        Some(Commands::Plugin {
-            action: PluginAction::New { id, runtime },
-        }) => {
-            plugin_cmd::create_new(config, &id, &runtime)?;
-        }
 
-        Some(Commands::Plugin {
-            action: PluginAction::Check { path },
-        }) => {
-            plugin_cmd::check(config, path.as_deref())?;
-        }
 
         Some(Commands::Route { action }) => {
             route_cmd::run(action, config);

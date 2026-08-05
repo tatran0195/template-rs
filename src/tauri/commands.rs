@@ -42,15 +42,12 @@ pub async fn auth_login(
 ) -> Result<serde_json::Value, String> {
     let req = crate::dto::LoginRequest { email, password };
     crate::services::auth::login(
-        state.0.user_repo.as_ref(),
-        state.0.refresh_token_repo.as_ref(),
-        &state.0.plugins,
-        &state.0.eventbus,
+        &state.0.aspect_engine,
+        &state.0.pool,
         &req,
         &state.0.config.jwt_secret,
         state.0.config.jwt_access_expires,
         state.0.config.jwt_refresh_expires,
-        None,
         false,
     )
     .await
@@ -428,10 +425,7 @@ pub async fn schema_create(
         cached_rules: None,
     };
 
-    if crate::plugins::permissions::PermissionChecker::is_protected_table(
-        &schema.table,
-        &state.0.config.builtins.protected_tables(),
-    ) {
+    if state.0.config.builtins.protected_tables().contains(&schema.table) {
         return Err(format!(
             "table '{}' is a protected system table",
             schema.table

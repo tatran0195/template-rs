@@ -34,7 +34,7 @@ pub mod options;
 
 pub mod page;
 
-pub mod plugin;
+
 pub mod post;
 
 

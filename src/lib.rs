@@ -1,4 +1,4 @@
-//! axe full-stack development platform core library
+//! mcms full-stack development platform core library
 //!
 //! A high-performance full-stack development platform built with Rust + Axum,
 //! supporting `SQLite` / `PostgreSQL` / `MySQL`.
@@ -36,7 +36,7 @@ pub mod models;
 pub mod notifier;
 pub mod oauth;
 
-pub mod plugins;
+
 pub mod policy;
 pub mod protocols;
 pub mod search;
@@ -80,7 +80,7 @@ use db::Pool;
 use eventbus::EventBus;
 use notifier::{EmailSender, SmsSender};
 use oauth::OAuthProviderRegistry;
-use plugins::PluginManager;
+
 use search::SearchEngine;
 use services::audit::AuditService;
 use services::options::OptionsService;
@@ -102,7 +102,7 @@ pub struct AppState {
     pub pool: Pool,
     pub config: Arc<AppConfig>,
     pub jwt_decoding_key: jsonwebtoken::DecodingKey,
-    pub plugins: Arc<PluginManager>,
+
     pub eventbus: EventBus,
     pub post_service: Arc<dyn crate::services::post::PostService>,
     pub page_service: Arc<dyn crate::services::page::PageService>,
@@ -182,19 +182,10 @@ pub async fn build_app_state(
         }
     }
 
-    let plugin_manager = PluginManager::new_with_options(
-        Arc::new(config.clone()),
-        crate::plugins::PluginManagerOptions {
-            pool: Some(pool.clone()),
-            event_bus: Some(eventbus.clone()),
-        },
-    )
-    .await;
-
     protocol_registry.register_aspects_into(&aspect_engine);
     aspect_engine.register(crate::aspects::slug_aspect::SlugAspect);
     aspect_engine.register(crate::aspects::excerpt_aspect::ExcerptAspect);
-    aspect_engine.set_infrastructure(plugin_manager.clone(), eventbus.clone());
+    aspect_engine.set_infrastructure(eventbus.clone());
     tracing::info!(
         "aspect engine initialized with {} aspect(s), {} protocol(s)",
         aspect_engine.aspects().len(),
@@ -250,7 +241,7 @@ pub async fn build_app_state(
         pool: pool.clone(),
         config: Arc::new(config.clone()),
         jwt_decoding_key: jsonwebtoken::DecodingKey::from_secret(config.jwt_secret.as_bytes()),
-        plugins: plugin_manager,
+
         eventbus: eventbus.clone(),
         post_service,
         page_service,

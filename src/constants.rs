@@ -57,5 +57,3 @@ pub const CMS_ROUTE: &str = "/cms";
 /// Content Type admin route segment (relative to API_PREFIX)
 pub const CMS_ADMIN_ROUTE: &str = "/admin/cms";
 
-/// Plugin host function global object name (JS/Lua)
-pub const PLUGIN_HOST_GLOBAL: &str = "mcmsHost";

@@ -11,7 +11,7 @@ use crate::cache::MemoryCache;
 use crate::config::app::AppConfig;
 
 use crate::handlers::{
-    api_token, auth, category, comment, cron, health, media, options, page, plugin, post, rbac,
+    api_token, auth, category, comment, cron, health, media, options, page, post, rbac,
     reusable_block, rss, setup, sse, stats, tag, user, ws,
 };
 use crate::middleware::locale::locale_middleware;
@@ -102,7 +102,6 @@ async fn build_app(
             worker_pool,
             &eventbus,
             config,
-            state.plugins.clone(),
             state.search.clone(),
             cache_for_workers,
         )
@@ -146,7 +145,6 @@ async fn build_app(
     }
 
     api_v1 = api_v1
-        .merge(plugin::routes(&mut registry, config))
         .merge(cron::routes(&mut registry, config))
         .merge(rbac::routes(&mut registry, config))
         .merge(stats::routes(&mut registry, config))
@@ -287,13 +285,6 @@ async fn build_app(
         "health",
     );
 
-    {
-        let plugin_routes = state.plugins.all_plugin_routes().await;
-        for (method, path, ext_id) in &plugin_routes {
-            registry.record(method, path, "plugin", ext_id);
-        }
-    }
-
     registry.record(
         "GET",
         &format!("{}/routes", crate::constants::API_PREFIX),
@@ -322,7 +313,6 @@ async fn build_app(
             "/assets",
             axum::Router::new().fallback(admin_spa::serve_admin_asset),
         )
-        .fallback(handle_plugin_route)
         .layer(Extension(limiters))
         .layer(from_fn(powered_by_middleware))
         .layer(from_fn(locale_middleware))
@@ -381,7 +371,7 @@ pub async fn start(config: &AppConfig) -> anyhow::Result<()> {
     tracing::info!(
         version = env!("CARGO_PKG_VERSION"),
         env = %config.env,
-        "starting axe server"
+        "starting mcms server"
     );
     let tz = crate::utils::tz::parse_tz_or_utc(&config.timezone);
     tracing::info!("site timezone: {}", tz);
@@ -420,7 +410,6 @@ pub async fn start(config: &AppConfig) -> anyhow::Result<()> {
                 use axum_server::tls_rustls::RustlsConfig;
                 let tls_config = RustlsConfig::from_pem_file(_cert, _key).await?;
                 tracing::info!("server listening on https://{}", addr);
-                println!("server listening on https://{}", addr);
                 let socket_addr: std::net::SocketAddr = addr.parse()?;
                 axum_server::bind_rustls(socket_addr, tls_config)
                     .serve(app.into_make_service())
@@ -437,7 +426,6 @@ pub async fn start(config: &AppConfig) -> anyhow::Result<()> {
                     addr,
                     std::process::id()
                 );
-                println!("server listening on http://{}", addr);
                 let start = std::time::Instant::now();
                 let listener = TcpListener::bind(&addr).await?;
                 tracing::info!(
@@ -453,7 +441,6 @@ pub async fn start(config: &AppConfig) -> anyhow::Result<()> {
         }
         _ => {
             tracing::info!("server listening on http://{}", addr);
-            println!("server listening on http://{}", addr);
             let listener = TcpListener::bind(&addr).await?;
             axum::serve(listener, app.into_make_service())
                 .with_graceful_shutdown(shutdown_signal(shutdown_tx))
@@ -499,102 +486,6 @@ async fn shutdown_signal(shutdown_tx: tokio::sync::watch::Sender<bool>) {
     let _ = shutdown_tx.send(true);
 }
 
-/// Plugin route fallback.
-///
-/// When no axum route matches, attempt to dispatch to plugin declarative routes from `manifest.routes`.
-/// If no plugin handles the request, returns 404.
-async fn handle_plugin_route(
-    Extension(limiters): Extension<crate::middleware::rate_limit::RateLimiterSet>,
-    auth: crate::middleware::auth::AuthUser,
-    State(state): State<AppState>,
-    req: axum::extract::Request,
-) -> axum::response::Response {
-    use serde_json::json;
-
-    let ip = crate::middleware::rate_limit::extract_client_ip(&req);
-    if !limiters.global.check(&ip).await {
-        return crate::middleware::rate_limit::rate_limited_response();
-    }
-    if let Some(prefix) = crate::middleware::rate_limit::extract_api_token_prefix(&req)
-        && !limiters.api_token.check(&format!("token:{prefix}")).await
-    {
-        return crate::middleware::rate_limit::rate_limited_response();
-    }
-
-    let content_length = req
-        .headers()
-        .get("content-length")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.parse::<usize>().ok());
-    if let Some(len) = content_length
-        && len > 2 * 1024 * 1024
-    {
-        return (
-            axum::http::StatusCode::PAYLOAD_TOO_LARGE,
-            axum::Json(json!({
-                "code": 41300,
-                "message": "request body too large",
-                "data": null
-            })),
-        )
-            .into_response();
-    }
-
-    let path = {
-        let mut s = req.uri().path().to_string();
-        if let Some(q) = req.uri().query() {
-            s.push('?');
-            s.push_str(q);
-        }
-        s
-    };
-    let method = req.method().to_string();
-
-    let headers_json: serde_json::Value = {
-        let mut map = serde_json::Map::new();
-        for (key, value) in req.headers() {
-            if let Ok(v) = value.to_str() {
-                map.insert(key.to_string(), serde_json::Value::String(v.to_string()));
-            }
-        }
-        serde_json::Value::Object(map)
-    };
-
-    let body_str = if method == "GET" || method == "HEAD" {
-        None
-    } else {
-        axum::body::to_bytes(req.into_body(), 1024 * 1024)
-            .await
-            .ok()
-            .and_then(|b| String::from_utf8(b.to_vec()).ok())
-    };
-
-    let result = state
-        .plugins
-        .dispatch_route(
-            &path,
-            &method,
-            body_str.as_deref(),
-            Some(&headers_json),
-            &auth,
-        )
-        .await;
-
-    match result {
-        Some(response) => response,
-        None => (
-            axum::http::StatusCode::NOT_FOUND,
-            axum::Json(json!({
-                "code": 40400,
-                "message": "not found",
-                "data": null
-            })),
-        )
-            .into_response(),
-    }
-}
-
-/// Spawn EventBus background subscriber to forward business events to the plugin system.
 /// Spawn audit log subscriber to write all business events to the `audit_log` table.
 pub fn spawn_audit_subscriber(
     eventbus: crate::eventbus::EventBus,
@@ -787,13 +678,13 @@ async fn spawn_workers(
     pool: crate::db::Pool,
     eventbus: &crate::eventbus::EventBus,
     config: &AppConfig,
-    plugins: Arc<crate::plugins::PluginManager>,
+
     search: Arc<dyn crate::search::SearchEngine>,
     cache: Arc<dyn crate::cache::CacheStore>,
 ) {
     use crate::worker::{
-        CronScheduler, DefaultJobQueue, JobEnqueuer, JobHandlerRegistry, PluginCronDispatcher,
-        WorkerRunner, seed_defaults,
+        CronScheduler, DefaultJobQueue, JobEnqueuer, JobHandlerRegistry, WorkerRunner,
+        seed_defaults,
     };
 
     let queue = Arc::new(DefaultJobQueue::new(pool.clone()));
@@ -835,8 +726,7 @@ async fn spawn_workers(
         Arc::new(registry),
         Duration::from_millis(config.worker_poll_interval_ms),
         config.worker_batch_size,
-    )
-    .with_plugin_dispatcher(Arc::new(PluginCronDispatcher::new(plugins)));
+    );
     runner.spawn(config.worker_concurrency);
 
     tracing::info!(

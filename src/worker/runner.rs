@@ -1,25 +1,22 @@
 //! Worker background polling executor
 //!
-//! Dispatch chain: built-in Handler Registry → plugin Cron Dispatcher → mark dead
+//! Dispatch chain: built-in Handler Registry → mark dead
 
 use std::sync::Arc;
 use std::time::Duration;
 
-use super::{Job, JobHandlerRegistry, JobQueue, PluginCronDispatcher};
+use super::{Job, JobHandlerRegistry, JobQueue};
 
 /// Worker executor
 pub struct WorkerRunner {
     queue: Arc<dyn JobQueue>,
     handlers: Arc<JobHandlerRegistry>,
-    plugin_dispatcher: Option<Arc<PluginCronDispatcher>>,
     poll_interval: Duration,
     batch_size: usize,
 }
 
 impl WorkerRunner {
     /// Creates a new `WorkerRunner`
-    ///
-    /// When `plugin_dispatcher` is `None`, unmatched jobs are directly marked dead.
     pub fn new(
         queue: Arc<dyn JobQueue>,
         handlers: Arc<JobHandlerRegistry>,
@@ -29,17 +26,9 @@ impl WorkerRunner {
         Self {
             queue,
             handlers,
-            plugin_dispatcher: None,
             poll_interval,
             batch_size,
         }
-    }
-
-    /// Sets the plugin Cron dispatcher
-    #[must_use]
-    pub fn with_plugin_dispatcher(mut self, dispatcher: Arc<PluginCronDispatcher>) -> Self {
-        self.plugin_dispatcher = Some(dispatcher);
-        self
     }
 
     /// Spawns N concurrent workers
@@ -137,9 +126,6 @@ impl WorkerRunner {
 
         let result = if self.handlers.has_handler(job_type) {
             self.handlers.handle(&job.job).await
-        } else if let Some(ref dispatcher) = self.plugin_dispatcher {
-            tracing::info!("no built-in handler for '{job_type}', dispatching to plugins");
-            dispatcher.dispatch(&job.job).await
         } else {
             tracing::warn!("no handler for job type '{job_type}', marking dead");
             self.queue.dead(&job.id, "no handler registered").await?;
@@ -163,7 +149,6 @@ impl WorkerRunner {
         Self {
             queue: self.queue.clone(),
             handlers: self.handlers.clone(),
-            plugin_dispatcher: self.plugin_dispatcher.clone(),
             poll_interval: self.poll_interval,
             batch_size: self.batch_size,
         }
@@ -311,7 +296,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn unhandled_job_without_plugin_marks_dead() {
+    async fn unhandled_job_marks_dead() {
         let (queue, registry) = setup().await;
         let runner = WorkerRunner::new(queue.clone(), registry, Duration::from_millis(100), 5);
 

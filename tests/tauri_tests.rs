@@ -755,7 +755,7 @@ async fn tauri_build_app_state_succeeds() {
     config.static_dir = format!("{}/static", dir.path().display());
     config.log_dir = format!("{}/logs", dir.path().display());
     config.content_type_dir = format!("{}/content_types", dir.path().display());
-    config.plugin_dir = None;
+
     std::fs::create_dir_all(&config.content_type_dir).unwrap();
 
     let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);

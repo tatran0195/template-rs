@@ -21,7 +21,6 @@ pub mod stats;
 pub mod tag;
 pub mod user;
 
-
 pub mod ws;
 
 pub use api_token::*;
@@ -46,7 +45,6 @@ pub use stats::*;
 pub use tag::*;
 pub use user::*;
 
-
 pub use ws::*;
 
 #[cfg(feature = "export-types")]
@@ -59,10 +57,6 @@ export_types!(
     comment::CreateCommentRequest,
     comment::UpdateCommentStatusRequest,
     comment::AdminCommentListQuery,
-    currencies::CurrencyResponse,
-    currencies::CreateCurrencyRequest,
-    currencies::UpdateCurrencyRequest,
-
     media::MediaResponse,
     media::MediaStatsResponse,
     media::MediaTypeInfoResponse,
@@ -78,7 +72,6 @@ export_types!(
     post::CreatePostRequest,
     post::UpdatePostRequest,
     post::PostResponse,
-
     tag::CreateTagRequest,
     tag::UpdateTagRequest,
     user::CredentialResponse,
@@ -100,7 +93,6 @@ export_types!(
     user::BindEmailRequest,
     user::VerifyEmailRequest,
     user::ResendVerificationRequest,
-
 );
 
 fn validate_password(pwd: &str) -> Result<(), validator::ValidationError> {
@@ -163,8 +155,6 @@ fn validate_id_vec(ids: &[String]) -> Result<(), validator::ValidationError> {
 fn is_valid_id_str(s: &str) -> bool {
     !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric())
 }
-
-
 
 #[cfg(test)]
 mod tests {

@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">axe</h1>
+  <h1 align="center">mcms</h1>
   <p align="center">
     <strong>The fastest CMS, easiest to deploy.</strong>
   </p>
@@ -16,7 +16,7 @@
 
 ---
 
-## Why axe?
+## Why mcms?
 
 **Single binary, full capability**
 One binary, no Node.js, no Docker, no runtime. Blog is native built-in — not plugin assemblies, but the skeleton itself.
@@ -50,8 +50,8 @@ JS, Rhai, Lua, and WASM — a full spectrum from scripting to compiled. Dynamic 
 
 ```bash
 # Clone
-git clone https://github.com/axe/axe.git
-cd axe
+git clone https://github.com/mcms/mcms.git
+cd mcms
 
 # Build and run (SQLite, default)
 cargo run --features "db-sqlite plugin-all search-tantivy"
@@ -63,7 +63,7 @@ cargo run --features "db-sqlite plugin-all search-tantivy"
 
 ### First run
 
-On first startup, axe automatically:
+On first startup, mcms automatically:
 
 1. Creates all database tables
 2. Seeds default roles, permissions, and site options
@@ -78,8 +78,8 @@ cargo run -- db seed admin@example.com admin your-password
 ### Docker
 
 ```bash
-docker build -t axe .
-docker run -p 9898:9898 -v ./data:/app/data axe
+docker build -t mcms .
+docker run -p 9898:9898 -v ./data:/app/data mcms
 ```
 
 ---
@@ -116,7 +116,7 @@ src/
 ├── export_type.rs       # ts-rs TypeScript type export (feature: export-types)
 └── admin_spa.rs         # Embedded Admin UI (rust-embed)
 
-axe-derive/              # Proc-macro crate: CRUD Where-DSL, schema validation,
+mcms-derive/              # Proc-macro crate: CRUD Where-DSL, schema validation,
                          # #[derive(EventMeta)], #[aspect_service]
 ```
 

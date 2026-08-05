@@ -1,4 +1,4 @@
-//! `axe route` CLI subcommand.
+//! `mcms route` CLI subcommand.
 //!
 //! Inspect registered routes without starting the HTTP server.
 
@@ -33,7 +33,6 @@ fn collect_routes(config: &AppConfig) -> Vec<RouteInfo> {
     let _ = mcms::handlers::sse::routes(&mut registry, config);
     let _ = mcms::handlers::ws::routes(&mut registry, config);
 
-    let _ = mcms::handlers::plugin::routes(&mut registry, config);
     let _ = mcms::handlers::cron::routes(&mut registry, config);
     let _ = mcms::handlers::rbac::routes(&mut registry, config);
     let _ = mcms::handlers::stats::routes(&mut registry, config);

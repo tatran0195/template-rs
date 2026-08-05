@@ -185,17 +185,7 @@ CREATE TABLE IF NOT EXISTS webhook_subscriptions (
 
 CREATE INDEX IF NOT EXISTS idx_webhook_subscriptions_enabled ON webhook_subscriptions(enabled);
 
--- Plugin KV storage
-CREATE TABLE IF NOT EXISTS plugin_storage (
-    plugin_id TEXT NOT NULL,
-    storage_key TEXT NOT NULL,
-    value TEXT NOT NULL,
-    expires_at TEXT,
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    PRIMARY KEY (plugin_id, storage_key)
-);
 
-CREATE INDEX IF NOT EXISTS idx_plugin_storage_plugin ON plugin_storage(plugin_id);
 
 -- Content revision history
 CREATE TABLE IF NOT EXISTS content_revisions (
@@ -282,14 +272,13 @@ CREATE TABLE IF NOT EXISTS cron_schedules (
     enabled      INTEGER NOT NULL DEFAULT 1,
     last_run_at  TEXT,
     next_run_at  TEXT NOT NULL,
-    plugin_id    TEXT,
     created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     updated_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_cron_enabled ON cron_schedules(enabled);
 CREATE INDEX IF NOT EXISTS idx_cron_next_run ON cron_schedules(next_run_at) WHERE enabled = 1;
-CREATE INDEX IF NOT EXISTS idx_cron_plugin ON cron_schedules(plugin_id);
+
 
 -- Cron execution log
 CREATE TABLE IF NOT EXISTS cron_execution_log (
@@ -545,19 +534,9 @@ CREATE TABLE IF NOT EXISTS workflow_step_logs (
 
 CREATE INDEX IF NOT EXISTS idx_wf_step_logs_instance ON workflow_step_logs(instance_id);
 
-
-
 -- ============================================================
 -- Seed data
 -- ============================================================
-
--- Default currencies
-INSERT OR IGNORE INTO currencies (id, code, name, decimals) VALUES
-    (10001, 'CNY', 'Chinese Yuan', 2),
-    (10002, 'USD', 'US Dollar', 2),
-    (10003, 'EUR', 'Euro', 2),
-    (10004, 'GBP', 'British Pound', 2),
-    (10005, 'JPY', 'Japanese Yen', 0);
 
 -- System roles
 INSERT OR IGNORE INTO roles (id, name, description, is_system, created_at, updated_at) VALUES

@@ -248,7 +248,7 @@ async fn has_column(pool: &Pool, table: &str, column: &str) -> bool {
 
 /// Get all content-type-related table names from the database
 async fn get_content_tables(pool: &Pool) -> Result<Vec<String>, AppError> {
-    let excluded_tables = "'users','refresh_tokens','media','plugin_storage','roles','permissions','options','pending_jobs','cron_schedules','cron_execution_log'";
+    let excluded_tables = "'users','refresh_tokens','media','roles','permissions','options','pending_jobs','cron_schedules','cron_execution_log'";
     Ok(crate::db::Driver::list_user_tables(pool, excluded_tables).await)
 }
 

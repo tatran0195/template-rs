@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$SCRIPT_DIR/../frontend/axe.com"
+PROJECT_DIR="$SCRIPT_DIR/../frontend/mcms.com"
 
 cd "$PROJECT_DIR"
 

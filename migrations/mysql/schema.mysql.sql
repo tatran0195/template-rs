@@ -75,22 +75,6 @@ CREATE TABLE IF NOT EXISTS oauth_states (
     INDEX idx_oauth_states_expires (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Currency configuration
-CREATE TABLE IF NOT EXISTS currencies (
-    id BIGINT PRIMARY KEY,
-    code VARCHAR(10) NOT NULL UNIQUE,
-    name VARCHAR(255) NOT NULL,
-    decimals INT NOT NULL DEFAULT 0,
-    is_active TINYINT(1) NOT NULL DEFAULT 1,
-    version INT NOT NULL DEFAULT 1,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT chk_currencies_code CHECK (code = UPPER(code) AND CHAR_LENGTH(code) BETWEEN 1 AND 10),
-    CONSTRAINT chk_currencies_decimals CHECK (decimals BETWEEN 0 AND 18)
-);
-
-
-
 -- Refresh Tokens
 CREATE TABLE IF NOT EXISTS refresh_tokens (
     id BIGINT PRIMARY KEY,
@@ -186,17 +170,6 @@ CREATE TABLE IF NOT EXISTS webhook_subscriptions (
     INDEX idx_webhook_subscriptions_tenant (tenant_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Plugin KV storage
-CREATE TABLE IF NOT EXISTS plugin_storage (
-    plugin_id VARCHAR(100) NOT NULL,
-    `storage_key` VARCHAR(255) NOT NULL,
-    value TEXT NOT NULL,
-    expires_at DATETIME,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (plugin_id, `storage_key`),
-    INDEX idx_plugin_storage_plugin (plugin_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- Content revision history
 CREATE TABLE IF NOT EXISTS content_revisions (
     id BIGINT PRIMARY KEY,
@@ -276,12 +249,10 @@ CREATE TABLE IF NOT EXISTS cron_schedules (
     enabled      BOOLEAN NOT NULL DEFAULT TRUE,
     last_run_at  DATETIME,
     next_run_at  DATETIME NOT NULL,
-    plugin_id    VARCHAR(100),
     created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_cron_enabled (enabled),
-    INDEX idx_cron_next_run (next_run_at),
-    INDEX idx_cron_plugin (plugin_id)
+    INDEX idx_cron_next_run (next_run_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Cron execution log
@@ -527,14 +498,6 @@ CREATE TABLE IF NOT EXISTS workflow_step_logs (
 -- ============================================================
 -- Seed data
 -- ============================================================
-
--- Default currencies
-INSERT IGNORE INTO currencies (id, code, name, decimals) VALUES
-    (10001, 'CNY', 'Chinese Yuan', 2),
-    (10002, 'USD', 'US Dollar', 2),
-    (10003, 'EUR', 'Euro', 2),
-    (10004, 'GBP', 'British Pound', 2),
-    (10005, 'JPY', 'Japanese Yen', 0);
 
 -- System roles
 INSERT IGNORE INTO roles (id, name, description, is_system, created_at, updated_at) VALUES

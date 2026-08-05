@@ -1,6 +1,6 @@
-//! # axe-derive
+//! # mcms-derive
 //!
-//! Proc-macro crate for the `axe` blog/CMS system.
+//! Proc-macro crate for the `mcms` blog/CMS system.
 //!
 //! Provides two categories of macros:
 //!

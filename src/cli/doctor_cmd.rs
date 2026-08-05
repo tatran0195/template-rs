@@ -1,4 +1,4 @@
-//! `axe doctor` CLI subcommand.
+//! `mcms doctor` CLI subcommand.
 //!
 //! Diagnose system health without starting the HTTP server.
 //! Checks configuration, database, storage directories, search index,
@@ -201,7 +201,6 @@ fn check_directories(config: &AppConfig) -> Vec<CheckResult> {
         ("upload_dir", &config.upload_dir),
         ("log_dir", &config.log_dir),
         ("search_index_dir", &config.search_index_dir),
-        ("plugin_vfs_root", &config.plugin_vfs_root),
     ];
 
     for (label, dir) in &dirs {
@@ -240,23 +239,6 @@ fn check_directories(config: &AppConfig) -> Vec<CheckResult> {
                     message: format!("{} (cannot create)", dir),
                 });
             }
-        }
-    }
-
-    if let Some(plugin_dir) = &config.plugin_dir {
-        let path = Path::new(plugin_dir);
-        if path.exists() && path.is_dir() {
-            results.push(CheckResult {
-                name: "plugin_dir".into(),
-                status: CheckStatus::Ok,
-                message: plugin_dir.clone(),
-            });
-        } else {
-            results.push(CheckResult {
-                name: "plugin_dir".into(),
-                status: CheckStatus::Warn,
-                message: format!("{plugin_dir} (not found)"),
-            });
         }
     }
 
@@ -439,7 +421,7 @@ fn print_summary(results: &[CheckResult]) {
 pub async fn run(config: &AppConfig) {
     let mut all_results: Vec<CheckResult> = Vec::new();
 
-    println!("{BOLD}{CYAN}axe doctor{RESET} — system diagnostics");
+    println!("{BOLD}{CYAN}mcms doctor{RESET} — system diagnostics");
     println!("{DIM}version {}{RESET}", env!("CARGO_PKG_VERSION"));
 
     // Section 1: Environment files

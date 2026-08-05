@@ -20,7 +20,7 @@ jobs:
           submodules: recursive
       - name: Install Rust
         run: rustup update stable && rustup default stable
-      - name: cargo publish axe-derive
-        run: cargo publish --no-verify --allow-dirty -p axe-derive || echo "already published"
-      - name: cargo publish axe
-        run: cargo publish --no-verify --allow-dirty -p axe || echo "already published"
+      - name: cargo publish mcms-derive
+        run: cargo publish --no-verify --allow-dirty -p mcms-derive || echo "already published"
+      - name: cargo publish mcms
+        run: cargo publish --no-verify --allow-dirty -p mcms || echo "already published"

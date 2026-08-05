@@ -7,7 +7,6 @@
 //! Service → EventBus.emit(Event) → JobEnqueuer → SQLite jobs table → WorkerRunner → JobHandler
 //! ```
 
-mod dispatcher;
 mod enqueuer;
 mod handler;
 pub mod handlers;
@@ -39,17 +38,15 @@ define_enum!(
     }
 );
 
-pub use dispatcher::PluginCronDispatcher;
 pub use enqueuer::JobEnqueuer;
 pub use handler::{JobHandler, JobHandlerRegistry, LogJobHandler};
 pub use job_queue::DefaultJobQueue;
 pub use runner::WorkerRunner;
 pub use scheduler::{
     CronExecutionLog, CronSchedule, CronScheduler, cleanup_execution_logs, complete_execution_log,
-    create_execution_log, create_schedule, create_schedule_with_plugin, delete_schedule,
-    fail_execution_log, find_by_id, list_execution_logs, list_schedules, next_run,
-    recent_execution_logs, remove_plugin_crons, seed_defaults, sync_plugin_crons, toggle_schedule,
-    update_schedule,
+    create_execution_log, create_schedule, delete_schedule, fail_execution_log, find_by_id,
+    list_execution_logs, list_schedules, next_run, recent_execution_logs, seed_defaults,
+    toggle_schedule, update_schedule,
 };
 
 #[cfg(feature = "export-types")]

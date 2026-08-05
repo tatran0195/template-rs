@@ -31,7 +31,6 @@ pub struct StorageStatusInfo {
 pub struct ExtensionsStatusInfo {
     pub writable: bool,
     pub content_types_path: String,
-    pub plugins_path: String,
 }
 
 #[derive(Debug, Deserialize, Validate)]

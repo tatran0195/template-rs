@@ -46,8 +46,8 @@ pub fn create_new(name: &str, template: &str) -> anyhow::Result<()> {
         include_str!("../../templates/app/README.md"),
         name,
         match template {
-            "blog" => "A blog project built with axe",
-            _ => "A axe project",
+            "blog" => "A blog project built with mcms",
+            _ => "A mcms project",
         },
     );
     std::fs::write(project_dir.join("README.md"), readme)?;
@@ -70,10 +70,10 @@ pub fn create_new(name: &str, template: &str) -> anyhow::Result<()> {
     println!();
     println!("  cd {name}");
     println!("  cp .env.example .env");
-    println!("  axe db migrate");
-    println!("  axe db rollback");
-    println!("  axe db seed");
-    println!("  axe server start");
+    println!("  mcms db migrate");
+    println!("  mcms db rollback");
+    println!("  mcms db seed");
+    println!("  mcms server start");
 
     Ok(())
 }

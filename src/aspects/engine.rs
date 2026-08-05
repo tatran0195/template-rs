@@ -11,7 +11,7 @@ use dashmap::DashMap;
 use crate::errors::app_error::AppResult;
 use crate::event::Event;
 use crate::eventbus::EventBus;
-use crate::plugins::PluginManager;
+
 
 use super::{
     Advice, Aspect, ColumnDef, DataAfterCreateContext, DataAfterDeleteContext,
@@ -30,7 +30,7 @@ pub struct AspectEntry {
 pub struct AspectEngine {
     dispatch_table: DashMap<JoinPointId, Vec<Arc<dyn Aspect>>>,
     registry: ArcSwap<Vec<AspectEntry>>,
-    infrastructure: OnceLock<(Arc<PluginManager>, EventBus)>,
+    infrastructure: OnceLock<EventBus>,
 }
 
 impl std::fmt::Debug for AspectEngine {
@@ -57,72 +57,33 @@ impl AspectEngine {
         }
     }
 
-    pub fn with_infrastructure(plugins: Arc<PluginManager>, eventbus: EventBus) -> Self {
+    pub fn with_infrastructure(eventbus: EventBus) -> Self {
         let engine = Self {
             dispatch_table: DashMap::new(),
             registry: ArcSwap::from_pointee(Vec::new()),
             infrastructure: OnceLock::new(),
         };
-        let _ = engine.infrastructure.set((plugins, eventbus));
+        let _ = engine.infrastructure.set(eventbus);
         engine
     }
 
     /// Set infrastructure on an existing engine (for deferred initialization).
-    pub fn set_infrastructure(&self, plugins: Arc<PluginManager>, eventbus: EventBus) {
-        let _ = self.infrastructure.set((plugins, eventbus));
-    }
-
-    fn plugins(&self) -> Option<&Arc<PluginManager>> {
-        self.infrastructure.get().map(|(p, _)| p)
+    pub fn set_infrastructure(&self, eventbus: EventBus) {
+        let _ = self.infrastructure.set(eventbus);
     }
 
     fn eventbus(&self) -> Option<&EventBus> {
-        self.infrastructure.get().map(|(_, e)| e)
+        self.infrastructure.get()
     }
 
-    async fn filter_creating<T: Clone + serde::Serialize + serde::de::DeserializeOwned + Send>(
-        &self,
-        table: &str,
-        data: T,
-    ) -> AppResult<T> {
-        let Some(plugins) = self.plugins() else {
-            return Ok(data);
-        };
-        let hook = match table {
-            "posts" => Event::PostCreating,
-            "comments" => Event::CommentCreating,
-            _ => Event::ContentCreating,
-        };
-        plugins.dispatch_filter(&hook, data).await
-    }
-
-    async fn filter_updating<T: Clone + serde::Serialize + serde::de::DeserializeOwned + Send>(
-        &self,
-        table: &str,
-        data: T,
-    ) -> AppResult<T> {
-        let Some(plugins) = self.plugins() else {
-            return Ok(data);
-        };
-        let hook = match table {
-            "posts" => Event::PostUpdating,
-            _ => Event::ContentUpdating,
-        };
-        plugins.dispatch_filter(&hook, data).await
-    }
-
-    /// Before-create: plugin filter + aspect data dispatch.
-    ///
-    /// Runs plugin filter first (typed `T → T`), then dispatches through registered aspects.
-    /// Returns `(filtered_data, Dispatched)` — caller gets both the typed result and aspect-modified record.
+    /// Before-create: aspect data dispatch.
     pub async fn before_create<T: Clone + serde::Serialize + serde::de::DeserializeOwned + Send>(
         &self,
         table: &str,
         auth: &crate::middleware::auth::AuthUser,
         data: T,
     ) -> AppResult<(T, super::Dispatched)> {
-        let filtered = self.filter_creating(table, data).await?;
-        let record = merge_non_null(super::Record::new(), &filtered);
+        let record = merge_non_null(super::Record::new(), &data);
         let mut ctx = super::DataBeforeCreateContext {
             base: make_base_ctx(auth),
             table: table.to_string(),
@@ -132,14 +93,10 @@ impl AspectEngine {
         self.dispatch_data_before_create(table, &mut ctx)
             .await
             .map_err(crate::errors::app_error::AppError::Internal)?;
-        Ok((filtered, super::Dispatched(ctx.record)))
+        Ok((data, super::Dispatched(ctx.record)))
     }
 
-    /// Before-update: plugin filter + aspect data dispatch.
-    ///
-    /// Runs plugin filter first (typed `T → T`), then dispatches through registered aspects.
-    /// `old_data` = existing record, `new_data` = update request.
-    /// Returns `(filtered_data, Dispatched)`.
+    /// Before-update: aspect data dispatch.
     pub async fn before_update<T: Clone + serde::Serialize + serde::de::DeserializeOwned + Send>(
         &self,
         table: &str,
@@ -147,8 +104,7 @@ impl AspectEngine {
         old_data: &impl serde::Serialize,
         data: T,
     ) -> AppResult<(T, super::Dispatched)> {
-        let filtered = self.filter_updating(table, data).await?;
-        let new_record = merge_non_null(super::Record::new(), &filtered);
+        let new_record = merge_non_null(super::Record::new(), &data);
         let old_record = merge_non_null(super::Record::new(), old_data);
         let mut ctx = super::DataBeforeUpdateContext {
             base: make_base_ctx(auth),
@@ -160,7 +116,7 @@ impl AspectEngine {
         self.dispatch_data_before_update(table, &mut ctx)
             .await
             .map_err(crate::errors::app_error::AppError::Internal)?;
-        Ok((filtered, super::Dispatched(ctx.new_record)))
+        Ok((data, super::Dispatched(ctx.new_record)))
     }
 
     /// Before-delete: aspect data dispatch.
@@ -196,18 +152,10 @@ impl AspectEngine {
             .insert(key.to_string(), serde_json::json!(value));
     }
 
-    /// Broadcast event to EventBus + trigger plugin action (fire-and-forget).
+    /// Broadcast event to EventBus (fire-and-forget).
     pub fn emit(&self, event: Event) {
         if let Some(eventbus) = self.eventbus() {
             eventbus.emit(event.clone());
-        }
-        if let Some(plugins) = self.plugins() {
-            let hook_name = event.name();
-            let json = serde_json::to_value(&event).unwrap_or_default();
-            let plugins = Arc::clone(plugins);
-            tokio::spawn(async move {
-                plugins.dispatch_action(&hook_name, &json).await;
-            });
         }
     }
 

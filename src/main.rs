@@ -1,4 +1,4 @@
-//! axe: Rust-powered high-performance BaaS and headless CMS.
+//! mcms: Rust-powered high-performance BaaS and headless CMS.
 //!
 //! Default behavior: starts the HTTP server. Use subcommands to switch to other operations.
 //!
@@ -16,8 +16,8 @@
 
 rust_i18n::i18n!("locales", fallback = "en");
 
-use mcms::config::app::AppConfig;
 use clap::Parser;
+use mcms::config::app::AppConfig;
 
 mod cli;
 mod logging;

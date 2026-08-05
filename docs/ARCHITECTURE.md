@@ -1,8 +1,8 @@
 # Architecture
 
-> This document provides a comprehensive overview of the axe system architecture for developers and contributors.
+> This document provides a comprehensive overview of the mcms system architecture for developers and contributors.
 >
-> **For AI agents / automated tooling:** this file is intended to be a *self-contained mental model* of the
+> **For AI agents / automated tooling:** this file is intended to be a _self-contained mental model_ of the
 > project so you do **not** need to re-scan the entire source tree before making changes. It stays in sync with
 > `AGENTS.md` (agent commands & constraints) and `README.md` (user-facing overview). If you change architecture,
 > update this file. Key invariants are collected in [Key Design Decisions](#key-design-decisions).
@@ -22,7 +22,7 @@
 - [Application State](#application-state)
 - [Request Lifecycle](#request-lifecycle)
 - [Database Layer](#database-layer)
-- [Code Generation (axe-derive)](#code-generation-axe-derive)
+- [Code Generation (mcms-derive)](#code-generation-mcms-derive)
 - [Type Export (TypeScript SDK)](#type-export-typescript-sdk)
 - [Auth System](#auth-system)
 - [Plugin Engine](#plugin-engine)
@@ -43,11 +43,11 @@
 
 ## Overview
 
-axe is a Rust-powered high-performance BaaS and headless CMS. It compiles to a single binary with zero runtime dependencies, providing blog, ecommerce, wallet, payment, and multi-tenant SaaS capabilities out of the box.
+mcms is a Rust-powered high-performance BaaS and headless CMS. It compiles to a single binary with zero runtime dependencies, providing blog, ecommerce, wallet, payment, and multi-tenant SaaS capabilities out of the box.
 
 ```
                     ┌──────────────────────────────────┐
-                    │           axe binary         │
+                    │           mcms binary         │
                     │  ┌────────┐  ┌────────────────┐  │
     HTTP ─────────► │  │  Axum  │  │  Admin SPA     │  │
     (9898)          │  │ Router │  │  (rust-embed)  │  │
@@ -77,22 +77,22 @@ axe is a Rust-powered high-performance BaaS and headless CMS. It compiles to a s
 
 ## Technology Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Language | Rust (edition 2024) |
-| HTTP Framework | Axum 0.8 |
-| Database | SQLx 0.8 (SQLite / PostgreSQL / MySQL) |
-| Auth | JWT (HS256) + Argon2 |
-| Search | Tantivy |
-| Plugin Runtime | wasmtime / rquickjs / mlua / rhai |
-| Cache | moka (in-memory, TinyLFU + LRU) |
-| Admin UI | React 19 + Vite + shadcn/ui (embedded via rust-embed) |
-| Desktop | Tauri (optional) |
-| ID Generation | ferroid (Snowflake + multiplicative inverse cipher + base62) |
-| CLI | clap |
-| Logging | tracing + tracing-subscriber |
-| Metrics | Prometheus |
-| API Docs | utoipa + Swagger UI |
+| Layer          | Technology                                                   |
+| -------------- | ------------------------------------------------------------ |
+| Language       | Rust (edition 2024)                                          |
+| HTTP Framework | Axum 0.8                                                     |
+| Database       | SQLx 0.8 (SQLite / PostgreSQL / MySQL)                       |
+| Auth           | JWT (HS256) + Argon2                                         |
+| Search         | Tantivy                                                      |
+| Plugin Runtime | wasmtime / rquickjs / mlua / rhai                            |
+| Cache          | moka (in-memory, TinyLFU + LRU)                              |
+| Admin UI       | React 19 + Vite + shadcn/ui (embedded via rust-embed)        |
+| Desktop        | Tauri (optional)                                             |
+| ID Generation  | ferroid (Snowflake + multiplicative inverse cipher + base62) |
+| CLI            | clap                                                         |
+| Logging        | tracing + tracing-subscriber                                 |
+| Metrics        | Prometheus                                                   |
+| API Docs       | utoipa + Swagger UI                                          |
 
 ---
 
@@ -102,42 +102,42 @@ Feature flags control which components are compiled. Only the needed features ar
 
 ### Database (pick one)
 
-| Flag | Description |
-|------|-------------|
-| `db-sqlite` | SQLite backend |
+| Flag          | Description        |
+| ------------- | ------------------ |
+| `db-sqlite`   | SQLite backend     |
 | `db-postgres` | PostgreSQL backend |
-| `db-mysql` | MySQL backend |
+| `db-mysql`    | MySQL backend      |
 
 ### Plugin Engines
 
-| Flag | Description |
-|------|-------------|
-| `plugin-js` | JavaScript (QuickJS) |
-| `plugin-lua` | Lua 5.4 (mlua) |
-| `plugin-rhai` | Rhai scripting |
+| Flag          | Description            |
+| ------------- | ---------------------- |
+| `plugin-js`   | JavaScript (QuickJS)   |
+| `plugin-lua`  | Lua 5.4 (mlua)         |
+| `plugin-rhai` | Rhai scripting         |
 | `plugin-wasm` | WebAssembly (wasmtime) |
-| `plugin-all` | All four engines |
+| `plugin-all`  | All four engines       |
 
 ### Search
 
-| Flag | Description |
-|------|-------------|
+| Flag             | Description                  |
+| ---------------- | ---------------------------- |
 | `search-tantivy` | Full-text search via Tantivy |
 
 ### Storage
 
-| Flag | Description |
-|------|-------------|
+| Flag         | Description                  |
+| ------------ | ---------------------------- |
 | `storage-s3` | S3-compatible object storage |
 
 ### Other
 
-| Flag | Description |
-|------|-------------|
-| `tls` | HTTPS via rustls |
-| `openapi` | Swagger UI |
-| `proxy` | Multi-tenant reverse proxy |
-| `tauri` | Tauri desktop mode |
+| Flag           | Description                                                                                           |
+| -------------- | ----------------------------------------------------------------------------------------------------- |
+| `tls`          | HTTPS via rustls                                                                                      |
+| `openapi`      | Swagger UI                                                                                            |
+| `proxy`        | Multi-tenant reverse proxy                                                                            |
+| `tauri`        | Tauri desktop mode                                                                                    |
 | `export-types` | TypeScript type generation via ts-rs (off by default; see [Type Export](#type-export-typescript-sdk)) |
 
 ### Example Build
@@ -195,7 +195,7 @@ src/
 ├── macros.rs               # Internal macros (reg_route!, export_types!, in_transaction!, ...)
 └── utils/                  # Timezone, ID generation utilities
 
-axe-derive/                 # Workspace member: proc-macro crate
+mcms-derive/                 # Workspace member: proc-macro crate
 ├── src/lib.rs              # Macro entry points (authoritative syntax reference)
 ├── src/crud.rs             # crud_*! SQL macro implementations
 ├── src/where_dsl.rs        # WhereExpr DSL for WHERE clauses
@@ -347,28 +347,28 @@ in_transaction!(pool, |tx| {
 
 ### CRUD Macro System
 
-All database operations use the `axe-derive` macro DSL (see [Code Generation](#code-generation-axe-derive)
+All database operations use the `mcms-derive` macro DSL (see [Code Generation](#code-generation-mcms-derive)
 for how these are implemented).
 
-| Macro | Purpose |
-|-------|---------|
-| `crud_insert!` | INSERT with auto-generated columns |
-| `crud_upsert!` | INSERT ... ON CONFLICT DO UPDATE |
-| `crud_update!` | UPDATE with dynamic SET (`bind:` / `optional:` / `raw:`) |
-| `crud_delete!` | DELETE with Where-DSL conditions |
-| `crud_find!` | SELECT explicit columns → `fetch_optional` |
-| `crud_find_one!` | SELECT single row → `fetch_one` |
-| `crud_find_all!` | SELECT all matching rows → `fetch_all` |
-| `crud_list!` | SELECT all rows (no WHERE) |
-| `crud_count!` | `SELECT COUNT(*)` → `i64` |
-| `crud_exists!` | `SELECT EXISTS(...)` → `bool` |
-| `crud_query!` / `crud_scalar!` / `crud_select!` | runtime `query_as` / `query_scalar` helpers |
-| `crud_join!` / `crud_join_paged!` | JOIN queries (optionally paginated) |
-| `crud_query_paged!` | Paginated data + COUNT pair |
-| `crud_resolve_id!` | Resolve/verify a Snowflake ID → `Option<i64>` |
-| `crud_resolve_ids!` | Batch ID resolution (all-must-exist) |
-| `check_schema!` | **Compile-time only** table/column validation (expands to nothing) |
-| `in_transaction!` | Transaction wrapper (auto-acquires write lock) |
+| Macro                                           | Purpose                                                            |
+| ----------------------------------------------- | ------------------------------------------------------------------ |
+| `crud_insert!`                                  | INSERT with auto-generated columns                                 |
+| `crud_upsert!`                                  | INSERT ... ON CONFLICT DO UPDATE                                   |
+| `crud_update!`                                  | UPDATE with dynamic SET (`bind:` / `optional:` / `raw:`)           |
+| `crud_delete!`                                  | DELETE with Where-DSL conditions                                   |
+| `crud_find!`                                    | SELECT explicit columns → `fetch_optional`                         |
+| `crud_find_one!`                                | SELECT single row → `fetch_one`                                    |
+| `crud_find_all!`                                | SELECT all matching rows → `fetch_all`                             |
+| `crud_list!`                                    | SELECT all rows (no WHERE)                                         |
+| `crud_count!`                                   | `SELECT COUNT(*)` → `i64`                                          |
+| `crud_exists!`                                  | `SELECT EXISTS(...)` → `bool`                                      |
+| `crud_query!` / `crud_scalar!` / `crud_select!` | runtime `query_as` / `query_scalar` helpers                        |
+| `crud_join!` / `crud_join_paged!`               | JOIN queries (optionally paginated)                                |
+| `crud_query_paged!`                             | Paginated data + COUNT pair                                        |
+| `crud_resolve_id!`                              | Resolve/verify a Snowflake ID → `Option<i64>`                      |
+| `crud_resolve_ids!`                             | Batch ID resolution (all-must-exist)                               |
+| `check_schema!`                                 | **Compile-time only** table/column validation (expands to nothing) |
+| `in_transaction!`                               | Transaction wrapper (auto-acquires write lock)                     |
 
 ### Schema
 
@@ -380,17 +380,17 @@ for how these are implemented).
 
 ---
 
-## Code Generation (axe-derive)
+## Code Generation (mcms-derive)
 
-`axe-derive/` is the project's own **procedural-macro crate** — core infrastructure the whole
-codebase depends on (it is *not* an optional/removable feature). It provides three categories of macros:
+`mcms-derive/` is the project's own **procedural-macro crate** — core infrastructure the whole
+codebase depends on (it is _not_ an optional/removable feature). It provides three categories of macros:
 
 ### 1. Bang macros — SQL CRUD Where-DSL
 
 The `crud_*!` family listed under [CRUD Macro System](#crud-macro-system). They are implemented in
-`axe-derive/src/crud.rs` and share a small `WhereExpr` DSL (`axe-derive/src/where_dsl.rs`) for building
+`mcms-derive/src/crud.rs` and share a small `WhereExpr` DSL (`mcms-derive/src/where_dsl.rs`) for building
 type-safe `WHERE` clauses. At compile time they consult the parsed SQL schema
-(`axe-derive/src/schema.rs`) to:
+(`mcms-derive/src/schema.rs`) to:
 
 - validate that referenced tables/columns exist (fail the build otherwise),
 - generate explicit column lists so no query uses `SELECT *`,
@@ -400,16 +400,16 @@ type-safe `WHERE` clauses. At compile time they consult the parsed SQL schema
 
 Applied to event enums (`src/event/`). Generates `name()`, `display_name()`, and `table()` methods
 from per-variant `#[event(table = "...", name = "...", dynamic)]` attributes, keeping the ~40 event
-types consistent without hand-written boilerplate. Implemented in `axe-derive/src/event_meta.rs`.
+types consistent without hand-written boilerplate. Implemented in `mcms-derive/src/event_meta.rs`.
 
 ### 3. `#[aspect_service(entity = "...", model = Type)]`
 
 Attribute macro applied to a service struct (see [AOP & Protocols](#aop--protocols)). Generates the
 constructor plus `before_create/update/delete` hooks (delegating to the aspect engine) and
 `after_created/updated/deleted` hooks (emitting the matching domain events on the EventBus). The struct
-declares its engine field with `#[engine]`. Implemented in `axe-derive/src/aspect_service.rs`.
+declares its engine field with `#[engine]`. Implemented in `mcms-derive/src/aspect_service.rs`.
 
-> **Where to look:** `axe-derive/src/lib.rs` is heavily doc-commented and is the authoritative reference
+> **Where to look:** `mcms-derive/src/lib.rs` is heavily doc-commented and is the authoritative reference
 > for every macro's exact syntax.
 
 ---
@@ -435,8 +435,8 @@ the React Admin UI / external clients in sync. It has zero effect on normal (non
 cargo run --example export-types --features export-types
 ```
 
-> Note: this `ts-rs` "type derivation" is entirely separate from the `axe-derive` proc-macro crate above.
-> `axe-derive` is required core infra; `export-types` is an optional developer tool.
+> Note: this `ts-rs` "type derivation" is entirely separate from the `mcms-derive` proc-macro crate above.
+> `mcms-derive` is required core infra; `export-types` is an optional developer tool.
 
 ---
 
@@ -471,11 +471,11 @@ async fn my_handler(auth: AuthUser, State(state): State<AppState>) -> AppResult<
 
 ### OAuth Providers
 
-| Provider | Flow |
-|----------|------|
-| GitHub | OAuth2 + PKCE |
-| Google | OpenID Connect + PKCE |
-| WeChat | QR code / MP |
+| Provider | Flow                  |
+| -------- | --------------------- |
+| GitHub   | OAuth2 + PKCE         |
+| Google   | OpenID Connect + PKCE |
+| WeChat   | QR code / MP          |
 
 ### RBAC
 
@@ -539,11 +539,11 @@ cron_expr = "0 */6 * * *"
 
 ### Hook Types
 
-| Type | Behavior |
-|------|----------|
-| **Filter** | Chain: each hook transforms data, passes to next |
-| **Action** | Sequential: fire-and-forget side effects |
-| **RenderOverride** | Override response rendering |
+| Type               | Behavior                                         |
+| ------------------ | ------------------------------------------------ |
+| **Filter**         | Chain: each hook transforms data, passes to next |
+| **Action**         | Sequential: fire-and-forget side effects         |
+| **RenderOverride** | Override response rendering                      |
 
 ### Hot Reload
 
@@ -586,13 +586,13 @@ protocols = ["timestampable", "soft_deletable", "sortable"]
 
 ### Generated API
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/cms/portfolios` | List (paginated, filterable) |
-| `GET` | `/cms/portfolios/:id` | Get single |
-| `POST` | `/cms/portfolios` | Create |
-| `PUT` | `/cms/portfolios/:id` | Update |
-| `DELETE` | `/cms/portfolios/:id` | Delete |
+| Method   | Path                  | Description                  |
+| -------- | --------------------- | ---------------------------- |
+| `GET`    | `/cms/portfolios`     | List (paginated, filterable) |
+| `GET`    | `/cms/portfolios/:id` | Get single                   |
+| `POST`   | `/cms/portfolios`     | Create                       |
+| `PUT`    | `/cms/portfolios/:id` | Update                       |
+| `DELETE` | `/cms/portfolios/:id` | Delete                       |
 
 ### API Access Control
 
@@ -625,19 +625,19 @@ Dynamic data filtering via expressions:
 
 Protocols are composable, declarative behaviors that can be mixed into any content type:
 
-| Protocol | Adds | Behavior |
-|----------|------|----------|
-| `timestampable` | `created_at`, `updated_at` | Auto-managed timestamps |
-| `ownable` | `created_by`, `updated_by` | Auto-set from auth user |
-| `soft_deletable` | `deleted_at` | Logical delete, filter `IS NULL` |
-| `versionable` | Revision tracking | Snapshot before update |
-| `tenantable` | `tenant_id` | Multi-tenant isolation |
-| `lockable` | `lock_version` | Optimistic locking |
-| `sortable` | `sort_order` | Default ordering |
-| `statusable` | Status field | State machine with allowed transitions |
-| `expirable` | `expires_at` | Expiration dates |
-| `nestable` | `parent_id` | Parent-child hierarchy |
-| `metaable` | `metadata` (JSON) | Arbitrary metadata |
+| Protocol         | Adds                       | Behavior                               |
+| ---------------- | -------------------------- | -------------------------------------- |
+| `timestampable`  | `created_at`, `updated_at` | Auto-managed timestamps                |
+| `ownable`        | `created_by`, `updated_by` | Auto-set from auth user                |
+| `soft_deletable` | `deleted_at`               | Logical delete, filter `IS NULL`       |
+| `versionable`    | Revision tracking          | Snapshot before update                 |
+| `tenantable`     | `tenant_id`                | Multi-tenant isolation                 |
+| `lockable`       | `lock_version`             | Optimistic locking                     |
+| `sortable`       | `sort_order`               | Default ordering                       |
+| `statusable`     | Status field               | State machine with allowed transitions |
+| `expirable`      | `expires_at`               | Expiration dates                       |
+| `nestable`       | `parent_id`                | Parent-child hierarchy                 |
+| `metaable`       | `metadata` (JSON)          | Arbitrary metadata                     |
 
 ### AOP Layers
 
@@ -682,18 +682,18 @@ Protocols are composable, declarative behaviors that can be mixed into any conte
 
 ### Built-in Job Handlers
 
-| Handler | Trigger |
-|---------|---------|
-| `SendWelcomeEmail` | User registered |
-| `GenerateThumbnail` | Media uploaded |
-| `ScheduledPublish` | Post/Page publish time reached |
-| `WebhookNotify` | Event emitted |
-| `RebuildSearchIndex` | Content changed |
-| `InvalidateCache` | Content changed |
-| `GenerateSitemap` | Cron (every 6h) |
-| `SendPasswordResetEmail` | Password reset requested |
-| `SendSmsCode` | SMS verification |
-| `SendEmailVerification` | Email verification |
+| Handler                  | Trigger                        |
+| ------------------------ | ------------------------------ |
+| `SendWelcomeEmail`       | User registered                |
+| `GenerateThumbnail`      | Media uploaded                 |
+| `ScheduledPublish`       | Post/Page publish time reached |
+| `WebhookNotify`          | Event emitted                  |
+| `RebuildSearchIndex`     | Content changed                |
+| `InvalidateCache`        | Content changed                |
+| `GenerateSitemap`        | Cron (every 6h)                |
+| `SendPasswordResetEmail` | Password reset requested       |
+| `SendSmsCode`            | SMS verification               |
+| `SendEmailVerification`  | Email verification             |
 
 ### Job Lifecycle
 
@@ -723,15 +723,15 @@ Service → eventbus.emit(Event::PostCreated { ... })
 
 ### Event Types (~40)
 
-| Category | Events |
-|----------|--------|
-| Post | Creating, Created, Updating, Updated, Deleted |
-| Comment | Created, Updated, Deleted |
-| Page | Created, Updated, Deleted |
-| User | Registered, LoggedIn |
-| Media | Uploaded, Deleted |
-| CMS | Generic content CRUD |
-| Utility | RenderMarkdown, FilterHtml, OnLogin, CronTick |
+| Category | Events                                        |
+| -------- | --------------------------------------------- |
+| Post     | Creating, Created, Updating, Updated, Deleted |
+| Comment  | Created, Updated, Deleted                     |
+| Page     | Created, Updated, Deleted                     |
+| User     | Registered, LoggedIn                          |
+| Media    | Uploaded, Deleted                             |
+| CMS      | Generic content CRUD                          |
+| Utility  | RenderMarkdown, FilterHtml, OnLogin, CronTick |
 
 ---
 
@@ -739,12 +739,13 @@ Service → eventbus.emit(Event::PostCreated { ... })
 
 `SearchEngine` trait with two implementations:
 
-| Implementation | Description |
-|----------------|-------------|
-| `TantivyEngine` | Full-text search with keyword highlighting |
-| `NoopSearchEngine` | No-op fallback |
+| Implementation     | Description                                |
+| ------------------ | ------------------------------------------ |
+| `TantivyEngine`    | Full-text search with keyword highlighting |
+| `NoopSearchEngine` | No-op fallback                             |
 
 **Features:**
+
 - Chinese-aware tokenization
 - Keyword highlighting (`<em>` tags)
 - Auto-excerpt generation around matched keywords
@@ -756,10 +757,10 @@ Service → eventbus.emit(Event::PostCreated { ... })
 
 `Storage` trait with two implementations:
 
-| Implementation | Feature Flag | Description |
-|----------------|-------------|-------------|
-| `LocalStorage` | (default) | Filesystem storage under `upload_dir` |
-| `S3Storage` | `storage-s3` | S3-compatible object storage with presigned URLs |
+| Implementation | Feature Flag | Description                                      |
+| -------------- | ------------ | ------------------------------------------------ |
+| `LocalStorage` | (default)    | Filesystem storage under `upload_dir`            |
+| `S3Storage`    | `storage-s3` | S3-compatible object storage with presigned URLs |
 
 **Operations:** `put()`, `get()`, `delete()`, `url()`, `presigned_upload()`
 
@@ -788,72 +789,72 @@ All configuration via environment variables or `.env` file:
 
 ### Core
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `HOST` | `0.0.0.0` | Listen address |
-| `PORT` | `9898` | Listen port |
-| `DATABASE_URL` | — | Database connection string |
-| `JWT_SECRET` | — | JWT signing key (required in production) |
-| `APP_KEY` | auto | 32-byte base64 key for encryption |
+| Variable       | Default   | Description                              |
+| -------------- | --------- | ---------------------------------------- |
+| `HOST`         | `0.0.0.0` | Listen address                           |
+| `PORT`         | `9898`    | Listen port                              |
+| `DATABASE_URL` | —         | Database connection string               |
+| `JWT_SECRET`   | —         | JWT signing key (required in production) |
+| `APP_KEY`      | auto      | 32-byte base64 key for encryption        |
 
 ### Built-in Modules
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `BUILTIN_BLOG` | `true` | Enable blog module |
-| `BUILTIN_PAGES` | `true` | Enable pages module |
-| `BUILTIN_MEDIA` | `true` | Enable media module |
-| `BUILTIN_ECOMMERCE` | `true` | Enable ecommerce module |
-| `BUILTIN_PAYMENT` | `true` | Enable payment module |
-| `BUILTIN_WALLET` | `true` | Enable wallet module |
-| `BUILTIN_WORKFLOW` | `true` | Enable workflow module |
+| Variable            | Default | Description             |
+| ------------------- | ------- | ----------------------- |
+| `BUILTIN_BLOG`      | `true`  | Enable blog module      |
+| `BUILTIN_PAGES`     | `true`  | Enable pages module     |
+| `BUILTIN_MEDIA`     | `true`  | Enable media module     |
+| `BUILTIN_ECOMMERCE` | `true`  | Enable ecommerce module |
+| `BUILTIN_PAYMENT`   | `true`  | Enable payment module   |
+| `BUILTIN_WALLET`    | `true`  | Enable wallet module    |
+| `BUILTIN_WORKFLOW`  | `true`  | Enable workflow module  |
 
 ### Plugin
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PLUGIN_DIR` | `./plugins` | Plugin directory |
-| `PLUGIN_HOT_RELOAD` | `true` | Auto-reload on file change |
-| `PLUGIN_MAX_MEMORY_MB` | `32` | Per-plugin memory limit |
-| `PLUGIN_DEFAULT_TIMEOUT_MS` | `5000` | Execution timeout |
+| Variable                    | Default     | Description                |
+| --------------------------- | ----------- | -------------------------- |
+| `PLUGIN_DIR`                | `./plugins` | Plugin directory           |
+| `PLUGIN_HOT_RELOAD`         | `true`      | Auto-reload on file change |
+| `PLUGIN_MAX_MEMORY_MB`      | `32`        | Per-plugin memory limit    |
+| `PLUGIN_DEFAULT_TIMEOUT_MS` | `5000`      | Execution timeout          |
 
 ### Worker
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `WORKER_ENABLED` | `true` | Enable background worker |
-| `WORKER_CONCURRENCY` | `2` | Concurrent job workers |
-| `WORKER_POLL_INTERVAL_MS` | `500` | Queue poll interval |
+| Variable                  | Default | Description              |
+| ------------------------- | ------- | ------------------------ |
+| `WORKER_ENABLED`          | `true`  | Enable background worker |
+| `WORKER_CONCURRENCY`      | `2`     | Concurrent job workers   |
+| `WORKER_POLL_INTERVAL_MS` | `500`   | Queue poll interval      |
 
 ### Rate Limiting
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `RATE_LIMIT_ENABLED` | `true` | Enable rate limiting |
-| `RATE_LIMIT_GLOBAL_MAX` | `100` | Global requests per window |
-| `RATE_LIMIT_REGISTER_MAX` | `5` | Register requests per window |
-| `RATE_LIMIT_LOGIN_MAX` | `10` | Login requests per window |
+| Variable                  | Default | Description                  |
+| ------------------------- | ------- | ---------------------------- |
+| `RATE_LIMIT_ENABLED`      | `true`  | Enable rate limiting         |
+| `RATE_LIMIT_GLOBAL_MAX`   | `100`   | Global requests per window   |
+| `RATE_LIMIT_REGISTER_MAX` | `5`     | Register requests per window |
+| `RATE_LIMIT_LOGIN_MAX`    | `10`    | Login requests per window    |
 
 ### Storage
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `STORAGE_DRIVER` | `local` | `local` or `s3` |
-| `UPLOAD_DIR` | `./storage/uploads` | Upload directory |
-| `MAX_UPLOAD_SIZE` | `104857600` | Max file size (100MB) |
+| Variable          | Default             | Description           |
+| ----------------- | ------------------- | --------------------- |
+| `STORAGE_DRIVER`  | `local`             | `local` or `s3`       |
+| `UPLOAD_DIR`      | `./storage/uploads` | Upload directory      |
+| `MAX_UPLOAD_SIZE` | `104857600`         | Max file size (100MB) |
 
 ### Email
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `EMAIL_PROVIDER` | `log` | `log`/`smtp`/`sendgrid`/`resend` |
-| `EMAIL_FROM` | — | Sender address |
+| Variable         | Default | Description                      |
+| ---------------- | ------- | -------------------------------- |
+| `EMAIL_PROVIDER` | `log`   | `log`/`smtp`/`sendgrid`/`resend` |
+| `EMAIL_FROM`     | —       | Sender address                   |
 
 ### SMS
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SMS_PROVIDER` | `log` | `log`/`twilio` |
+| Variable       | Default | Description    |
+| -------------- | ------- | -------------- |
+| `SMS_PROVIDER` | `log`   | `log`/`twilio` |
 
 ---
 
@@ -914,40 +915,40 @@ Paginated responses:
 ## CLI
 
 ```bash
-axe <command> [options]
+mcms <command> [options]
 
 # Commands:
-axe server start        # Start HTTP server
-axe server stop         # Stop server
-axe server restart      # Restart server
-axe db migrate          # Run database migrations
-axe db rollback         # Rollback migration
-axe db backup           # Backup database
-axe db seed <email> <username> <password>  # Seed admin user
-axe plugin list         # List loaded plugins
-axe plugin reload <id>  # Reload plugin
-axe route list          # List all routes
-axe ct list             # List content types
-axe ct create <name>    # Create content type
-axe doctor              # System diagnostics
-axe codegen             # Code generation
+mcms server start        # Start HTTP server
+mcms server stop         # Stop server
+mcms server restart      # Restart server
+mcms db migrate          # Run database migrations
+mcms db rollback         # Rollback migration
+mcms db backup           # Backup database
+mcms db seed <email> <username> <password>  # Seed admin user
+mcms plugin list         # List loaded plugins
+mcms plugin reload <id>  # Reload plugin
+mcms route list          # List all routes
+mcms ct list             # List content types
+mcms ct create <name>    # Create content type
+mcms doctor              # System diagnostics
+mcms codegen             # Code generation
 ```
 
 ---
 
 ## Key Design Decisions
 
-| Decision | Rationale |
-|----------|-----------|
-| **Single binary** | Zero deployment friction, no runtime dependencies |
-| **`unsafe` banned** | `#![deny(unsafe_code)]` — memory safety guaranteed |
-| **No `unwrap()` in prod** | All errors propagated via `?` or explicit handling |
-| **Write lock for SQLite** | Serialize writes via tokio Mutex to eliminate `SQLITE_BUSY` |
-| **Snowflake ID + cipher** | Globally unique, time-sortable, non-sequential (security) |
-| **Handler-only auth** | `ensure_*` calls only in handlers, services do policy only |
-| **Feature flags** | Compile only what you need, minimal binary size |
-| **Embedded admin** | `rust-embed` serves SPA from binary, no separate deployment |
-| **EventBus decoupling** | Services emit events, subscribers handle side effects |
-| **AOP protocols** | Composable behaviors, no code duplication across content types |
-| **Plugin VFS** | Isolated filesystem per plugin with size limits |
-| **moka cache** | High-performance concurrent cache, no external dependency |
+| Decision                  | Rationale                                                      |
+| ------------------------- | -------------------------------------------------------------- |
+| **Single binary**         | Zero deployment friction, no runtime dependencies              |
+| **`unsafe` banned**       | `#![deny(unsafe_code)]` — memory safety guaranteed             |
+| **No `unwrap()` in prod** | All errors propagated via `?` or explicit handling             |
+| **Write lock for SQLite** | Serialize writes via tokio Mutex to eliminate `SQLITE_BUSY`    |
+| **Snowflake ID + cipher** | Globally unique, time-sortable, non-sequential (security)      |
+| **Handler-only auth**     | `ensure_*` calls only in handlers, services do policy only     |
+| **Feature flags**         | Compile only what you need, minimal binary size                |
+| **Embedded admin**        | `rust-embed` serves SPA from binary, no separate deployment    |
+| **EventBus decoupling**   | Services emit events, subscribers handle side effects          |
+| **AOP protocols**         | Composable behaviors, no code duplication across content types |
+| **Plugin VFS**            | Isolated filesystem per plugin with size limits                |
+| **moka cache**            | High-performance concurrent cache, no external dependency      |

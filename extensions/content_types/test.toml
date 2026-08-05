@@ -1,0 +1,12 @@
+[content_type]
+name = "test"
+singular = "test"
+plural = "tests"
+table = "tests"
+implements = [
+    "versionable",
+    "nestable",
+    "sortable",
+]
+
+[fields]

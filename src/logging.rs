@@ -10,7 +10,7 @@
 //! |----------|---------|-------------|
 //! | `LOG_DIR` | `{STORAGE_ROOT_DIR}/logs` | Log file directory |
 //! | `LOG_MAX_FILES` | `7` | Number of log files to retain |
-//! | `RUST_LOG` | `axe=info,tower_http=info` | Log level filter |
+//! | `RUST_LOG` | `mcms=info,tower_http=info` | Log level filter |
 
 use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
@@ -91,7 +91,7 @@ impl Write for DailyRollingWriter {
 /// otherwise file logging will stop prematurely.
 pub fn init(log_dir: &str) -> Option<tracing_appender::non_blocking::WorkerGuard> {
     let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("axe=info,tower_http=info"));
+        .unwrap_or_else(|_| EnvFilter::new("mcms=info,tower_http=info"));
 
     let stdout_layer = tracing_subscriber::fmt::layer()
         .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
@@ -109,7 +109,7 @@ pub fn init(log_dir: &str) -> Option<tracing_appender::non_blocking::WorkerGuard
         return None;
     }
 
-    let writer = DailyRollingWriter::new(log_dir, "axe");
+    let writer = DailyRollingWriter::new(log_dir, "mcms");
     let (non_blocking, guard) = tracing_appender::non_blocking(writer);
 
     let file_layer = tracing_subscriber::fmt::layer()

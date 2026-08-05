@@ -66,12 +66,7 @@ pub async fn setup_status(
     let storage_writable = is_storage_writable(&storage_path);
 
     let ct_path = state.config.content_type_dir.clone();
-    let plugin_path = state
-        .config
-        .plugin_dir
-        .clone()
-        .unwrap_or_else(|| "./extensions/plugins".into());
-    let ext_writable = is_dir_writable(&ct_path) && is_dir_writable(&plugin_path);
+    let ext_writable = is_dir_writable(&ct_path);
 
     let admin_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users WHERE role = 'admin'")
         .fetch_one(&state.pool)
@@ -96,7 +91,6 @@ pub async fn setup_status(
         extensions: crate::dto::ExtensionsStatusInfo {
             writable: ext_writable,
             content_types_path: ct_path,
-            plugins_path: plugin_path,
         },
         has_admin: admin_count > 0,
     }))
@@ -163,7 +157,7 @@ pub async fn setup_database(
 
     tokio::spawn(async {
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-        let exe = std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("axe"));
+        let exe = std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("mcms"));
         let args: Vec<String> = std::env::args().skip(1).collect();
         tracing::info!("spawning new server process and exiting...");
         let _ = std::process::Command::new(&exe).args(&args).spawn();
@@ -433,8 +427,8 @@ mod tests {
     #[test]
     fn mask_db_url_mysql() {
         assert_eq!(
-            mask_db_url("mysql://root:password@localhost/axe"),
-            "mysql://root:***@localhost/axe"
+            mask_db_url("mysql://root:password@localhost/mcms"),
+            "mysql://root:***@localhost/mcms"
         );
     }
 
@@ -529,12 +523,12 @@ mod tests {
             port: Some(3306),
             username: Some("root".into()),
             password: Some("pass123".into()),
-            database: Some("axe".into()),
+            database: Some("mcms".into()),
             url: None,
         };
         assert_eq!(
             req.build_url("mysql").unwrap(),
-            "mysql://root:pass123@localhost:3306/axe"
+            "mysql://root:pass123@localhost:3306/mcms"
         );
     }
 

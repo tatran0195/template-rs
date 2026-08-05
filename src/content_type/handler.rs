@@ -20,7 +20,7 @@ use super::schema::{ContentKind, ContentTypeSchema, FieldType, RelationType, che
 use crate::AppState;
 use crate::constants::*;
 use crate::errors::app_error::AppError;
-use crate::event::Event;
+
 use crate::middleware::auth::AuthUser;
 
 pub fn routes(
@@ -869,17 +869,6 @@ pub async fn do_get(
         }
     }
 
-    state
-        .plugins
-        .dispatch_action(
-            "on_content_viewed",
-            &json!({
-                "content_type": ct.singular,
-                "id": result.get(COL_ID).and_then(|v| v.as_i64().or_else(|| v.as_str().and_then(|s| s.parse().ok()))).unwrap_or(0),
-            }),
-        )
-        .await;
-
     if ct.api.get.cache {
         state
             .cms_cache
@@ -897,16 +886,7 @@ pub async fn do_create(
     data: Value,
     save_ctx: &SaveContext,
 ) -> Result<serde_json::Value, AppError> {
-    let hook_data = json!({
-        "content_type": ct.singular,
-        "data": &data,
-    });
-    let filtered = state
-        .plugins
-        .dispatch_filter(&Event::ContentCreating, hook_data)
-        .await?;
-
-    let mut data = filtered.get("data").cloned().unwrap_or(data);
+    let mut data = data;
 
     {
         let record = data.as_object().cloned().unwrap_or_default();
@@ -928,16 +908,6 @@ pub async fn do_create(
     let result = repo.create(ct, data, save_ctx).await?;
     invalidate_cms_cache(state, ct);
 
-    let id = result
-        .get(COL_ID)
-        .and_then(|v| v.as_i64())
-        .unwrap_or(0)
-        .to_string();
-    let slug = result
-        .get("slug")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-
     {
         let record = result.as_object().cloned().unwrap_or_default();
         let mut after_ctx = crate::aspects::DataAfterCreateContext {
@@ -954,18 +924,6 @@ pub async fn do_create(
             tracing::warn!("aspect after_create dispatch error: {e}");
         }
     }
-
-    state
-        .plugins
-        .dispatch_action(
-            "on_content_created",
-            &json!({
-                "content_type": ct.singular,
-                "id": id,
-                "slug": slug,
-            }),
-        )
-        .await;
 
     Ok(result)
 }
@@ -1004,17 +962,7 @@ pub async fn do_update(
         }
     }
 
-    let hook_data = json!({
-        "content_type": ct.singular,
-        "id": id,
-        "data": &data,
-    });
-    let filtered = state
-        .plugins
-        .dispatch_filter(&Event::ContentUpdating, hook_data)
-        .await?;
-
-    let mut data = filtered.get("data").cloned().unwrap_or(data);
+    let mut data = data;
 
     let old_record = old_record_value
         .and_then(|v| v.as_object().cloned())
@@ -1057,17 +1005,6 @@ pub async fn do_update(
             tracing::warn!("aspect after_update dispatch error: {e}");
         }
     }
-
-    state
-        .plugins
-        .dispatch_action(
-            "on_content_updated",
-            &json!({
-                "content_type": ct.singular,
-                "id": id,
-            }),
-        )
-        .await;
 
     Ok(result)
 }
@@ -1152,17 +1089,6 @@ pub async fn do_delete(
             tracing::warn!("aspect after_delete dispatch error: {e}");
         }
     }
-
-    state
-        .plugins
-        .dispatch_action(
-            "on_content_deleted",
-            &json!({
-                "content_type": ct.singular,
-                "id": id,
-            }),
-        )
-        .await;
 
     Ok(())
 }
@@ -1519,10 +1445,8 @@ pub async fn create_schema(
         cached_rules: None,
     };
 
-    if crate::plugins::permissions::PermissionChecker::is_protected_table(
-        &schema.table,
-        &state.config.builtins.protected_tables(),
-    ) {
+    let protected_tables = state.config.builtins.protected_tables();
+    if protected_tables.iter().any(|p| p == &schema.table) {
         return Err(AppError::BadRequest(format!(
             "table '{}' is a protected system table",
             req.table

@@ -19,7 +19,7 @@ use mcms::DbDriver;
 use mcms::config::app::AppConfig;
 use mcms::handlers::{
     api_token as h_token, auth as h_auth, category as h_cat, comment as h_cmt, cron as h_cron,
-    health as h_health, media as h_media, options as h_options, page as h_page, plugin as h_plugin,
+    health as h_health, media as h_media, options as h_options, page as h_page,
     post as h_post, rbac as h_rbac, reusable_block as h_block, rss as h_rss, sse as h_sse,
     stats as h_stats, tag as h_tag, user as h_user,
 };
@@ -27,7 +27,6 @@ use mcms::middleware::locale::locale_middleware;
 use mcms::middleware::rate_limit::{
     RateLimiterSet, comment_rate_limit, global_rate_limit, login_rate_limit, register_rate_limit,
 };
-use mcms::plugins::PluginManager;
 use mcms::search::NoopSearchEngine;
 use serde_json::{Value, json};
 use std::sync::Arc;
@@ -74,7 +73,6 @@ async fn build_test_app(pool: mcms::db::Pool) -> (axum::Router, AppState) {
         pool: pool.clone(),
         config: config.clone(),
         jwt_decoding_key: jsonwebtoken::DecodingKey::from_secret(config.jwt_secret.as_bytes()),
-        plugins: PluginManager::new(config.clone()).await,
         eventbus: mcms::eventbus::EventBus::new(256),
         post_service: {
             Arc::new(mcms::services::post::PostServiceImpl::new(
@@ -191,14 +189,6 @@ async fn build_test_app(pool: mcms::db::Pool) -> (axum::Router, AppState) {
         .route("/admin/crons/{id}/toggle", http_post(h_cron::toggle))
         .route("/admin/crons/logs", get(h_cron::logs))
         .route("/admin/crons/logs/cleanup", http_post(h_cron::cleanup_logs))
-        .route("/admin/plugins", get(h_plugin::list))
-        .route(
-            "/admin/plugins/{id}",
-            get(h_plugin::get).delete(h_plugin::remove),
-        )
-        .route("/admin/plugins/{id}/enable", http_post(h_plugin::enable))
-        .route("/admin/plugins/{id}/disable", http_post(h_plugin::disable))
-        .route("/admin/plugins/{id}/reload", http_post(h_plugin::reload))
         .route(
             "/admin/rbac/roles",
             get(h_rbac::list_roles).post(h_rbac::create_role),
@@ -512,8 +502,7 @@ mod options;
 #[path = "api/page.rs"]
 mod page;
 
-#[path = "api/plugin.rs"]
-mod plugin;
+
 #[path = "api/post.rs"]
 mod post;
 

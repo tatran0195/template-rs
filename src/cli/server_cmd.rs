@@ -1,6 +1,6 @@
 //! `server` subcommand: start, stop, restart, view status.
 //!
-//! Manages server process lifecycle via PID file (`{STORAGE_ROOT_DIR}/axe.pid`).
+//! Manages server process lifecycle via PID file (`{STORAGE_ROOT_DIR}/mcms.pid`).
 
 use std::path::PathBuf;
 
@@ -9,7 +9,7 @@ use mcms::config::app::AppConfig;
 use mcms::server as srv;
 
 fn pid_file_path(storage_root: &str) -> PathBuf {
-    PathBuf::from(format!("{storage_root}/axe.pid"))
+    PathBuf::from(format!("{storage_root}/mcms.pid"))
 }
 
 fn write_pid(storage_root: &str, pid: u32) -> anyhow::Result<()> {
@@ -95,7 +95,7 @@ pub async fn start(config: &AppConfig) -> anyhow::Result<()> {
         && is_process_running(old_pid)
     {
         anyhow::bail!(
-            "server already running (pid={}). Stop it first: axe server stop",
+            "server already running (pid={}). Stop it first: mcms server stop",
             old_pid
         );
     }

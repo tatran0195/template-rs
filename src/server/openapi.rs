@@ -120,13 +120,6 @@ use crate::dto;
         crate::handlers::content_revision::get_revision,
         crate::handlers::content_revision::restore_revision,
         crate::handlers::content_revision::diff_revisions,
-        crate::handlers::plugin::list,
-        crate::handlers::plugin::get,
-        crate::handlers::plugin::enable,
-        crate::handlers::plugin::disable,
-        crate::handlers::plugin::reload,
-        crate::handlers::plugin::remove,
-        crate::handlers::plugin::admin_batch,
     ),
     components(
         schemas(
@@ -173,7 +166,6 @@ use crate::dto;
 
         (name = "rss", description = "RSS"),
         (name = "revisions", description = "Content Revisions"),
-        (name = "plugins", description = "Plugins"),
     )
 )]
 pub struct ApiDoc;
@@ -226,7 +218,7 @@ pub async fn serve_scalar_ui() -> impl IntoResponse {
     let html = r#"<!DOCTYPE html>
 <html>
 <head>
-    <title>axe API Docs</title>
+    <title>mcms API Docs</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
@@ -254,7 +246,7 @@ pub async fn serve_scalar_ui() -> impl IntoResponse {
 <body>
     <div id="login-bar">
         <span>Quick Login:</span>
-        <input id="email" type="email" placeholder="Email" value="admin@axe.dev" style="width:180px" />
+        <input id="email" type="email" placeholder="Email" value="admin@mcms.dev" style="width:180px" />
         <input id="password" type="password" placeholder="Password" value="admin123" style="width:140px" />
         <button onclick="doLogin()">Login</button>
         <span id="status" class="status"></span>

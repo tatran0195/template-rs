@@ -2,9 +2,9 @@
 
 ## Project
 
-axe — Rust-powered high-performance BaaS and headless CMS. Single binary, zero dependencies, zero GC. Built-in blog, ecommerce, wallet, payment & multi-tenant SaaS. JS / Rhai / Lua / WASM plugin engines for infinite extensibility.
+mcms — Rust-powered high-performance BaaS and headless CMS. Single binary, zero dependencies, zero GC. Built-in blog, ecommerce, wallet, payment & multi-tenant SaaS. JS / Rhai / Lua / WASM plugin engines for infinite extensibility.
 
-- **Crate name:** `axe`
+- **Crate name:** `mcms`
 - **Rust edition:** 2024
 - **Architecture:** Handler → Service → Model three-layer
 - **Plugin engines:** JS (QuickJS) / Rhai / Lua (mlua) / WASM (wasmtime)
@@ -61,25 +61,25 @@ Handler → Service → Model (SQL)
 ## Documentation Map
 
 - **`docs/ARCHITECTURE.md`** — full system design; read it first to avoid re-analyzing the whole tree.
-  Covers layering, DB/CRUD macros, `axe-derive` code generation, the `export-types` TS SDK, auth,
+  Covers layering, DB/CRUD macros, `mcms-derive` code generation, the `export-types` TS SDK, auth,
   plugins, content types, AOP, workers, events, and key invariants.
 - **`README.md`** — user-facing overview / quick start.
-- **`axe-derive/src/lib.rs`** — authoritative reference for every proc-macro's syntax.
+- **`mcms-derive/src/lib.rs`** — authoritative reference for every proc-macro's syntax.
 
 > **API surface:** REST/JSON under `/api/v1/...` + SSE + optional WebSocket. **No GraphQL**
 > (the `async-graphql` endpoint was removed).
 
-## Code Generation (`axe-derive`) & Type Export
+## Code Generation (`mcms-derive`) & Type Export
 
-- `axe-derive/` is the project's own proc-macro crate (required core infra, not optional): `crud_*!`
+- `mcms-derive/` is the project's own proc-macro crate (required core infra, not optional): `crud_*!`
   Where-DSL SQL macros, `#[derive(EventMeta)]`, `#[aspect_service]`, compile-time `check_schema!`.
 - `export-types` (feature flag, off by default) uses `ts-rs` + `export_types!` + `src/export_type.rs` to
-  emit a TypeScript SDK: `cargo run --example export-types --features export-types`. This is a *separate*
-  system from `axe-derive` — do not conflate the two.
+  emit a TypeScript SDK: `cargo run --example export-types --features export-types`. This is a _separate_
+  system from `mcms-derive` — do not conflate the two.
 
 ## CRUD Macro System
 
-All DB operations use the Where DSL macro system (`axe-derive`):
+All DB operations use the Where DSL macro system (`mcms-derive`):
 
 - `crud_insert!`, `crud_update!`, `crud_delete!` — write operations
 - `crud_find!`, `crud_find_one!`, `crud_find_all!` — read operations

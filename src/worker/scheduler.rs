@@ -39,7 +39,7 @@ use ts_rs::TS;
 use crate::db::Pool;
 use crate::db::{DbDriver, Driver};
 use crate::errors::app_error::{AppError, AppResult};
-use crate::plugins::CronEntry;
+
 use crate::types::snowflake_id::SnowflakeId;
 use crate::utils::tz::Timestamp;
 
@@ -57,7 +57,6 @@ macro_rules! cron_row_to_schedule {
             enabled: r.enabled != 0,
             last_run_at: r.last_run_at,
             next_run_at: r.next_run_at,
-            plugin_id: r.plugin_id,
             created_at: r.created_at,
             updated_at: r.updated_at,
         }
@@ -91,7 +90,6 @@ struct CronScheduleRow {
     enabled: i64,
     last_run_at: Option<Timestamp>,
     next_run_at: Timestamp,
-    plugin_id: Option<String>,
     created_at: Timestamp,
     updated_at: Timestamp,
 }
@@ -109,12 +107,6 @@ struct CronExecLogRow {
     finished_at: Option<Timestamp>,
 }
 
-#[derive(sqlx::FromRow)]
-struct PluginCronRow {
-    id: SnowflakeId,
-    job_type: String,
-}
-
 /// Cron schedule row
 #[cfg_attr(feature = "export-types", derive(TS))]
 #[derive(Debug, Clone, serde::Serialize)]
@@ -127,7 +119,6 @@ pub struct CronSchedule {
     pub enabled: bool,
     pub last_run_at: Option<Timestamp>,
     pub next_run_at: Timestamp,
-    pub plugin_id: Option<String>,
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
 }
@@ -150,7 +141,6 @@ pub fn next_run<Tz: chrono::TimeZone>(
         .ok_or_else(|| AppError::BadRequest("cron schedule has no future runs".into()))
 }
 
-/// Create a new Cron schedule
 pub async fn create_schedule(
     pool: &Pool,
     label: &str,
@@ -158,19 +148,6 @@ pub async fn create_schedule(
     payload: Option<&str>,
     cron_expr: &str,
     enabled: bool,
-) -> AppResult<CronSchedule> {
-    create_schedule_with_plugin(pool, label, job_type, payload, cron_expr, enabled, None).await
-}
-
-/// Create a new Cron schedule (with `plugin_id`)
-pub async fn create_schedule_with_plugin(
-    pool: &Pool,
-    label: &str,
-    job_type: &str,
-    payload: Option<&str>,
-    cron_expr: &str,
-    enabled: bool,
-    plugin_id: Option<&str>,
 ) -> AppResult<CronSchedule> {
     let now = crate::utils::tz::now_utc();
     let next = next_run(cron_expr, now)?;
@@ -184,7 +161,6 @@ pub async fn create_schedule_with_plugin(
         "cron_expr" => cron_expr,
         "enabled" => enabled,
         "next_run_at" => next,
-        "plugin_id" => plugin_id,
         "created_at" => now,
         "updated_at" => now
     ])?;
@@ -198,7 +174,6 @@ pub async fn create_schedule_with_plugin(
         enabled,
         last_run_at: None,
         next_run_at: next,
-        plugin_id: plugin_id.map(|s| s.to_string()),
         created_at: now,
         updated_at: now,
     }))
@@ -207,7 +182,7 @@ pub async fn create_schedule_with_plugin(
 /// Find by ID
 pub async fn find_by_id(pool: &Pool, id: SnowflakeId) -> AppResult<Option<CronSchedule>> {
     let row: Option<CronScheduleRow> = sqlx::query_as::<_, CronScheduleRow>(&format!(
-        "SELECT id, label, job_type, payload, cron_expr, enabled, last_run_at, next_run_at, plugin_id, created_at, updated_at
+        "SELECT id, label, job_type, payload, cron_expr, enabled, last_run_at, next_run_at, created_at, updated_at
          FROM cron_schedules WHERE id = {}",
         Driver::ph(1)
     ))
@@ -221,7 +196,7 @@ pub async fn find_by_id(pool: &Pool, id: SnowflakeId) -> AppResult<Option<CronSc
 /// List all schedules
 pub async fn list_schedules(pool: &Pool) -> AppResult<Vec<CronSchedule>> {
     let rows: Vec<CronScheduleRow> = sqlx::query_as::<_, CronScheduleRow>(
-        "SELECT id, label, job_type, payload, cron_expr, enabled, last_run_at, next_run_at, plugin_id, created_at, updated_at
+        "SELECT id, label, job_type, payload, cron_expr, enabled, last_run_at, next_run_at, created_at, updated_at
          FROM cron_schedules ORDER BY created_at ASC",
     )
     .fetch_all(pool)
@@ -349,7 +324,7 @@ impl CronScheduler {
         let now = crate::utils::tz::now_utc();
 
         let rows = sqlx::query_as::<_, CronScheduleRow>(&format!(
-            "SELECT id, label, job_type, payload, cron_expr, enabled, last_run_at, next_run_at, plugin_id, created_at, updated_at
+            "SELECT id, label, job_type, payload, cron_expr, enabled, last_run_at, next_run_at, created_at, updated_at
              FROM cron_schedules WHERE enabled = 1 AND next_run_at <= {}",
             Driver::ph(1)
         ))
@@ -622,98 +597,6 @@ pub async fn cleanup_execution_logs(pool: &Pool, retention_days: i64) -> AppResu
     Ok(count)
 }
 
-/// Sync plugin Cron schedules to the database
-///
-/// Called when plugins are loaded/reloaded. Writes `plugin.cron` declarations into `cron_schedules`,
-/// and removes stale schedule entries that the plugin no longer declares.
-/// All operations are performed in a single transaction for atomicity.
-///
-/// Uses the `plugin_id` column for association; does not affect built-in or other plugins' schedules.
-pub async fn sync_plugin_crons(
-    pool: &Pool,
-    plugin_id: &str,
-    entries: &[CronEntry],
-) -> AppResult<()> {
-    in_transaction!(pool, tx, {
-        let old = sqlx::query_as::<_, PluginCronRow>(&format!(
-            "SELECT id, job_type FROM cron_schedules WHERE plugin_id = {}",
-            Driver::ph(1)
-        ))
-        .bind(plugin_id)
-        .fetch_all(&mut *tx)
-        .await?;
-
-        let new_types: Vec<&str> = entries.iter().map(|e| e.job_type.as_str()).collect();
-
-        for row in &old {
-            if !new_types.contains(&row.job_type.as_str()) {
-                mcms_derive::crud_delete!(&mut *tx, "cron_schedules", where: ("id", row.id))?;
-                tracing::info!(
-                    "removed stale cron '{}' for plugin {plugin_id}",
-                    row.job_type
-                );
-            }
-        }
-
-        for entry in entries {
-            let existing: Option<(i64,)> = sqlx::query_as(&format!(
-                "SELECT id FROM cron_schedules WHERE plugin_id = {} AND job_type = {}",
-                Driver::ph(1),
-                Driver::ph(2)
-            ))
-            .bind(plugin_id)
-            .bind(&entry.job_type)
-            .fetch_optional(&mut *tx)
-            .await?;
-
-            if let Some(existing_row) = existing {
-                let now = crate::utils::tz::now_utc();
-                let next = next_run(&entry.cron_expr, crate::utils::tz::now_utc())?;
-                mcms_derive::crud_update!(&mut *tx, "cron_schedules",
-                    bind: ["label" => &entry.label, "payload" => &entry.payload, "cron_expr" => &entry.cron_expr, "enabled" => entry.enabled, "next_run_at" => next, "updated_at" => now],
-                    where: ("id", existing_row.0)
-                )?;
-
-                tracing::debug!("updated cron '{}' for plugin {plugin_id}", entry.job_type);
-            } else {
-                let id = crate::utils::id::new_id();
-                let now = crate::utils::tz::now_utc();
-                let next = next_run(&entry.cron_expr, crate::utils::tz::now_utc())?;
-                mcms_derive::crud_insert!(&mut *tx, "cron_schedules", [
-                    "id" => id,
-                    "label" => &entry.label,
-                    "job_type" => &entry.job_type,
-                    "payload" => &entry.payload,
-                    "cron_expr" => &entry.cron_expr,
-                    "enabled" => entry.enabled,
-                    "next_run_at" => next,
-                    "plugin_id" => plugin_id,
-                    "created_at" => now,
-                    "updated_at" => now
-                ])?;
-
-                tracing::info!("created cron '{}' for plugin {plugin_id}", entry.job_type);
-            }
-        }
-
-        Ok::<_, crate::errors::app_error::AppError>(())
-    })
-}
-
-/// Remove all Cron schedules associated with a plugin
-///
-/// Called when a plugin is unloaded.
-pub async fn remove_plugin_crons(pool: &Pool, plugin_id: &str) -> AppResult<()> {
-    let result: crate::db::DbQueryResult =
-        mcms_derive::crud_delete!(pool, "cron_schedules", where: ("plugin_id", plugin_id))?;
-
-    let count = result.rows_affected();
-    if count > 0 {
-        tracing::info!("removed {count} cron schedule(s) for plugin {plugin_id}");
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -857,8 +740,8 @@ mod tests {
         let past = (now - chrono::Duration::hours(1)).to_rfc3339();
 
         sqlx::query(
-            "INSERT INTO cron_schedules (id, label, job_type, payload, cron_expr, enabled, next_run_at, plugin_id, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, 1, ?, NULL, ?, ?)",
+            "INSERT INTO cron_schedules (id, label, job_type, payload, cron_expr, enabled, next_run_at, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)",
         )
         .bind(1i64)
         .bind("Test Sitemap")
@@ -928,170 +811,6 @@ mod tests {
         assert_eq!(count.0, 0);
     }
 
-    #[tokio::test]
-    async fn sync_plugin_crons_creates_entries() {
-        let pool = Pool::connect("sqlite::memory:").await.unwrap();
-        sqlx::query(crate::db::schema::SCHEMA_SQL)
-            .execute(&pool)
-            .await
-            .unwrap();
-
-        let entries = vec![CronEntry {
-            label: "Cleanup".into(),
-            job_type: "cleanup_sessions".into(),
-            payload: Some(r#"{"max_age": 24}"#.into()),
-            cron_expr: "0 0 */6 * * *".into(),
-            enabled: true,
-        }];
-
-        sync_plugin_crons(&pool, "com.example.cleanup", &entries)
-            .await
-            .unwrap();
-
-        let list = list_schedules(&pool).await.unwrap();
-        assert_eq!(list.len(), 1);
-        assert_eq!(list[0].job_type, "cleanup_sessions");
-        assert_eq!(list[0].plugin_id, Some("com.example.cleanup".into()));
-        assert!(list[0].enabled);
-    }
-
-    #[tokio::test]
-    async fn sync_plugin_crons_updates_existing() {
-        let pool = Pool::connect("sqlite::memory:").await.unwrap();
-        sqlx::query(crate::db::schema::SCHEMA_SQL)
-            .execute(&pool)
-            .await
-            .unwrap();
-
-        let entries = vec![CronEntry {
-            label: "V1".into(),
-            job_type: "my_task".into(),
-            payload: None,
-            cron_expr: "0 0 * * * *".into(),
-            enabled: true,
-        }];
-        sync_plugin_crons(&pool, "com.test", &entries)
-            .await
-            .unwrap();
-
-        let updated = vec![CronEntry {
-            label: "V2".into(),
-            job_type: "my_task".into(),
-            payload: None,
-            cron_expr: "0 0 */2 * * *".into(),
-            enabled: false,
-        }];
-        sync_plugin_crons(&pool, "com.test", &updated)
-            .await
-            .unwrap();
-
-        let list = list_schedules(&pool).await.unwrap();
-        assert_eq!(list.len(), 1);
-        assert_eq!(list[0].label, "V2");
-        assert!(!list[0].enabled);
-    }
-
-    #[tokio::test]
-    async fn sync_plugin_crons_removes_stale_entries() {
-        let pool = Pool::connect("sqlite::memory:").await.unwrap();
-        sqlx::query(crate::db::schema::SCHEMA_SQL)
-            .execute(&pool)
-            .await
-            .unwrap();
-
-        let v1 = vec![
-            CronEntry {
-                label: "A".into(),
-                job_type: "task_a".into(),
-                payload: None,
-                cron_expr: "0 0 * * * *".into(),
-                enabled: true,
-            },
-            CronEntry {
-                label: "B".into(),
-                job_type: "task_b".into(),
-                payload: None,
-                cron_expr: "0 0 * * * *".into(),
-                enabled: true,
-            },
-        ];
-        sync_plugin_crons(&pool, "com.test", &v1).await.unwrap();
-        assert_eq!(list_schedules(&pool).await.unwrap().len(), 2);
-
-        let v2 = vec![CronEntry {
-            label: "A".into(),
-            job_type: "task_a".into(),
-            payload: None,
-            cron_expr: "0 0 * * * *".into(),
-            enabled: true,
-        }];
-        sync_plugin_crons(&pool, "com.test", &v2).await.unwrap();
-
-        let list = list_schedules(&pool).await.unwrap();
-        assert_eq!(list.len(), 1);
-        assert_eq!(list[0].job_type, "task_a");
-    }
-
-    #[tokio::test]
-    async fn remove_plugin_crons_deletes_all() {
-        let pool = Pool::connect("sqlite::memory:").await.unwrap();
-        sqlx::query(crate::db::schema::SCHEMA_SQL)
-            .execute(&pool)
-            .await
-            .unwrap();
-
-        let entries = vec![CronEntry {
-            label: "X".into(),
-            job_type: "task_x".into(),
-            payload: None,
-            cron_expr: "0 0 * * * *".into(),
-            enabled: true,
-        }];
-        sync_plugin_crons(&pool, "com.test", &entries)
-            .await
-            .unwrap();
-        assert_eq!(list_schedules(&pool).await.unwrap().len(), 1);
-
-        remove_plugin_crons(&pool, "com.test").await.unwrap();
-        assert!(list_schedules(&pool).await.unwrap().is_empty());
-    }
-
-    #[tokio::test]
-    async fn remove_plugin_crons_does_not_affect_others() {
-        let pool = Pool::connect("sqlite::memory:").await.unwrap();
-        sqlx::query(crate::db::schema::SCHEMA_SQL)
-            .execute(&pool)
-            .await
-            .unwrap();
-
-        let entries = vec![CronEntry {
-            label: "X".into(),
-            job_type: "task_x".into(),
-            payload: None,
-            cron_expr: "0 0 * * * *".into(),
-            enabled: true,
-        }];
-        sync_plugin_crons(&pool, "com.test", &entries)
-            .await
-            .unwrap();
-
-        create_schedule(
-            &pool,
-            "Built-in",
-            "generate_sitemap",
-            None,
-            "0 0 * * * *",
-            true,
-        )
-        .await
-        .unwrap();
-
-        remove_plugin_crons(&pool, "com.test").await.unwrap();
-        let list = list_schedules(&pool).await.unwrap();
-        assert_eq!(list.len(), 1);
-        assert!(list[0].plugin_id.is_none());
-    }
-
     async fn setup_log_tables() -> Pool {
         let pool = Pool::connect("sqlite::memory:").await.unwrap();
         sqlx::query(crate::db::schema::SCHEMA_SQL)
@@ -1105,8 +824,8 @@ mod tests {
         let id = crate::utils::id::new_id();
         let now = Utc::now();
         sqlx::query(
-            "INSERT INTO cron_schedules (id, label, job_type, payload, cron_expr, enabled, next_run_at, plugin_id, created_at, updated_at)
-             VALUES (?, 'Test', 'test_task', NULL, '0 */5 * * * *', 1, ?, NULL, ?, ?)",
+            "INSERT INTO cron_schedules (id, label, job_type, payload, cron_expr, enabled, next_run_at, created_at, updated_at)
+             VALUES (?, 'Test', 'test_task', NULL, '0 */5 * * * *', 1, ?, ?, ?)",
         )
         .bind(id)
         .bind(now.to_rfc3339())

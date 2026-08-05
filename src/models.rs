@@ -31,7 +31,7 @@ pub mod options;
 pub mod page;
 pub mod password_reset;
 
-pub mod plugin_storage;
+
 pub mod post;
 
 pub mod rbac;

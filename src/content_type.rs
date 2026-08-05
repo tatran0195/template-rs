@@ -163,10 +163,7 @@ impl ContentTypeRegistry {
             guard.protected_tables.clone()
         };
 
-        if crate::plugins::permissions::PermissionChecker::is_protected_table(
-            &schema.table,
-            &protected,
-        ) {
+        if protected.iter().any(|p| p == &schema.table) {
             conflicts.push(format!(
                 "table '{}' is a protected system table",
                 schema.table

@@ -5,7 +5,7 @@ REMOTE="github"
 BRANCH="master"
 REMOTE_BRANCH="main"
 
-CI_FEATURES="db-sqlite plugin-all search-tantivy"
+CI_FEATURES="db-sqlite search-tantivy"
 
 usage() {
   echo "Usage: $0 <command> [options]"

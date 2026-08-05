@@ -73,21 +73,6 @@ CREATE TABLE IF NOT EXISTS oauth_states (
 
 CREATE INDEX IF NOT EXISTS idx_oauth_states_expires ON oauth_states(expires_at);
 
--- Currency configuration
-CREATE TABLE IF NOT EXISTS currencies (
-    id BIGINT PRIMARY KEY,
-    code VARCHAR(10) NOT NULL UNIQUE CHECK(code = UPPER(code) AND LENGTH(code) BETWEEN 1 AND 10),
-    name TEXT NOT NULL,
-    decimals INTEGER NOT NULL DEFAULT 0 CHECK(decimals BETWEEN 0 AND 18),
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    version INTEGER NOT NULL DEFAULT 1,
-    created_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW()
-);
-
-
-
-
 -- Refresh Tokens
 CREATE TABLE IF NOT EXISTS refresh_tokens (
     id BIGINT PRIMARY KEY,
@@ -189,17 +174,7 @@ CREATE TABLE IF NOT EXISTS webhook_subscriptions (
 CREATE INDEX IF NOT EXISTS idx_webhook_subscriptions_enabled ON webhook_subscriptions(enabled);
 CREATE INDEX IF NOT EXISTS idx_webhook_subscriptions_tenant ON webhook_subscriptions(tenant_id);
 
--- Plugin KV storage
-CREATE TABLE IF NOT EXISTS plugin_storage (
-    plugin_id VARCHAR(100) NOT NULL,
-    storage_key VARCHAR(255) NOT NULL,
-    value TEXT NOT NULL,
-    expires_at TIMESTAMPTZ,
-    updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (plugin_id, storage_key)
-);
 
-CREATE INDEX IF NOT EXISTS idx_plugin_storage_plugin ON plugin_storage(plugin_id);
 
 -- Content revision history
 CREATE TABLE IF NOT EXISTS content_revisions (
@@ -286,14 +261,13 @@ CREATE TABLE IF NOT EXISTS cron_schedules (
     enabled      BOOLEAN NOT NULL DEFAULT TRUE,
     last_run_at  TIMESTAMPTZ,
     next_run_at  TIMESTAMPTZ NOT NULL,
-    plugin_id    VARCHAR(100),
     created_at   TIMESTAMPTZ(0) NOT NULL DEFAULT NOW(),
     updated_at   TIMESTAMPTZ(0) NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_cron_enabled ON cron_schedules(enabled);
 CREATE INDEX IF NOT EXISTS idx_cron_next_run ON cron_schedules(next_run_at) WHERE enabled = TRUE;
-CREATE INDEX IF NOT EXISTS idx_cron_plugin ON cron_schedules(plugin_id);
+
 
 -- Cron execution log
 CREATE TABLE IF NOT EXISTS cron_execution_log (
@@ -549,20 +523,9 @@ CREATE TABLE IF NOT EXISTS workflow_step_logs (
 
 CREATE INDEX IF NOT EXISTS idx_wf_step_logs_instance ON workflow_step_logs(instance_id);
 
-
-
 -- ============================================================
 -- Seed data
 -- ============================================================
-
--- Default currencies
-INSERT INTO currencies (id, code, name, decimals) VALUES
-    (10001, 'CNY', 'Chinese Yuan', 2),
-    (10002, 'USD', 'US Dollar', 2),
-    (10003, 'EUR', 'Euro', 2),
-    (10004, 'GBP', 'British Pound', 2),
-    (10005, 'JPY', 'Japanese Yen', 0)
-ON CONFLICT DO NOTHING;
 
 -- System roles
 INSERT INTO roles (id, name, description, is_system, created_at, updated_at) VALUES

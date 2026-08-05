@@ -16,9 +16,6 @@ license = ""
 default = [
     "db-sqlite",
     "search-tantivy",
-    "plugin-js",
-    "plugin-lua",
-    "plugin-rhai",
     "openapi",
     "proxy",
 ]
@@ -27,13 +24,6 @@ default = [
 db-sqlite = ["sqlx/sqlite"]
 db-postgres = ["sqlx/postgres"]
 db-mysql = ["sqlx/mysql"]
-
-# ── Plugin runtimes ────────────────────────────────────────────────
-plugin-wasm = ["wasmtime", "wasmtime-wasi"]
-plugin-js = ["rquickjs"]
-plugin-lua = ["mlua"]
-plugin-rhai = ["rhai"]
-plugin-all = ["plugin-wasm", "plugin-js", "plugin-lua", "plugin-rhai"]
 
 # ── Search engine ────────────────────────────────────────────────────
 search-tantivy = ["tantivy"]
@@ -160,27 +150,6 @@ rust-i18n = "3.1.5"
 clap = { version = "4.6.0", features = ["derive"] }
 nix = { version = "0.31.2", features = ["signal"] }
 
-# Plugin system
-wasmtime = { version = "26", optional = true }
-wasmtime-wasi = { version = "26", optional = true }
-rquickjs = { version = "0.11", features = [
-    "futures",
-    "parallel",
-    "loader",
-    "macro",
-], optional = true }
-mlua = { version = "0.11", features = [
-    "lua54",
-    "vendored",
-    "send",
-    "serde",
-    "macros",
-], optional = true }
-rhai = { version = "1.24", features = [
-    "serde",
-    "sync",
-    "internals",
-], optional = true }
 reqwest = { version = "0.12", features = [
     "json",
     "rustls-tls",

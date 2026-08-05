@@ -29,16 +29,12 @@ use serde::{Deserialize, Serialize};
 /// | `CORS_ORIGINS` | String | (empty=all allowed) | CORS allowed origins, comma-separated |
 /// | `TLS_CERT_PATH` | String | (empty=HTTP) | TLS certificate file path (PEM format) |
 /// | `TLS_KEY_PATH` | String | (empty=HTTP) | TLS private key file path (PEM format) |
-/// | `PLUGIN_WASM_POOL_SIZE` | u32 | `4` | WASM instance pool size |
-/// | `PLUGIN_LUA_POOL_SIZE` | u32 | `4` | Lua instance pool size |
-/// | `PLUGIN_JS_POOL_SIZE` | u32 | `4` | JS instance pool size |
 /// | `APP_TIMEZONE` | String | `UTC` | Site timezone (IANA format, e.g., `Asia/Shanghai`) |
 /// | `WEBSOCKET_ENABLED` | bool | `false` | Whether to enable WebSocket real-time push |
 /// | `STORAGE_ROOT_DIR` | String | `./storage` | Local file storage root directory (parent of uploads/logs/search_index/vfs/db) |
 /// | `UPLOAD_DIR` | String | `{STORAGE_ROOT_DIR}/uploads` | Media upload directory |
 /// | `LOG_DIR` | String | `{STORAGE_ROOT_DIR}/logs` | Log file directory |
 /// | `SEARCH_INDEX_DIR` | String | `{STORAGE_ROOT_DIR}/search_index` | Search index directory |
-/// | `PLUGIN_VFS_ROOT` | String | `{STORAGE_ROOT_DIR}/vfs` | Plugin virtual filesystem directory |
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     pub host: String,
@@ -63,28 +59,6 @@ pub struct AppConfig {
     pub cors_origins: Option<String>,
     pub tls_cert_path: Option<String>,
     pub tls_key_path: Option<String>,
-    #[serde(default = "default_plugin_dir")]
-    pub plugin_dir: Option<String>,
-    #[serde(default)]
-    pub plugin_hot_reload: bool,
-    #[serde(default = "default_plugin_max_memory")]
-    pub plugin_max_memory_mb: u32,
-    #[serde(default = "default_plugin_timeout")]
-    pub plugin_default_timeout_ms: u64,
-    #[serde(default = "default_plugin_wasm_pool_size")]
-    pub plugin_wasm_pool_size: u32,
-    #[serde(default = "default_plugin_lua_pool_size")]
-    pub plugin_lua_pool_size: u32,
-    #[serde(default = "default_plugin_js_pool_size")]
-    pub plugin_js_pool_size: u32,
-    #[serde(default)]
-    pub plugin_disabled: Vec<String>,
-    #[serde(default = "default_plugin_vfs_root")]
-    pub plugin_vfs_root: String,
-    #[serde(default = "default_plugin_vfs_max_file_size")]
-    pub plugin_vfs_max_file_size: usize,
-    #[serde(default = "default_plugin_vfs_max_total_size")]
-    pub plugin_vfs_max_total_size: usize,
     #[serde(default = "default_log_dir")]
     pub log_dir: String,
     #[serde(default = "default_log_max_files")]
@@ -282,7 +256,6 @@ impl BuiltinsConfig {
             "orders",
             "pages",
             "password",
-            "plugins",
             "reusable-blocks",
             "routes",
             "rss",
@@ -449,10 +422,6 @@ fn default_content_type_dir() -> String {
     "./extensions/content_types".into()
 }
 
-fn default_plugin_dir() -> Option<String> {
-    Some("./extensions/plugins".into())
-}
-
 fn default_timezone() -> String {
     "UTC".into()
 }
@@ -552,30 +521,6 @@ fn default_worker_max_attempts() -> u32 {
     3
 }
 
-fn default_plugin_max_memory() -> u32 {
-    32
-}
-
-fn default_plugin_timeout() -> u64 {
-    5000
-}
-
-fn default_plugin_wasm_pool_size() -> u32 {
-    4
-}
-
-fn default_plugin_lua_pool_size() -> u32 {
-    4
-}
-
-fn default_plugin_js_pool_size() -> u32 {
-    4
-}
-
-fn default_plugin_vfs_root() -> String {
-    storage_subdir(&default_storage_root_dir(), "vfs")
-}
-
 fn default_storage_driver() -> String {
     "local".into()
 }
@@ -586,14 +531,6 @@ fn default_s3_bucket() -> String {
 
 fn default_s3_region() -> String {
     "us-east-1".into()
-}
-
-fn default_plugin_vfs_max_file_size() -> usize {
-    1048576 // 1 MB
-}
-
-fn default_plugin_vfs_max_total_size() -> usize {
-    10485760 // 10 MB
 }
 
 fn default_sms_code_expires_in() -> u64 {
@@ -644,11 +581,11 @@ impl AppConfig {
             }
             #[cfg(feature = "db-postgres")]
             {
-                "postgres://localhost/axe".into()
+                "postgres://localhost/mcms".into()
             }
             #[cfg(feature = "db-mysql")]
             {
-                "mysql://root@localhost/axe".into()
+                "mysql://root@localhost/mcms".into()
             }
         });
 
@@ -703,35 +640,6 @@ impl AppConfig {
             cors_origins,
             tls_cert_path,
             tls_key_path,
-            plugin_dir: env::var("PLUGIN_DIR").ok().filter(|s| !s.is_empty()),
-            plugin_hot_reload: env::var("PLUGIN_HOT_RELOAD")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(false),
-            plugin_max_memory_mb: env::var("PLUGIN_MAX_MEMORY_MB")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(default_plugin_max_memory()),
-            plugin_default_timeout_ms: env::var("PLUGIN_DEFAULT_TIMEOUT_MS")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(default_plugin_timeout()),
-            plugin_wasm_pool_size: env::var("PLUGIN_WASM_POOL_SIZE")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(default_plugin_wasm_pool_size()),
-            plugin_lua_pool_size: env::var("PLUGIN_LUA_POOL_SIZE")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(default_plugin_lua_pool_size()),
-            plugin_js_pool_size: env::var("PLUGIN_JS_POOL_SIZE")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(default_plugin_js_pool_size()),
-            plugin_disabled: env::var("PLUGIN_DISABLED")
-                .ok()
-                .map(|s| s.split(',').map(|x| x.trim().to_string()).collect())
-                .unwrap_or_default(),
             log_dir: env::var("LOG_DIR")
                 .unwrap_or_else(|_| storage_subdir(&storage_root_dir, "logs")),
             log_max_files: env::var("LOG_MAX_FILES")
@@ -782,16 +690,6 @@ impl AppConfig {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(default_rate_limit_api_token_window()),
-            plugin_vfs_root: env::var("PLUGIN_VFS_ROOT")
-                .unwrap_or_else(|_| storage_subdir(&storage_root_dir, "vfs")),
-            plugin_vfs_max_file_size: env::var("PLUGIN_VFS_MAX_FILE_SIZE")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(default_plugin_vfs_max_file_size()),
-            plugin_vfs_max_total_size: env::var("PLUGIN_VFS_MAX_TOTAL_SIZE")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(default_plugin_vfs_max_total_size()),
             worker_enabled: env::var("WORKER_ENABLED")
                 .ok()
                 .and_then(|v| v.parse().ok())
@@ -938,17 +836,6 @@ impl AppConfig {
             cors_origins: None,
             tls_cert_path: None,
             tls_key_path: None,
-            plugin_dir: None,
-            plugin_hot_reload: false,
-            plugin_max_memory_mb: default_plugin_max_memory(),
-            plugin_default_timeout_ms: default_plugin_timeout(),
-            plugin_wasm_pool_size: default_plugin_wasm_pool_size(),
-            plugin_lua_pool_size: default_plugin_lua_pool_size(),
-            plugin_js_pool_size: default_plugin_js_pool_size(),
-            plugin_disabled: vec![],
-            plugin_vfs_root: "./test-storage/vfs".into(),
-            plugin_vfs_max_file_size: default_plugin_vfs_max_file_size(),
-            plugin_vfs_max_total_size: default_plugin_vfs_max_total_size(),
             log_dir: "./test-storage/logs".into(),
             log_max_files: 1,
             rate_limit_enabled: default_rate_limit_enabled(),

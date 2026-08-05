@@ -1,4 +1,4 @@
-# axe common commands
+# mcms common commands
 #
 # Usage: just <recipe>
 # Help:  just --list
@@ -6,16 +6,15 @@
 set dotenv-load
 
 db := "sqlite"
-db_url := "sqlite:./storage/db/axe.db?mode=rwc"
+db_url := "sqlite:./storage/db/mcms.db?mode=rwc"
 # db        := "mysql"
-# db_url    := "mysql://root:root@localhost:3306/axe"
-plugin_type := "all"
+# db_url    := "mysql://root:root@localhost:3306/mcms"
 
 # ── Default ───────────────────────────────────────────────────────
 
 default:
     @just --list
-features := "db-" + db + " plugin-js plugin-rhai search-tantivy"
+features := "db-" + db + " search-tantivy"
 
 # ── Build ─────────────────────────────────────────────────────────
 
@@ -71,10 +70,10 @@ test-integration:
 # Create SQLite database and run migrations
 db-init:
     mkdir -p storage/db
-    sqlite3 ./storage/db/axe.db < migrations/sqlite/schema.sqlite.sql
+    sqlite3 ./storage/db/mcms.db < migrations/sqlite/schema.sqlite.sql
 # Recreate database (dangerous: deletes existing data)
 db-reset:
-    rm -f storage/db/axe.db
+    rm -f storage/db/mcms.db
     just db-init
 # Run CLI migrations
 db-migrate:
@@ -109,7 +108,7 @@ ci: fmt-check lint test
 # ── Deploy ────────────────────────────────────────────────────────
 
 fly_target := "x86_64-unknown-linux-musl"
-fly_image := "axe-fly"
+fly_image := "mcms-fly"
 
 # Install cross (Rust cross-compilation tool)
 install-cross:

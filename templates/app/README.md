@@ -6,9 +6,9 @@
 
 ```bash
 cp .env.example .env
-axe db migrate
-axe db seed
-axe server start
+mcms db migrate
+mcms db seed
+mcms server start
 ```
 
 ## API Endpoints
