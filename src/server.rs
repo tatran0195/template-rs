@@ -710,7 +710,6 @@ async fn spawn_workers(
         search,
         cache,
         crate::notifier::build_email_sender(config),
-        crate::notifier::build_sms_sender(config),
     );
 
     let cron = CronScheduler::new(

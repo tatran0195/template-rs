@@ -19,9 +19,9 @@ use mcms::DbDriver;
 use mcms::config::app::AppConfig;
 use mcms::handlers::{
     api_token as h_token, auth as h_auth, category as h_cat, comment as h_cmt, cron as h_cron,
-    health as h_health, media as h_media, options as h_options, page as h_page,
-    post as h_post, rbac as h_rbac, reusable_block as h_block, rss as h_rss, sse as h_sse,
-    stats as h_stats, tag as h_tag, user as h_user,
+    health as h_health, media as h_media, options as h_options, page as h_page, post as h_post,
+    rbac as h_rbac, reusable_block as h_block, rss as h_rss, sse as h_sse, stats as h_stats,
+    tag as h_tag, user as h_user,
 };
 use mcms::middleware::locale::locale_middleware;
 use mcms::middleware::rate_limit::{
@@ -132,7 +132,6 @@ async fn build_test_app(pool: mcms::db::Pool) -> (axum::Router, AppState) {
         cms_cache: Arc::new(dashmap::DashMap::new()),
         oauth_registry: Arc::new(mcms::oauth::OAuthProviderRegistry::default()),
         email_sender: mcms::notifier::build_email_sender(&config),
-        sms_sender: mcms::notifier::build_sms_sender(&config),
         route_registry: Arc::new(Vec::new()),
         services: mcms::app::ServiceRegistry::new(),
     };
@@ -501,7 +500,6 @@ mod options;
 
 #[path = "api/page.rs"]
 mod page;
-
 
 #[path = "api/post.rs"]
 mod post;

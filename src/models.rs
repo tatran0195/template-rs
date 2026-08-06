@@ -31,14 +31,12 @@ pub mod options;
 pub mod page;
 pub mod password_reset;
 
-
 pub mod post;
 
 pub mod rbac;
 pub mod refresh_token;
 pub mod reusable_block;
 
-pub mod sms_code;
 pub mod tag;
 pub mod tagging;
 pub mod user;

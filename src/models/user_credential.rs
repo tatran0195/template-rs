@@ -13,7 +13,6 @@ use crate::utils::tz::Timestamp;
 define_enum!(
     AuthType {
         Email = "email",
-        Phone = "phone",
         Oauth = "oauth",
     }
 );
@@ -93,7 +92,8 @@ pub async fn create(
         "created_at" => now,
         "updated_at" => now
     ])?;
-    let cred = mcms_derive::crud_find_one!(pool, "user_credentials", UserCredential, where: ("id", id))?;
+    let cred =
+        mcms_derive::crud_find_one!(pool, "user_credentials", UserCredential, where: ("id", id))?;
     Ok(cred)
 }
 

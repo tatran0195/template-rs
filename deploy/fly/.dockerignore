@@ -1,8 +1,0 @@
-target/
-.git/
-storage/
-frontend/
-node_modules/
-*.db
-*.db-shm
-*.db-wal

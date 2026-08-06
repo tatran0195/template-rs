@@ -36,8 +36,6 @@ pub struct OAuthConfig {
     pub github: Option<GitHubOAuthConfig>,
     /// Google configuration
     pub google: Option<GoogleOAuthConfig>,
-    /// WeChat configuration
-    pub wechat: Option<WechatOAuthConfig>,
 }
 
 impl OAuthConfig {
@@ -79,26 +77,11 @@ impl OAuthConfig {
             }
         };
 
-        let wechat = {
-            let app_id = std::env::var("OAUTH_WECHAT_APP_ID").ok();
-            let app_secret = std::env::var("OAUTH_WECHAT_APP_SECRET").ok();
-            match (app_id, app_secret) {
-                (Some(id), Some(secret)) if !id.is_empty() && !secret.is_empty() => {
-                    Some(WechatOAuthConfig {
-                        app_id: id,
-                        app_secret: secret,
-                    })
-                }
-                _ => None,
-            }
-        };
-
         Self {
             enabled,
             redirect_url,
             github,
             google,
-            wechat,
         }
     }
 
@@ -107,7 +90,6 @@ impl OAuthConfig {
         match provider {
             "github" => self.github.is_some(),
             "google" => self.google.is_some(),
-            "wechat" => self.wechat.is_some(),
             _ => false,
         }
     }
@@ -120,9 +102,6 @@ impl OAuthConfig {
         }
         if self.google.is_some() {
             providers.push("google");
-        }
-        if self.wechat.is_some() {
-            providers.push("wechat");
         }
         providers
     }

@@ -85,11 +85,6 @@ pub enum Job {
         email: String,
         reset_token: String,
     },
-    SendSmsCode {
-        phone: String,
-        code: String,
-        purpose: String,
-    },
     SendEmailVerification {
         user_id: SnowflakeId,
         email: String,
@@ -116,7 +111,6 @@ impl Job {
             Job::InvalidateCache { .. } => "invalidate_cache",
             Job::GenerateSitemap => "generate_sitemap",
             Job::SendPasswordResetEmail { .. } => "send_password_reset_email",
-            Job::SendSmsCode { .. } => "send_sms_code",
             Job::SendEmailVerification { .. } => "send_email_verification",
 
             Job::Custom { job_type, .. } => job_type,

@@ -92,11 +92,10 @@ pub async fn redirect_to_provider(
 
     if !state.config.oauth.is_provider_configured(&provider) {
         tracing::warn!(
-            "OAuth provider '{}' not configured, github={}, google={}, wechat={}",
+            "OAuth provider '{}' not configured, github={}, google={}",
             provider,
             state.config.oauth.github.is_some(),
             state.config.oauth.google.is_some(),
-            state.config.oauth.wechat.is_some(),
         );
         return Err(AppError::BadRequest(format!(
             "OAuth provider '{provider}' is not configured"

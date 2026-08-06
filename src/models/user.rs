@@ -34,7 +34,6 @@ define_enum!(
 define_enum!(
     RegisteredVia {
         Email = "email",
-        Phone = "phone",
         Oauth = "oauth",
     }
 );
@@ -49,25 +48,12 @@ pub struct User {
     pub status: UserStatus,
     pub registered_via: RegisteredVia,
     pub avatar: Option<String>,
-    pub bio: Option<String>,
-    pub website: Option<String>,
     pub display_name: Option<String>,
     pub slug: Option<String>,
     pub locale: Option<String>,
-    pub social_links: Option<String>,
     pub metadata: Option<String>,
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
-}
-
-pub fn parse_social_links(raw: &Option<String>) -> Option<SocialLinks> {
-    raw.as_ref().and_then(|s| serde_json::from_str(s).ok())
-}
-
-pub fn encode_social_links(links: &Option<SocialLinks>) -> Option<String> {
-    links
-        .as_ref()
-        .map(|m| serde_json::to_string(m).unwrap_or_default())
 }
 
 pub fn parse_metadata(raw: &Option<String>) -> Option<UserMetadata> {
@@ -128,26 +114,11 @@ pub async fn update_profile(
         .await?
         .ok_or_else(|| AppError::not_found("user"))?;
     let username = cmd.username.as_deref().unwrap_or(&user.username);
-    let bio = cmd
-        .bio
-        .as_deref()
-        .map(std::string::ToString::to_string)
-        .or(user.bio);
-    let website = cmd
-        .website
-        .as_deref()
-        .map(std::string::ToString::to_string)
-        .or(user.website);
     let avatar = cmd
         .avatar
         .as_deref()
         .map(std::string::ToString::to_string)
         .or(user.avatar);
-    let social_links = cmd
-        .social_links
-        .as_ref()
-        .map(|m| serde_json::to_string(m).unwrap_or_default())
-        .or_else(|| user.social_links.clone());
     let metadata = cmd
         .metadata
         .as_ref()
@@ -155,7 +126,7 @@ pub async fn update_profile(
         .or_else(|| user.metadata.clone());
     let now = crate::utils::tz::now_utc();
     mcms_derive::crud_update!(pool, "users",
-        bind: ["username" => username, "bio" => bio, "website" => website, "avatar" => avatar, "social_links" => social_links, "metadata" => metadata, "updated_at" => &now],
+        bind: ["username" => username, "avatar" => avatar, "metadata" => metadata, "updated_at" => &now],
         where: ("id", user.id)
     )?;
     find_by_id(pool, cmd.id)

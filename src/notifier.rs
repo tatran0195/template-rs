@@ -1,12 +1,10 @@
 //! Notification module
 //!
-//! Generic email/SMS sending abstraction layer, with implementation selected via env config:
+//! Generic email sending abstraction layer, with implementation selected via env config:
 //!
 //! - Email: `log` (log placeholder) | `smtp` (lettre)
-//! - SMS: `log` (log placeholder) | `aliyun` (Alibaba Cloud SMS) | `twilio`
 
 pub mod email;
-pub mod sms;
 
 /// HTTP request timeout for notification service calls (seconds)
 const NOTIFICATION_TIMEOUT_SECS: u64 = 10;
@@ -21,8 +19,6 @@ pub(crate) fn http_client() -> reqwest::Client {
 
 use std::sync::Arc;
 
-use serde_json::Value;
-
 /// Email message
 #[derive(Debug, Clone)]
 pub struct EmailMessage {
@@ -32,26 +28,10 @@ pub struct EmailMessage {
     pub text_body: Option<String>,
 }
 
-/// SMS message
-#[derive(Debug, Clone)]
-pub struct SmsMessage {
-    pub to: String,
-    pub content: String,
-    pub template_id: Option<String>,
-    pub template_params: Option<Value>,
-}
-
 /// Email sender trait
 #[async_trait::async_trait]
 pub trait EmailSender: Send + Sync {
     async fn send(&self, msg: &EmailMessage) -> anyhow::Result<()>;
-    fn name(&self) -> &'static str;
-}
-
-/// SMS sender trait
-#[async_trait::async_trait]
-pub trait SmsSender: Send + Sync {
-    async fn send(&self, msg: &SmsMessage) -> anyhow::Result<()>;
     fn name(&self) -> &'static str;
 }
 
@@ -75,17 +55,5 @@ pub fn build_email_sender(config: &crate::config::app::AppConfig) -> Arc<dyn Ema
             config.email_from_name.clone(),
         )),
         _ => Arc::new(email::LogSender),
-    }
-}
-
-/// Build an SMS sender based on configuration
-pub fn build_sms_sender(config: &crate::config::app::AppConfig) -> Arc<dyn SmsSender> {
-    match config.sms_provider.as_str() {
-        "twilio" => Arc::new(sms::TwilioSender::new(
-            config.sms_twilio_account_sid.clone().unwrap_or_default(),
-            config.sms_twilio_auth_token.clone().unwrap_or_default(),
-            config.sms_twilio_from.clone().unwrap_or_default(),
-        )),
-        _ => Arc::new(sms::LogSender),
     }
 }

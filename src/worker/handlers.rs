@@ -8,11 +8,9 @@ pub mod db_backup;
 pub mod email;
 pub mod email_verification;
 
-
 pub mod publish;
 pub mod search_index;
 pub mod sitemap;
-pub mod sms;
 pub mod thumbnail;
 
 pub mod webhook;
@@ -22,7 +20,7 @@ use std::sync::Arc;
 use crate::cache::CacheStore;
 use crate::config::app::AppConfig;
 use crate::db::Pool;
-use crate::notifier::{EmailSender, SmsSender};
+use crate::notifier::EmailSender;
 use crate::search::SearchEngine;
 use crate::worker::JobHandlerRegistry;
 
@@ -34,7 +32,6 @@ pub fn register_all(
     search: Arc<dyn SearchEngine>,
     cache: Arc<dyn CacheStore>,
     email_sender: Arc<dyn EmailSender>,
-    sms_sender: Arc<dyn SmsSender>,
 ) {
     registry.register(
         "send_welcome_email",
@@ -49,10 +46,6 @@ pub fn register_all(
             config.clone(),
             email_sender.clone(),
         )),
-    );
-    registry.register(
-        "send_sms_code",
-        Box::new(sms::SendSmsCodeHandler::new(sms_sender)),
     );
     registry.register(
         "send_email_verification",

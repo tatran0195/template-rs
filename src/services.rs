@@ -27,11 +27,9 @@ pub mod post;
 pub mod rbac;
 pub mod reusable_block;
 
-pub mod sms;
 pub mod stats;
 pub mod tag;
 pub mod user;
-
 
 #[cfg(feature = "export-types")]
 export_types!(

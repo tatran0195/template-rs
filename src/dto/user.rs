@@ -114,35 +114,6 @@ pub struct SetPasswordRequest {
 
 #[cfg_attr(feature = "export-types", derive(TS))]
 #[derive(Debug, Deserialize, Validate, ToSchema)]
-pub struct SendSmsCodeRequest {
-    #[validate(length(min = 5, max = 20))]
-    pub phone: String,
-    #[validate(length(min = 1, max = 30))]
-    pub purpose: String,
-}
-
-#[cfg_attr(feature = "export-types", derive(TS))]
-#[derive(Debug, Deserialize, Validate, ToSchema)]
-pub struct VerifySmsRequest {
-    #[validate(length(min = 5, max = 20))]
-    pub phone: String,
-    #[validate(length(min = 4, max = 8))]
-    pub code: String,
-    #[validate(length(min = 1, max = 30))]
-    pub purpose: String,
-}
-
-#[cfg_attr(feature = "export-types", derive(TS))]
-#[derive(Debug, Deserialize, Validate, ToSchema)]
-pub struct BindPhoneRequest {
-    #[validate(length(min = 5, max = 20))]
-    pub phone: String,
-    #[validate(length(min = 4, max = 8))]
-    pub code: String,
-}
-
-#[cfg_attr(feature = "export-types", derive(TS))]
-#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct BindEmailRequest {
     #[validate(email)]
     pub email: String,
@@ -182,7 +153,6 @@ impl CredentialResponse {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct AuthConfigResponse {
     pub registration_email_enabled: bool,
-    pub registration_sms_enabled: bool,
     pub oauth_providers: Vec<String>,
     pub require_email_verification: bool,
 }
@@ -208,19 +178,14 @@ pub struct ResendVerificationRequest {
 pub struct UserResponse {
     pub id: String,
     pub email: Option<String>,
-    pub phone: Option<String>,
     pub username: String,
     pub role: UserRole,
     pub status: UserStatus,
     pub registered_via: RegisteredVia,
     pub avatar: Option<String>,
-    pub bio: Option<String>,
-    pub website: Option<String>,
     pub display_name: Option<String>,
     pub slug: Option<String>,
     pub locale: Option<String>,
-    #[cfg_attr(feature = "export-types", ts(type = "Record<string, string>"))]
-    pub social_links: Option<SocialLinks>,
     #[cfg_attr(feature = "export-types", ts(type = "unknown"))]
     pub metadata: Option<UserMetadata>,
     #[schema(value_type = String)]
@@ -231,7 +196,7 @@ pub struct UserResponse {
 
 impl UserResponse {
     pub fn from_user(user: User) -> AppResult<Self> {
-        Self::build(user, None, None)
+        Self::build(user, None)
     }
 
     pub async fn from_user_with_contacts(pool: &crate::db::Pool, user: User) -> AppResult<Self> {
@@ -240,32 +205,24 @@ impl UserResponse {
             .iter()
             .find(|c| c.auth_type == crate::models::user_credential::AuthType::Email)
             .map(|c| c.identifier.clone());
-        let phone = creds
-            .iter()
-            .find(|c| c.auth_type == crate::models::user_credential::AuthType::Phone)
-            .map(|c| c.identifier.clone());
-        Self::build(user, email, phone)
+        Self::build(user, email)
     }
 
-    fn build(user: User, email: Option<String>, phone: Option<String>) -> AppResult<Self> {
+    fn build(user: User, email: Option<String>) -> AppResult<Self> {
         let role = user.role;
         let status = user.status;
         let registered_via = user.registered_via;
         Ok(Self {
             id: user.id.to_string(),
             email,
-            phone,
             username: user.username,
             role,
             status,
             registered_via,
             avatar: user.avatar,
-            bio: user.bio,
-            website: user.website,
             display_name: user.display_name,
             slug: user.slug,
             locale: user.locale,
-            social_links: crate::models::user::parse_social_links(&user.social_links),
             metadata: crate::models::user::parse_metadata(&user.metadata),
             created_at: user.created_at,
             updated_at: user.updated_at,
@@ -395,18 +352,14 @@ mod tests {
         let resp = UserResponse {
             id: "doc-123".to_string(),
             email: Some("test@example.com".to_string()),
-            phone: None,
             username: "test".to_string(),
             role: UserRole::Reader,
             status: UserStatus::Active,
             registered_via: RegisteredVia::Email,
             avatar: None,
-            bio: None,
-            website: None,
             display_name: None,
             slug: None,
             locale: None,
-            social_links: None,
             metadata: None,
             created_at: "2025-01-01T00:00:00Z".parse().unwrap(),
             updated_at: "2025-01-01T00:00:00Z".parse().unwrap(),

@@ -36,7 +36,6 @@ pub mod models;
 pub mod notifier;
 pub mod oauth;
 
-
 pub mod policy;
 pub mod protocols;
 pub mod search;
@@ -78,7 +77,7 @@ use config::app::AppConfig;
 use content_type::ContentTypeRegistry;
 use db::Pool;
 use eventbus::EventBus;
-use notifier::{EmailSender, SmsSender};
+use notifier::EmailSender;
 use oauth::OAuthProviderRegistry;
 
 use search::SearchEngine;
@@ -125,7 +124,6 @@ pub struct AppState {
     pub cms_cache: Arc<dashmap::DashMap<String, (serde_json::Value, std::time::Instant)>>,
     pub oauth_registry: Arc<OAuthProviderRegistry>,
     pub email_sender: Arc<dyn EmailSender>,
-    pub sms_sender: Arc<dyn SmsSender>,
     pub route_registry: Arc<Vec<crate::server::RouteInfo>>,
     pub services: ServiceRegistry,
 }
@@ -264,7 +262,6 @@ pub async fn build_app_state(
         cms_cache: Arc::new(dashmap::DashMap::new()),
         oauth_registry: Arc::new(build_oauth_registry(config)),
         email_sender: crate::notifier::build_email_sender(config),
-        sms_sender: crate::notifier::build_sms_sender(config),
         route_registry: Arc::new(Vec::new()),
         services,
     };
@@ -317,13 +314,6 @@ pub fn build_oauth_registry(config: &AppConfig) -> OAuthProviderRegistry {
         )));
         tracing::info!("OAuth provider registered: google");
     }
-    if let Some(wechat) = &config.oauth.wechat {
-        registry.register(Box::new(crate::oauth::wechat::WechatProvider::new(
-            wechat.app_id.clone(),
-            wechat.app_secret.clone(),
-            config.base_url.clone(),
-        )));
-        tracing::info!("OAuth provider registered: wechat");
-    }
+
     registry
 }

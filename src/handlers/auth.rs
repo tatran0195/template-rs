@@ -7,16 +7,15 @@ use axum::Json;
 use axum::extract::State;
 
 use crate::dto::{
-    AuthConfigResponse, BindEmailRequest, BindPhoneRequest, CredentialResponse,
-    ForgotPasswordRequest, LoginRequest, RefreshRequest, RegisterRequest,
-    ResendVerificationRequest, ResetPasswordRequest, SendSmsCodeRequest, SetPasswordRequest,
-    VerifyEmailRequest, VerifySmsRequest,
+    AuthConfigResponse, BindEmailRequest, CredentialResponse, ForgotPasswordRequest, LoginRequest,
+    RefreshRequest, RegisterRequest, ResendVerificationRequest, ResetPasswordRequest,
+    SetPasswordRequest, VerifyEmailRequest,
 };
 use crate::errors::app_error::AppResult;
 use crate::errors::response::ApiResponse;
 use crate::errors::validation;
 use crate::middleware::auth::AuthUser;
-use crate::services::{auth, email_verification, password_reset, sms};
+use crate::services::{auth, email_verification, password_reset};
 use crate::types::snowflake_id::SnowflakeId;
 
 pub fn routes(
@@ -95,36 +94,6 @@ pub fn routes(
         "/auth/config",
         get,
         auth_config,
-        "system public",
-        "auth"
-    );
-    let r = reg_route!(
-        r,
-        registry,
-        restful,
-        "/auth/sms/send",
-        post,
-        send_sms_code,
-        "system public",
-        "auth"
-    );
-    let r = reg_route!(
-        r,
-        registry,
-        restful,
-        "/auth/sms/verify",
-        post,
-        verify_sms,
-        "system public",
-        "auth"
-    );
-    let r = reg_route!(
-        r,
-        registry,
-        restful,
-        "/auth/phone/bind",
-        post,
-        bind_phone,
         "system public",
         "auth"
     );
@@ -342,51 +311,9 @@ pub async fn auth_config(
     };
     Ok(ApiResponse::success(AuthConfigResponse {
         registration_email_enabled: state.config.registration_email_enabled,
-        registration_sms_enabled: state.config.registration_sms_enabled,
         oauth_providers,
         require_email_verification: state.config.require_email_verification,
     }))
-}
-
-/// Send SMS verification code
-pub async fn send_sms_code(
-    State(state): State<crate::AppState>,
-    Json(req): Json<SendSmsCodeRequest>,
-) -> AppResult<ApiResponse<()>> {
-    validation::validate(&req)?;
-    sms::send_sms_code(&state.pool, &state.config, &req.phone, &req.purpose).await?;
-    Ok(ApiResponse::success(()))
-}
-
-/// Verify SMS code (auto register/login)
-pub async fn verify_sms(
-    State(state): State<crate::AppState>,
-    Json(req): Json<VerifySmsRequest>,
-) -> AppResult<ApiResponse<crate::dto::LoginResponse>> {
-    validation::validate(&req)?;
-    let resp = sms::verify_sms_and_auth(
-        &state.pool,
-        &req.phone,
-        &req.code,
-        &req.purpose,
-        &state.config.jwt_secret,
-        state.config.jwt_access_expires,
-        state.config.jwt_refresh_expires,
-    )
-    .await?;
-    Ok(ApiResponse::success(resp))
-}
-
-/// Bind phone number
-pub async fn bind_phone(
-    auth: AuthUser,
-    State(state): State<crate::AppState>,
-    Json(req): Json<BindPhoneRequest>,
-) -> AppResult<ApiResponse<()>> {
-    auth.ensure_authenticated()?;
-    validation::validate(&req)?;
-    sms::bind_phone(&state.pool, &auth, &req.phone, &req.code).await?;
-    Ok(ApiResponse::success(()))
 }
 
 /// Bind email/password credential

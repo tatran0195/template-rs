@@ -131,14 +131,6 @@ pub struct AppConfig {
     #[serde(default = "default_true")]
     pub registration_email_enabled: bool,
     #[serde(default)]
-    pub registration_sms_enabled: bool,
-    #[serde(default = "default_sms_code_expires_in")]
-    pub sms_code_expires_in: u64,
-    #[serde(default = "default_sms_code_length")]
-    pub sms_code_length: u32,
-    #[serde(default = "default_sms_rate_limit_secs")]
-    pub sms_rate_limit_secs: u64,
-    #[serde(default)]
     pub require_email_verification: bool,
     #[serde(default)]
     pub builtins: BuiltinsConfig,
@@ -154,11 +146,6 @@ pub struct AppConfig {
     pub email_from_name: Option<String>,
     pub email_sendgrid_api_key: Option<String>,
     pub email_resend_api_key: Option<String>,
-    #[serde(default = "default_sms_provider")]
-    pub sms_provider: String,
-    pub sms_twilio_account_sid: Option<String>,
-    pub sms_twilio_auth_token: Option<String>,
-    pub sms_twilio_from: Option<String>,
     pub app_key: Option<String>,
 }
 
@@ -533,28 +520,12 @@ fn default_s3_region() -> String {
     "us-east-1".into()
 }
 
-fn default_sms_code_expires_in() -> u64 {
-    300
-}
-
-fn default_sms_code_length() -> u32 {
-    6
-}
-
-fn default_sms_rate_limit_secs() -> u64 {
-    60
-}
-
 fn default_email_provider() -> String {
     "log".into()
 }
 
 fn default_email_smtp_port() -> u16 {
     587
-}
-
-fn default_sms_provider() -> String {
-    "log".into()
 }
 
 const DEFAULT_JWT_SECRET: &str = "change-me-in-production-at-least-32-chars";
@@ -755,22 +726,6 @@ impl AppConfig {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(true),
-            registration_sms_enabled: env::var("REGISTRATION_SMS_ENABLED")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(false),
-            sms_code_expires_in: env::var("SMS_CODE_EXPIRES_IN")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(default_sms_code_expires_in()),
-            sms_code_length: env::var("SMS_CODE_LENGTH")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(default_sms_code_length()),
-            sms_rate_limit_secs: env::var("SMS_RATE_LIMIT_SECS")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(default_sms_rate_limit_secs()),
             require_email_verification: env::var("REQUIRE_EMAIL_VERIFICATION")
                 .ok()
                 .and_then(|v| v.parse().ok())
@@ -796,17 +751,6 @@ impl AppConfig {
             email_resend_api_key: env::var("EMAIL_RESEND_API_KEY")
                 .ok()
                 .filter(|s| !s.is_empty()),
-            sms_provider: env::var("SMS_PROVIDER")
-                .ok()
-                .filter(|v| !v.is_empty())
-                .unwrap_or_else(default_sms_provider),
-            sms_twilio_account_sid: env::var("SMS_TWILIO_ACCOUNT_SID")
-                .ok()
-                .filter(|s| !s.is_empty()),
-            sms_twilio_auth_token: env::var("SMS_TWILIO_AUTH_TOKEN")
-                .ok()
-                .filter(|s| !s.is_empty()),
-            sms_twilio_from: env::var("SMS_TWILIO_FROM").ok().filter(|s| !s.is_empty()),
             app_key: env::var("APP_KEY").ok().filter(|s| !s.is_empty()),
             started_at: None,
         }
@@ -876,13 +820,8 @@ impl AppConfig {
                 redirect_url: "http://localhost:3000/auth/callback".into(),
                 github: None,
                 google: None,
-                wechat: None,
             },
             registration_email_enabled: true,
-            registration_sms_enabled: false,
-            sms_code_expires_in: default_sms_code_expires_in(),
-            sms_code_length: default_sms_code_length(),
-            sms_rate_limit_secs: default_sms_rate_limit_secs(),
             require_email_verification: false,
             builtins: BuiltinsConfig::default(),
             base_domain: Some("app.com".to_string()),
@@ -895,10 +834,6 @@ impl AppConfig {
             email_from_name: None,
             email_sendgrid_api_key: None,
             email_resend_api_key: None,
-            sms_provider: default_sms_provider(),
-            sms_twilio_account_sid: None,
-            sms_twilio_auth_token: None,
-            sms_twilio_from: None,
             app_key: None,
             started_at: None,
         }
@@ -1017,7 +952,6 @@ mod tests {
         assert!(!c.websocket_enabled);
         assert!(!c.worker_enabled);
         assert!(c.registration_email_enabled);
-        assert!(!c.registration_sms_enabled);
         assert!(!c.require_email_verification);
     }
 

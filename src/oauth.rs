@@ -11,7 +11,6 @@
 
 pub mod github;
 pub mod google;
-pub mod wechat;
 
 /// HTTP request timeout for OAuth provider calls (seconds)
 const OAUTH_TIMEOUT_SECS: u64 = 10;
