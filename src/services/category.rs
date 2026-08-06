@@ -10,6 +10,7 @@ use crate::aspects::slug_aspect;
 use crate::commands::{CreateCategoryCmd, UpdateCategoryCmd};
 use crate::dto::{CreateCategoryRequest, UpdateCategoryRequest};
 use crate::errors::app_error::AppResult;
+use crate::eventbus::Event;
 use crate::middleware::auth::AuthUser;
 use crate::models::category::Category;
 use crate::types::snowflake_id::SnowflakeId;
@@ -75,7 +76,7 @@ impl CategoryService for CategoryServiceImpl {
         let cat =
             crate::models::category::create(&self.pool, &cmd, auth.user_id())
                 .await?;
-        self.after_created(&cat);
+        self.aspect_engine.emit(Event::CategoryCreated(cat.clone()));
         Ok(cat)
     }
 
@@ -129,7 +130,7 @@ impl CategoryService for CategoryServiceImpl {
         let updated =
             crate::models::category::update(&self.pool, &cmd, auth.user_id())
                 .await?;
-        self.after_updated(&updated);
+        self.aspect_engine.emit(Event::CategoryUpdated(updated.clone()));
         Ok(updated)
     }
 
@@ -140,7 +141,7 @@ impl CategoryService for CategoryServiceImpl {
         crate::models::category::ensure_safe_to_delete(&self.pool, existing.id)
             .await?;
         crate::models::category::delete(&self.pool, existing.id).await?;
-        self.after_deleted(&existing);
+        self.aspect_engine.emit(Event::CategoryDeleted(existing.clone()));
         Ok(())
     }
 

@@ -1,5 +1,4 @@
 import { useAuthStore } from "@/stores/auth";
-import { useTenantStore } from "@/stores/tenant";
 import { useLocaleStore } from "@/stores/locale";
 import type { ApiEnvelope, TokenBundle } from "./types";
 
@@ -46,7 +45,7 @@ export class HttpClient {
   beforeSend: ((url: string, init: RequestInit) => Promise<{ url: string; init: RequestInit }> | { url: string; init: RequestInit }) | null = null;
   afterSend: ((response: Response, data: unknown) => unknown) | null = null;
 
-  constructor(public baseUrl = "/api/v1") {}
+  constructor(public baseUrl = "/api/v1") { }
 
   get apiStyle() {
     return this._apiStyle;
@@ -96,8 +95,6 @@ export class HttpClient {
 
     const { accessToken } = useAuthStore.getState();
     if (accessToken) h.set("Authorization", `Bearer ${accessToken}`);
-    const tenantId = useTenantStore.getState().currentTenantId;
-    if (tenantId) h.set("X-Tenant-ID", tenantId);
     const locale = useLocaleStore.getState().locale;
     if (locale) h.set("Accept-Language", locale);
     if (headers) for (const [k, v] of Object.entries(headers)) h.set(k, v);

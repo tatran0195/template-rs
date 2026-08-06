@@ -1,9 +1,16 @@
 import { useNavigate } from "react-router-dom";
-import { Menu, Moon, Sun, Search, User as UserIcon, LogOut, Globe } from "lucide-react";
+import {
+  Menu,
+  Moon,
+  Sun,
+  Search,
+  User as UserIcon,
+  LogOut,
+  Globe,
+} from "lucide-react";
 import { useState } from "react";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { NotificationsBell } from "./NotificationsBell";
-import { TenantSwitcher } from "./TenantSwitcher";
 import { Dropdown } from "@/components/ui/dropdown";
 import { Select } from "@/components/ui/select";
 import { useAuthStore } from "@/stores/auth";
@@ -41,15 +48,20 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
       <div className="flex-1" />
 
       <button
-        onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }))}
+        onClick={() =>
+          document.dispatchEvent(
+            new KeyboardEvent("keydown", { key: "k", ctrlKey: true }),
+          )
+        }
         className="hidden h-8 items-center gap-2 rounded-md border border-border bg-muted/50 px-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent sm:flex"
       >
         <Search className="size-3.5" />
         <span className="hidden lg:inline">{t("command.search")}</span>
-        <kbd className="rounded border border-border bg-background px-1 text-[10px]">⌘K</kbd>
+        <kbd className="rounded border border-border bg-background px-1 text-[10px]">
+          ⌘K
+        </kbd>
       </button>
 
-      <TenantSwitcher />
       <NotificationsBell />
 
       <div className="flex items-center gap-1 text-muted-foreground">
@@ -76,7 +88,11 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
         className="flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         aria-label="Toggle theme"
       >
-        {getTheme() === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+        {getTheme() === "dark" ? (
+          <Sun className="size-4" />
+        ) : (
+          <Moon className="size-4" />
+        )}
       </button>
 
       <Dropdown
@@ -87,13 +103,23 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
         }
         items={[
           {
-            label: `${user?.username ?? ""} ${user?.role ? `(${user.role})` : ""}`.trim(),
+            label:
+              `${user?.username ?? ""} ${user?.role ? `(${user.role})` : ""}`.trim(),
             icon: <UserIcon />,
             onClick: () => navigate("/profile"),
           },
-          { label: t("layout.profile"), icon: <UserIcon />, onClick: () => navigate("/profile") },
+          {
+            label: t("layout.profile"),
+            icon: <UserIcon />,
+            onClick: () => navigate("/profile"),
+          },
           { label: "", divider: true },
-          { label: t("layout.logout"), icon: <LogOut />, onClick: doLogout, danger: true },
+          {
+            label: t("layout.logout"),
+            icon: <LogOut />,
+            onClick: doLogout,
+            danger: true,
+          },
         ]}
       />
     </header>

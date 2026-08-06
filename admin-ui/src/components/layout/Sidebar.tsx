@@ -2,13 +2,11 @@ import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
 import { useAuthStore } from "@/stores/auth";
-import { useTenantStore } from "@/stores/tenant";
 import { NAV } from "./nav";
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useT();
   const { isAdmin } = useAuthStore();
-  const { builtinTenantable } = useTenantStore();
 
   return (
     <div className="flex h-full flex-col">
@@ -18,14 +16,15 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </div>
         <div className="leading-tight">
           <div className="text-sm font-semibold">{t("layout.brand")}</div>
-          <div className="text-[11px] text-muted-foreground">{t("layout.adminPanel")}</div>
+          <div className="text-[11px] text-muted-foreground">
+            {t("layout.adminPanel")}
+          </div>
         </div>
       </div>
 
       <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-3">
         {NAV.map((group, gi) => {
           const items = group.items.filter((item) => {
-            if (item.tenantOnly) return builtinTenantable && isAdmin();
             if (item.adminOnly) return isAdmin() || isAuthorSafe();
             return true;
           });

@@ -22,18 +22,18 @@ export function Audit() {
         fetchPage={(page, size, search) => api.audit.list(page, size, { search })}
         searchPlaceholder={t("common.search")}
         columns={[
-          { key: "actor", label: t("audit.actor"), render: (r) => r.actor ?? r.user_id ?? "system" },
+          { key: "actor", label: t("audit.actor"), render: (r) => r.actor_id ?? "system" },
           { key: "action", label: t("audit.action"), render: (r) => <Badge variant="secondary">{r.action}</Badge> },
           {
             key: "target",
             label: t("audit.target"),
             render: (r) => (
               <span className="font-mono text-xs text-muted-foreground">
-                {r.target_type ? `${r.target_type}${r.target_id ? `#${r.target_id}` : ""}` : "—"}
+                {r.subject ? `${r.subject}${r.subject_id ? `#${r.subject_id}` : ""}` : "—"}
               </span>
             ),
           },
-          { key: "ip", label: t("audit.ip"), className: "font-mono text-xs text-muted-foreground" },
+          { key: "ip", label: t("audit.ip"), render: (r) => <span className="font-mono text-xs text-muted-foreground">{r.ip_address ?? "—"}</span> },
           { key: "created_at", label: t("audit.time"), render: (r) => formatDate(r.created_at) },
         ]}
         rowActions={(row) => (

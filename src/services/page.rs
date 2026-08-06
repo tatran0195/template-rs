@@ -10,6 +10,7 @@ use mcms_derive::aspect_service;
 use crate::aspects::engine::AspectEngine;
 use crate::commands::{CreatePageCmd, UpdatePageCmd};
 use crate::errors::app_error::{AppError, AppResult};
+use crate::eventbus::Event;
 use crate::middleware::auth::AuthUser;
 use crate::models::page::{self, Page, PageStatus};
 use crate::types::snowflake_id::SnowflakeId;
@@ -91,7 +92,7 @@ impl PageService for PageServiceImpl {
             Self::validate_blocks_json(blocks)?;
         }
         let p = page::create(&self.pool, &cmd).await?;
-        self.after_created(&p);
+        self.aspect_engine.emit(Event::PageCreated(p.clone()));
         Ok(p)
     }
 
@@ -111,7 +112,7 @@ impl PageService for PageServiceImpl {
             Self::validate_blocks_json(blocks)?;
         }
         let updated = page::update(&self.pool, &cmd).await?;
-        self.after_updated(&updated);
+        self.aspect_engine.emit(Event::PageUpdated(updated.clone()));
         Ok(updated)
     }
 
@@ -121,7 +122,7 @@ impl PageService for PageServiceImpl {
             .ok_or_else(|| AppError::not_found("page"))?;
         self.before_delete(auth, &p).await?;
         page::delete(&self.pool, p.id).await?;
-        self.after_deleted(&p);
+        self.aspect_engine.emit(Event::PageDeleted(p.clone()));
         Ok(())
     }
 
@@ -138,7 +139,7 @@ impl PageService for PageServiceImpl {
             .before_update("pages", auth, &p, status)
             .await?;
         let updated = page::update_status(&self.pool, p.id, status, auth.user_id()).await?;
-        self.after_updated(&updated);
+        self.aspect_engine.emit(Event::PageUpdated(updated.clone()));
         Ok(updated)
     }
 

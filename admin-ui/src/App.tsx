@@ -18,7 +18,6 @@ import { CollectionEdit } from "@/pages/content-types/CollectionEdit";
 import { Users } from "@/pages/Users";
 import { Rbac } from "@/pages/Rbac";
 import { Crons, CronDetail } from "@/pages/Crons";
-import { Tenants } from "@/pages/Tenants";
 import { Webhooks } from "@/pages/Webhooks";
 import { Tokens } from "@/pages/Tokens";
 import { WorkflowList } from "@/pages/workflows/WorkflowList";
@@ -30,10 +29,20 @@ import { NotFound } from "@/pages/NotFound";
 
 /* Heavy pages are lazy-loaded — mirroring the recovered bundle's chunk strategy
    (vendor-md-editor, vendor-xyflow, vendor-chart split out of the main bundle). */
-const Dashboard = lazy(() => import("@/pages/Dashboard").then((m) => ({ default: m.Dashboard })));
-const PostEdit = lazy(() => import("@/pages/posts/PostEdit").then((m) => ({ default: m.PostEdit })));
-const PageEdit = lazy(() => import("@/pages/pages/PageEdit").then((m) => ({ default: m.PageEdit })));
-const WorkflowEditor = lazy(() => import("@/pages/workflows/WorkflowEditor").then((m) => ({ default: m.WorkflowEditor })));
+const Dashboard = lazy(() =>
+  import("@/pages/Dashboard").then((m) => ({ default: m.Dashboard })),
+);
+const PostEdit = lazy(() =>
+  import("@/pages/posts/PostEdit").then((m) => ({ default: m.PostEdit })),
+);
+const PageEdit = lazy(() =>
+  import("@/pages/pages/PageEdit").then((m) => ({ default: m.PageEdit })),
+);
+const WorkflowEditor = lazy(() =>
+  import("@/pages/workflows/WorkflowEditor").then((m) => ({
+    default: m.WorkflowEditor,
+  })),
+);
 
 function Lazy({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<PageLoading />}>{children}</Suspense>;
@@ -56,36 +65,86 @@ export function App() {
           }
         >
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<Lazy><Dashboard /></Lazy>} />
+          <Route
+            path="dashboard"
+            element={
+              <Lazy>
+                <Dashboard />
+              </Lazy>
+            }
+          />
 
           <Route path="posts" element={<PostList />} />
-          <Route path="posts/new" element={<Lazy><PostEdit /></Lazy>} />
-          <Route path="posts/:id/edit" element={<Lazy><PostEdit /></Lazy>} />
+          <Route
+            path="posts/new"
+            element={
+              <Lazy>
+                <PostEdit />
+              </Lazy>
+            }
+          />
+          <Route
+            path="posts/:id/edit"
+            element={
+              <Lazy>
+                <PostEdit />
+              </Lazy>
+            }
+          />
           <Route path="categories" element={<Categories />} />
           <Route path="tags" element={<Tags />} />
           <Route path="comments" element={<Comments />} />
           <Route path="media" element={<Media />} />
           <Route path="pages" element={<PageList />} />
-          <Route path="pages/new" element={<Lazy><PageEdit /></Lazy>} />
-          <Route path="pages/:id/edit" element={<Lazy><PageEdit /></Lazy>} />
+          <Route
+            path="pages/new"
+            element={
+              <Lazy>
+                <PageEdit />
+              </Lazy>
+            }
+          />
+          <Route
+            path="pages/:id/edit"
+            element={
+              <Lazy>
+                <PageEdit />
+              </Lazy>
+            }
+          />
           <Route path="reusable-blocks" element={<ReusableBlocks />} />
 
           <Route path="content-types" element={<ContentTypeList />} />
-          <Route path="content-types/builder" element={<ContentTypeBuilder />} />
+          <Route
+            path="content-types/builder"
+            element={<ContentTypeBuilder />}
+          />
           <Route path="content-types/:singular" element={<CollectionList />} />
-          <Route path="content-types/:singular/new" element={<CollectionEdit />} />
-          <Route path="content-types/:singular/:id/edit" element={<CollectionEdit />} />
+          <Route
+            path="content-types/:singular/new"
+            element={<CollectionEdit />}
+          />
+          <Route
+            path="content-types/:singular/:id/edit"
+            element={<CollectionEdit />}
+          />
 
           <Route path="users" element={<Users />} />
           <Route path="users/:id" element={<Users />} />
           <Route path="rbac" element={<Rbac />} />
           <Route path="crons" element={<Crons />} />
           <Route path="crons/:id" element={<CronDetail />} />
-          <Route path="tenants" element={<Tenants />} />
           <Route path="webhooks" element={<Webhooks />} />
           <Route path="tokens" element={<Tokens />} />
           <Route path="workflows" element={<WorkflowList />} />
-          <Route path="workflows/editor" element={<Lazy><WorkflowEditor /></Lazy>} />
+          <Route
+            path="workflows/editor"
+            element={
+              <Lazy>
+                <WorkflowEditor />
+              </Lazy>
+            }
+          />
           <Route path="workflows/instances" element={<WorkflowInstances />} />
           <Route path="audit" element={<Audit />} />
           <Route path="options" element={<Options />} />

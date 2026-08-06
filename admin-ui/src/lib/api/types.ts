@@ -179,13 +179,14 @@ export interface WorkflowInstance {
 
 export interface AuditEntry {
   id: number | string;
-  actor?: string;
-  user_id?: number | string;
+  actor_id?: number | string;
+  actor_role?: string;
   action: string;
-  target_type?: string;
-  target_id?: string;
+  subject?: string;
+  subject_id?: string;
   detail?: unknown;
-  ip?: string;
+  ip_address?: string;
+  user_agent?: string;
   created_at?: string;
   [k: string]: unknown;
 }

@@ -56,7 +56,7 @@ pub async fn find_paginated(
     let result = mcms_derive::crud_query_paged!(
         pool, AuditEntry,
         table: "audit_log",
-        where: AND(("action", action), ("actor_id", actor_id)),
+        where: ["action" => action, "actor_id" => actor_id],
         order_by: "created_at DESC",
         page: page,
         page_size: page_size

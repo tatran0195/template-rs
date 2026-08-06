@@ -8,6 +8,7 @@ use mcms_derive::aspect_service;
 use crate::aspects::engine::AspectEngine;
 use crate::dto::CreateTagRequest;
 use crate::errors::app_error::AppResult;
+use crate::eventbus::Event;
 use crate::middleware::auth::AuthUser;
 use crate::models::tag::Tag;
 use crate::types::snowflake_id::SnowflakeId;
@@ -50,7 +51,7 @@ impl TagService for TagServiceImpl {
         let (req, _d) = self.before_create(auth, req).await?;
         let slug = generate_slug(&req.name);
         let tag = crate::models::tag::create(&self.pool, &req.name, &slug, auth.user_id()).await?;
-        self.after_created(&tag);
+        self.aspect_engine.emit(Event::TagCreated(tag.clone()));
         Ok(tag)
     }
 
@@ -64,7 +65,7 @@ impl TagService for TagServiceImpl {
         let tag = crate::models::tag::find_by_id(&self.pool, id).await?;
         let ((name, slug), _d) = self.before_update(auth, &tag, (name, slug)).await?;
         let updated = crate::models::tag::update(&self.pool, tag.id, &name, &slug).await?;
-        self.after_updated(&updated);
+        self.aspect_engine.emit(Event::TagUpdated(updated.clone()));
         Ok(updated)
     }
 
@@ -72,7 +73,7 @@ impl TagService for TagServiceImpl {
         let tag = crate::models::tag::find_by_id(&self.pool, id).await?;
         self.before_delete(auth, &tag).await?;
         crate::models::tag::delete(&self.pool, tag.id).await?;
-        self.after_deleted(&tag);
+        self.aspect_engine.emit(Event::TagDeleted(tag.clone()));
         Ok(())
     }
 

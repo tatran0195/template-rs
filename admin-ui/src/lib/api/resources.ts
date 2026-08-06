@@ -1,15 +1,18 @@
 import { qs } from "@/lib/utils";
 import { http, type HttpClient, type RequestOptions } from "./client";
 import type {
-  ApiToken, AuditEntry, ContentType, CronJob, MediaItem, OptionEntry, Paginated,
-  Plugin, RoleDef, SetupStatus, StatsOverview, Tenant, TokenBundle, TrendPoint,
-  User, Webhook, WorkflowDef, WorkflowInstance, Post, Page,
+  ApiToken, AuditEntry, ContentType, CronJob, MediaItem, OptionEntry,
+  Page,
+  Paginated,
+  Post,
+  RoleDef, SetupStatus, StatsOverview, Tenant, TokenBundle, TrendPoint,
+  User, Webhook, WorkflowDef, WorkflowInstance
 } from "./types";
 
 /* ---------------------------------- auth ---------------------------------- */
 
 class AuthResource {
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
   login(email: string, password: string) {
     return this.http.post<TokenBundle>("/auth/login", { email, password });
   }
@@ -100,7 +103,7 @@ export const setupApi = {
 
 abstract class CrudResource<T = any> {
   protected abstract base: string;
-  constructor(protected http: HttpClient) {}
+  constructor(protected http: HttpClient) { }
 
   list(page = 1, pageSize = 25, extra?: Record<string, unknown>, opts?: RequestOptions) {
     return this.http.get<Paginated<T>>(this.base, {
@@ -165,7 +168,7 @@ class AdminPages extends CrudResource<Page> {
 class AdminReusableBlocks extends CrudResource { protected base = "/admin/reusable-blocks"; }
 
 class AdminMedia {
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
   upload(file: File) {
     const fd = new FormData();
     fd.append("file", file);
@@ -244,7 +247,7 @@ class DynamicCollection<T = any> {
 class AdminUsers extends CrudResource<User> { protected base = "/admin/users"; }
 
 class AdminRbac {
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
   listRoles() {
     return this.http.get<RoleDef[]>("/admin/rbac/roles");
   }
@@ -295,7 +298,7 @@ class AdminTenants extends CrudResource<Tenant> { protected base = "/admin/tenan
 class AdminWebhooks extends CrudResource<Webhook> { protected base = "/admin/webhooks"; }
 
 class AdminTokens {
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
   list(page = 1, pageSize = 25) {
     return this.http.get<Paginated<ApiToken>>("/tokens", { query: qs({ page, page_size: pageSize }) });
   }
@@ -337,7 +340,7 @@ class AdminWorkflows extends CrudResource<WorkflowDef> {
 }
 
 class AdminAudit {
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
   list(page = 1, pageSize = 20, extra?: Record<string, unknown>) {
     return this.http.get<Paginated<AuditEntry>>("/admin/audit", {
       query: qs({ page, page_size: pageSize, ...extra }),
@@ -349,7 +352,7 @@ class AdminAudit {
 }
 
 class AdminOptions {
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
   list(page = 1, pageSize = 50, extra?: Record<string, unknown>) {
     return this.http.get<Paginated<OptionEntry>>("/admin/options", {
       query: qs({ page, page_size: pageSize, ...extra }),
@@ -378,7 +381,7 @@ class AdminOptions {
 }
 
 class AdminStats {
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
   overview() {
     return this.http.get<StatsOverview>("/admin/stats");
   }
@@ -394,7 +397,7 @@ class AdminStats {
 
 /** Server-sent events channel (recovered: EventSource on /events?filter=…). */
 class EventsChannel {
-  constructor(private baseUrl: string) {}
+  constructor(private baseUrl: string) { }
   subscribe(filter?: string): EventSource {
     const url = filter
       ? `${this.baseUrl}/events?filter=${encodeURIComponent(filter)}`
@@ -430,3 +433,4 @@ export const api = {
 };
 
 export type { RequestOptions };
+

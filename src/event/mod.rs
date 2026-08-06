@@ -163,16 +163,18 @@ impl Event {
         let value = serde_json::to_value(self).ok()?;
         let data = value.get("data")?;
 
-        let subject_id = data
-            .get("id")
-            .and_then(|v| v.as_i64())
-            .map(|id| id.to_string())
-            .unwrap_or_default();
+        let get_id_str = |field: &str| -> Option<String> {
+            data.get(field).and_then(|v| {
+                v.as_i64()
+                    .map(|id| id.to_string())
+                    .or_else(|| v.as_str().map(|s| s.to_string()))
+            })
+        };
 
-        let actor_id = data
-            .get("user_id")
-            .and_then(|v| v.as_i64())
-            .or_else(|| data.get("created_by").and_then(|v| v.as_i64()));
+        let subject_id = get_id_str("id").unwrap_or_default();
+
+        let actor_id_str = get_id_str("user_id").or_else(|| get_id_str("created_by"));
+        let actor_id = actor_id_str.and_then(|s| crate::types::snowflake_id::decode_id(&s).or_else(|| s.parse().ok()));
 
         Some(AuditInfo {
             action,
@@ -189,7 +191,7 @@ impl Event {
                 action: "create".into(),
                 subject: "post".into(),
                 subject_id: data.id.clone(),
-                actor_id: data.created_by.as_deref().and_then(|s| s.parse().ok()),
+                actor_id: data.created_by.as_deref().and_then(|s| crate::types::snowflake_id::decode_id(s).or_else(|| s.parse().ok())),
                 detail: Some(format!("title={}", data.title)),
             }),
             Event::PostUpdated(data) => Some(AuditInfo {
@@ -220,7 +222,7 @@ impl Event {
                 action: "register".into(),
                 subject: "user".into(),
                 subject_id: data.id.to_string(),
-                actor_id: None,
+                actor_id: Some(*data.id),
                 detail: Some(format!("username={}", data.username)),
             }),
             Event::UserLoggedIn { user, success } => Some(AuditInfo {

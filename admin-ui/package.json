@@ -5,13 +5,13 @@
   "type": "module",
   "description": "Reimplementation of the RaisFast Admin UI (reverse-engineered). CMS / platform routes only — no e-commerce or payments.",
   "scripts": {
-    "dev": "vite",
+    "dev:mock": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
-    "dev:real": "VITE_MOCK=false vite"
+    "dev": "VITE_MOCK=false vite"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.0",

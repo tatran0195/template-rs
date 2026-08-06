@@ -499,13 +499,14 @@ pub fn spawn_audit_subscriber(
                 result = rx.recv() => {
                     match result {
                         Ok(event) => {
-                    let Some(info) = event.audit_info() else {
-                        continue;
-                    };
+                            tracing::info!("audit subscriber received event: {:?}", event);
+                            let Some(info) = event.audit_info() else {
+                                tracing::info!("no audit info for event");
+                                continue;
+                            };
 
-                    if let Err(e) = audit
-                        .log(
-                            info.actor_id,
+                            if let Err(e) = audit.log(
+                                info.actor_id,
                             None,
                             &info.action,
                             &info.subject,

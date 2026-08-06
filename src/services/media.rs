@@ -226,7 +226,7 @@ pub async fn admin_delete_media(
     storage: &dyn Storage,
     pool: &crate::db::Pool,
     media_id: &str,
-) -> AppResult<()> {
+) -> AppResult<media::Media> {
     let media_pk: i64 = crate::models::media::resolve_id(pool, media_id)
         .await?
         .ok_or_else(|| AppError::not_found("media"))?;
@@ -241,7 +241,7 @@ pub async fn admin_delete_media(
         tracing::warn!(key = %m.filepath, error = %e, "failed to delete file from storage");
     }
 
-    Ok(())
+    Ok(m)
 }
 
 /// Delete a media file.
@@ -253,7 +253,7 @@ pub async fn delete_media(
     pool: &crate::db::Pool,
     media_id: &str,
     auth: &AuthUser,
-) -> AppResult<()> {
+) -> AppResult<media::Media> {
     let user_id = auth.ensure_snowflake_user_id()?;
     let user = crate::models::user::find_by_id(pool, user_id)
         .await?
@@ -277,7 +277,7 @@ pub async fn delete_media(
         tracing::warn!(key = %m.filepath, error = %e, "failed to delete file from storage");
     }
 
-    Ok(())
+    Ok(m)
 }
 
 /// Get storage statistics

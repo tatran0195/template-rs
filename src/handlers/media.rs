@@ -6,6 +6,7 @@ use axum::extract::{Multipart, Path, Query, State};
 use crate::dto::{BatchRequest, BatchResponse};
 use crate::errors::app_error::{AppError, AppResult};
 use crate::errors::response::{ApiResponse, PaginatedData};
+use crate::eventbus::Event;
 use crate::middleware::auth::AuthUser;
 use crate::services::media as media_service;
 use crate::utils::pagination::PaginationParams;
@@ -139,6 +140,7 @@ pub async fn upload(
     .await?;
 
     let url = state.storage.url(&media.filepath).await?;
+    state.eventbus.emit(Event::MediaUploaded(media.clone()));
     Ok(ApiResponse::success(
         crate::dto::media_to_response_with_url(&media, &url),
     ))
@@ -180,7 +182,8 @@ pub async fn delete(
     Path(id): Path<String>,
 ) -> AppResult<ApiResponse<()>> {
     auth.ensure_authenticated()?;
-    media_service::delete_media(state.storage.as_ref(), &state.pool, &id, &auth).await?;
+    let deleted = media_service::delete_media(state.storage.as_ref(), &state.pool, &id, &auth).await?;
+    state.eventbus.emit(Event::MediaDeleted(deleted));
     Ok(ApiResponse::success(()))
 }
 
@@ -238,6 +241,7 @@ pub async fn admin_upload(
     .await?;
 
     let url = state.storage.url(&media.filepath).await?;
+    state.eventbus.emit(Event::MediaUploaded(media.clone()));
     Ok(ApiResponse::success(
         crate::dto::media_to_response_with_url(&media, &url),
     ))
@@ -278,7 +282,8 @@ pub async fn admin_delete(
     Path(id): Path<String>,
 ) -> AppResult<ApiResponse<()>> {
     auth.ensure_admin()?;
-    media_service::admin_delete_media(state.storage.as_ref(), &state.pool, &id).await?;
+    let deleted = media_service::admin_delete_media(state.storage.as_ref(), &state.pool, &id).await?;
+    state.eventbus.emit(Event::MediaDeleted(deleted));
     Ok(ApiResponse::success(()))
 }
 
@@ -297,10 +302,10 @@ pub async fn admin_batch(
     let mut affected = 0usize;
     if req.action == "delete" {
         for id in &req.ids {
-            if media_service::admin_delete_media(state.storage.as_ref(), &state.pool, id)
+            if let Ok(deleted) = media_service::admin_delete_media(state.storage.as_ref(), &state.pool, id)
                 .await
-                .is_ok()
             {
+                state.eventbus.emit(Event::MediaDeleted(deleted));
                 affected += 1;
             }
         }

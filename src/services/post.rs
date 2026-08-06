@@ -587,7 +587,7 @@ async fn build_response_from_post(
         cover_image: post.cover_image.clone(),
         image_ids: post.image_ids.clone(),
         status,
-        created_by: None,
+        created_by: Some(post.created_by.to_string()),
         author_name,
         category_id: None,
         category_name,

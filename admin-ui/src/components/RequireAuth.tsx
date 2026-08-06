@@ -2,7 +2,6 @@ import { useEffect, type ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/auth";
-import { useTenantStore } from "@/stores/tenant";
 import { PageLoading } from "@/components/ui/misc";
 
 /**
@@ -14,7 +13,6 @@ import { PageLoading } from "@/components/ui/misc";
 export function RequireAuth({ children }: { children: ReactNode }) {
   const location = useLocation();
   const isLoggedIn = useAuthStore((s) => s.accessToken !== null);
-  const setBuiltinTenantable = useTenantStore((s) => s.setBuiltinTenantable);
 
   const setup = useQuery({
     queryKey: ["setup-status"],
@@ -39,21 +37,14 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     retry: false,
   });
 
-  useEffect(() => {
-    const d = info.data;
-    if (!d) return;
-    const tenantable = Boolean(
-      d.tenantable ?? d.builtin_tenantable ?? d.features?.tenant ?? d.features?.tenants ?? false,
-    );
-    setBuiltinTenantable(tenantable);
-  }, [info.data, setBuiltinTenantable]);
-
   if (setup.isLoading) return <PageLoading />;
   if (setup.data && setup.data.has_admin === false) {
     return <Navigate to="/setup" replace />;
   }
   if (!isLoggedIn) {
-    return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />;
+    return (
+      <Navigate to="/auth/login" replace state={{ from: location.pathname }} />
+    );
   }
   return <>{children}</>;
 }
